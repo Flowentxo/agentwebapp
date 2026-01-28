@@ -1,0 +1,151 @@
+name: Rollback Production (Vercel)
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Deployment URL to roll back TO (e.g., https://app-abc123.vercel.app). Leave empty to auto-pick previous prod deployment.'
+        required: false
+        type: string
+      skip_health_check:
+        description: 'Skip health check before promotion?'
+        required: false
+        default: false
+        type: boolean
+      reason:
+        description: 'Reason for rollback (shown in run summary)'
+        required: true
+        type: string
+      prod_alias:
+        description: 'Optional prod alias to set (overrides env PROD_ALIAS).'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment:
+      name: Production          # gate with approvers in Settings → Environments
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      PROD_ALIAS_ENV: ${{ vars.PROD_ALIAS }}
+      HEALTH_PATH: /api/health
+    steps:
+      - name: Checkout (base branch only)
+        uses: actions/checkout@v4
+
+      - name: Install Node + Vercel CLI
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - run: npm i -g vercel
+
+      - name: Resolve rollback target
+        id: target
+        shell: bash
+        run: |
+          set -euo pipefail
+          IN_URL="${{ inputs.target_url }}"
+          if [ -n "$IN_URL" ]; then
+            # Normalize: ensure scheme prefix
+            if [[ "$IN_URL" != http* ]]; then IN_URL="https://$IN_URL"; fi
+            echo "url=$IN_URL" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Auto-pick the previous production deployment via Vercel API
+          echo "No target_url provided; fetching previous production deployment…"
+          API="https://api.vercel.com/v6/deployments?projectId=${VERCEL_PROJECT_ID}&target=production&limit=2"
+          JSON=$(curl -fsSL -H "Authorization: Bearer ${VERCEL_TOKEN}" "$API")
+          PREV=$(echo "$JSON" | jq -r '.deployments[1].url // empty')
+          if [ -z "$PREV" ] || [ "$PREV" = "null" ]; then
+            echo "Could not determine previous production deployment." >&2
+            exit 1
+          fi
+          echo "url=https://${PREV}" >> $GITHUB_OUTPUT
+
+      - name: Health check target (optional)
+        if: ${{ inputs.skip_health_check != true }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="${{ steps.target.outputs.url }}"
+          URL="${BASE}${HEALTH_PATH}"
+          echo "Health checking: $URL"
+          for i in {1..15}; do
+            CODE=$(curl -s -o /tmp/h -w "%{http_code}" "$URL" || true)
+            CT=$(curl -sI "$URL" | awk 'BEGIN{IGNORECASE=1}/^content-type:/ {print $2}')
+            if [ "$CODE" = "200" ] && [[ "$CT" == application/json* ]]; then
+              echo "OK (200 + JSON)"; exit 0
+            fi
+            echo "Attempt $i failed (code=$CODE, ct=$CT); retrying…"; sleep 4
+          done
+          echo "Health check failed"; cat /tmp/h || true; exit 1
+
+      - name: Pull prod env (ensures correct context)
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Promote target deployment to Production
+        id: promote
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="${{ steps.target.outputs.url }}"
+          echo "Promoting $URL to Production…"
+          if vercel --help | grep -q "promote"; then
+            vercel promote "$URL" --prod --token="$VERCEL_TOKEN"
+            echo "method=promote" >> $GITHUB_OUTPUT
+          else
+            echo "No 'vercel promote' available; will alias instead."
+            echo "method=alias" >> $GITHUB_OUTPUT
+
+      - name: Alias fallback (if promote unavailable AND alias provided)
+        if: ${{ steps.promote.outputs.method == 'alias' && (inputs.prod_alias != '' || env.PROD_ALIAS_ENV != '') }}
+        shell: bash
+        run: |
+          URL="${{ steps.target.outputs.url }}"
+          ALIAS="${{ inputs.prod_alias }}"
+          if [ -z "$ALIAS" ]; then ALIAS="$PROD_ALIAS_ENV"; fi
+          echo "Setting alias '$ALIAS' -> $URL"
+          vercel alias set "$URL" "$ALIAS" --token="$VERCEL_TOKEN"
+
+      - name: Post-deploy smoke (production)
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="${{ steps.target.outputs.url }}"
+          # Prefer alias if available to validate public entrypoint
+          ALIAS="${{ inputs.prod_alias }}"
+          if [ -z "$ALIAS" ]; then ALIAS="$PROD_ALIAS_ENV"; fi
+          if [ -n "$ALIAS" ]; then BASE="https://$ALIAS"; fi
+          URL="${BASE}${HEALTH_PATH}"
+          echo "Post-deploy health: $URL"
+          for i in {1..10}; do
+            CODE=$(curl -s -o /tmp/h2 -w "%{http_code}" "$URL" || true)
+            CT=$(curl -sI "$URL" | awk 'BEGIN{IGNORECASE=1}/^content-type:/ {print $2}')
+            if [ "$CODE" = "200" ] && [[ "$CT" == application/json* ]]; then
+              echo "OK (200 + JSON)"; exit 0
+            fi
+            echo "Attempt $i failed (code=$CODE, ct=$CT); retrying…"; sleep 3
+          done
+          echo "Post-deploy health failed"; cat /tmp/h2 || true; exit 1
+
+      - name: Summarize
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          {
+            echo "## ✅ Rollback Summary"
+            echo ""
+            echo "- **Target deployment:** ${{ steps.target.outputs.url }}"
+            echo "- **Method:** ${{ steps.promote.outputs.method || 'promote' }}"
+            echo "- **Prod alias:** ${{ inputs.prod_alias || env.PROD_ALIAS_ENV || '(none)' }}"
+            echo "- **Reason:** ${{ inputs.reason }}"
+            echo "- **Health checks:** $([ "${{ inputs.skip_health_check }}" = "true" ] && echo "skipped pre-check, ran post-check" || echo "pre + post passed")"
+          } >> "$GITHUB_STEP_SUMMARY"

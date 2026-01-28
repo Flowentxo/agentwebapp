@@ -1,0 +1,47 @@
+# ============================================
+# Cloud Run Environment Variables Template
+# ============================================
+# WICHTIG: Ersetze alle Werte mit deinen echten Credentials!
+
+# Database
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@YOUR_HOST:5432/brain_ai
+
+# Redis
+REDIS_URL=redis://:YOUR_PASSWORD@YOUR_HOST:6379
+
+# MongoDB
+MONGODB_URI=mongodb://YOUR_USER:YOUR_PASSWORD@YOUR_HOST:27017
+
+# MinIO / S3
+AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+AWS_SECRET_ACCESS_KEY=YOUR_SECRET_KEY
+AWS_REGION=us-east-1
+AWS_S3_BUCKET=flowent-ai-files
+AWS_ENDPOINT=https://YOUR_MINIO_HOST  # Optional, nur für MinIO
+
+# OpenAI
+OPENAI_API_KEY=sk-YOUR_OPENAI_KEY_HERE
+
+# Security Secrets (Generiere sichere Werte!)
+JWT_SECRET=YOUR_32_CHAR_MINIMUM_SECRET_HERE_CHANGE_THIS
+JWT_REFRESH_SECRET=YOUR_32_CHAR_MINIMUM_REFRESH_SECRET_HERE
+SESSION_SECRET=YOUR_32_CHAR_MINIMUM_SESSION_SECRET_HERE
+ENCRYPTION_KEY=YOUR_32_CHAR_MINIMUM_ENCRYPTION_KEY_HERE
+CSRF_SECRET=YOUR_32_CHAR_MINIMUM_CSRF_SECRET_HERE
+
+# Node Environment
+NODE_ENV=production
+
+# ============================================
+# Deployment Command (nachdem du Werte ersetzt hast):
+# ============================================
+
+# Option 1: Alle Variablen in einem Command
+gcloud run deploy ai-agent-webapp \
+  --source . \
+  --region europe-west3 \
+  --allow-unauthenticated \
+  --set-env-vars="NODE_ENV=production,DATABASE_URL=postgresql://...,REDIS_URL=redis://...,MONGODB_URI=mongodb://...,OPENAI_API_KEY=sk-...,JWT_SECRET=...,JWT_REFRESH_SECRET=...,SESSION_SECRET=...,ENCRYPTION_KEY=...,CSRF_SECRET=..."
+
+# Option 2: Secrets Manager (Empfohlen für Production)
+# Siehe CLOUD_RUN_DEPLOYMENT.md für Details

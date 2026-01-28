@@ -1,0 +1,17 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "dsznajder.es7-react-js-snippets",
+    "yoavbls.pretty-ts-errors",
+    "ms-playwright.playwright",
+    "vitest.explorer",
+    "usernamehw.errorlens",
+    "console-ninja-team.console-ninja",
+    "tamasfe.even-better-toml",
+    "mtxr.sqltools",
+    "mtxr.sqltools-driver-pg",
+    "mongodb.mongodb-vscode"
+  ]
+}

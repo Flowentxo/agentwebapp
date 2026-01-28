@@ -1,0 +1,112 @@
+name: E2E Tests
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - run: npm ci
+      # Run whatever you have; --if-present makes it a no-op if missing
+      - name: Unit tests
+        run: npm run test:unit --if-present
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          flags: unit
+          fail_ci_if_error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Lint
+        run: npm run lint --if-present
+
+  api-smoke:
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: '1'
+      E2E_TEST_MODE: '1'
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1' # speed: no browsers needed for API tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - run: npm ci
+      - name: API smoke
+        run: npx playwright test tests/api
+
+  e2e-double-pass:
+    needs: [unit, api-smoke]   # wait for fast checks first
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: '1'
+      E2E_TEST_MODE: '1' # enables /api/test/* helpers in tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E (Pass 1)
+        run: npx playwright test
+
+      - name: Run E2E (Pass 2)
+        run: npx playwright test
+
+      - name: Upload test artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # Optional: run a tiny subset without E2E mode to assert gating (requires tagging those tests, e.g. @no-e2e)
+  # no-e2e-gating-check:
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     CI: true
+  #     NODE_ENV: production
+  #     NEXT_TELEMETRY_DISABLED: '1'
+  #     # E2E_TEST_MODE intentionally NOT set
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '18'
+  #         cache: 'npm'
+  #     - run: npm ci
+  #     - run: npx playwright install --with-deps chromium
+  #     - name: Run only @no-e2e tests
+  #       run: npx playwright test --grep "@no-e2e"

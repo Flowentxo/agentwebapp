@@ -1,0 +1,190 @@
+###
+# Dexter Financial Analyst Agent - Integration Tests
+#
+# Test Dexter's integration with SINTRA AI Agent System
+# Requires: Server running on localhost:3000
+###
+
+@baseUrl = http://localhost:3000
+
+###
+# =====================================================
+# 1. HEALTH CHECK
+# =====================================================
+
+GET {{baseUrl}}/api/agents/dexter/health HTTP/1.1
+Content-Type: application/json
+
+###
+# =====================================================
+# 2. GET AGENT METADATA
+# =====================================================
+
+GET {{baseUrl}}/api/agents/dexter/chat HTTP/1.1
+Content-Type: application/json
+
+###
+# =====================================================
+# 3. SIMPLE CHAT TEST
+# =====================================================
+
+POST {{baseUrl}}/api/agents/dexter/chat HTTP/1.1
+Content-Type: application/json
+
+{
+  "content": "Hallo Dexter! Kannst du mir bei Finanzanalysen helfen?"
+}
+
+###
+# =====================================================
+# 4. ROI CALCULATION TEST - Simple
+# =====================================================
+
+POST {{baseUrl}}/api/agents/dexter/chat HTTP/1.1
+Content-Type: application/json
+
+{
+  "content": "Berechne den ROI für eine Investition von 100.000€ mit 180.000€ Revenue über 18 Monate"
+}
+
+###
+# =====================================================
+# 5. ROI CALCULATION TEST - With Recurring Costs
+# =====================================================
+
+POST {{baseUrl}}/api/agents/dexter/chat HTTP/1.1
+Content-Type: application/json
+
+{
+  "content": "Ich plane eine Investition von 50.000€. Erwartete Revenue: 120.000€ über 24 Monate. Laufende Kosten: 1.500€ pro Monat. Lohnt sich das?"
+}
+
+###
+# =====================================================
+# 6. ROI CALCULATION TEST - Poor Investment
+# =====================================================
+
+POST {{baseUrl}}/api/agents/dexter/chat HTTP/1.1
+Content-Type: application/json
+
+{
+  "content": "Investment: 200.000€, Revenue: 220.000€ über 36 Monate, monatliche Kosten: 500€. Wie ist der ROI?"
+}
+
+###
+# =====================================================
+# 7. COMPLEX QUERY - Multiple Questions
+# =====================================================
+
+POST {{baseUrl}}/api/agents/dexter/chat HTTP/1.1
+Content-Type: application/json
+
+{
+  "content": "Ich überlege, in ein neues Projekt zu investieren. Initiale Kosten: 75.000€. Erwartete Einnahmen im ersten Jahr: 40.000€, zweites Jahr: 60.000€. Wie sieht die Rentabilität aus? Wann amortisiert sich die Investition?"
+}
+
+###
+# =====================================================
+# 8. GENERAL QUESTION (No Tool)
+# =====================================================
+
+POST {{baseUrl}}/api/agents/dexter/chat HTTP/1.1
+Content-Type: application/json
+
+{
+  "content": "Was ist ein guter ROI für Software-Projekte?"
+}
+
+###
+# =====================================================
+# 9. OUT OF SCOPE QUESTION
+# =====================================================
+
+POST {{baseUrl}}/api/agents/dexter/chat HTTP/1.1
+Content-Type: application/json
+
+{
+  "content": "Kannst du mir beim Programmieren helfen?"
+}
+
+###
+# =====================================================
+# 10. EDGE CASE - Negative Investment
+# =====================================================
+
+POST {{baseUrl}}/api/agents/dexter/chat HTTP/1.1
+Content-Type: application/json
+
+{
+  "content": "Berechne ROI: Investment -10.000€, Revenue 50.000€ über 12 Monate"
+}
+
+###
+# =====================================================
+# 11. EDGE CASE - Zero Revenue
+# =====================================================
+
+POST {{baseUrl}}/api/agents/dexter/chat HTTP/1.1
+Content-Type: application/json
+
+{
+  "content": "Investment 100.000€, keine Revenue, Zeitraum 12 Monate"
+}
+
+###
+# =====================================================
+# 12. CONVERSATION CONTEXT TEST
+# =====================================================
+
+# First message
+POST {{baseUrl}}/api/agents/dexter/chat HTTP/1.1
+Content-Type: application/json
+
+{
+  "content": "Ich habe 50.000€ investiert und 80.000€ Revenue über 12 Monate generiert."
+}
+
+###
+# Follow-up (assuming conversation context is maintained)
+POST {{baseUrl}}/api/agents/dexter/chat HTTP/1.1
+Content-Type: application/json
+
+{
+  "content": "Und wie sieht der ROI aus?"
+}
+
+###
+# =====================================================
+# 13. GERMAN LANGUAGE TEST
+# =====================================================
+
+POST {{baseUrl}}/api/agents/dexter/chat HTTP/1.1
+Content-Type: application/json
+
+{
+  "content": "Guten Tag! Ich möchte eine Investitionsrendite berechnen. Meine Anfangsinvestition beträgt 250.000 Euro. Ich erwarte Einnahmen von 450.000 Euro über einen Zeitraum von 30 Monaten. Zusätzlich habe ich monatliche Betriebskosten von 3.000 Euro. Können Sie mir eine detaillierte Analyse geben?"
+}
+
+###
+# =====================================================
+# 14. MULTI-SCENARIO REQUEST
+# =====================================================
+
+POST {{baseUrl}}/api/agents/dexter/chat HTTP/1.1
+Content-Type: application/json
+
+{
+  "content": "Vergleiche diese zwei Investitionen:\n\n1. Investment A: 100.000€ Kosten, 200.000€ Revenue über 24 Monate\n2. Investment B: 150.000€ Kosten, 350.000€ Revenue über 36 Monate\n\nWelche ist besser?"
+}
+
+###
+# =====================================================
+# 15. TOOL ERROR TEST - Invalid Data
+# =====================================================
+
+POST {{baseUrl}}/api/agents/dexter/chat HTTP/1.1
+Content-Type: application/json
+
+{
+  "content": "Berechne ROI mit Investment 0€ und Revenue 100.000€"
+}

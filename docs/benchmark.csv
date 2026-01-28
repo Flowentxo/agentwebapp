@@ -1,0 +1,8 @@
+area,item,reference_behavior,our_state,gaps,priority,notes,source
+ui,Helpers Catalog,"Landing zeigt 12+ Helpers mit Rollen & CTAs",Grid vorhanden aber begrenzt,"Mehr Rollen, Filter, Intro",M,"Siehe Produkte-Sektion & 'Get helpers'",sintra.ai
+feature,Automations,"Planen/Kommentare prüfen, z. T. Social Scheduling",nicht vorhanden,"/automations UI+API",H,"Soshie/Cassie Beispiele",sintra.ai
+feature,Brain AI / Knowledge,"Dateien/Websites, lernen über Zeit",nicht vorhanden,"Upload+Index+RAG",H,"'They learn your business'",sintra.ai
+integration,Integrations,"Favoriten-Tools verbinden",nicht vorhanden,"OAuth + Token Store",H,"Integrations-Hub",sintra.ai
+collab,Workspaces,"Up to 5 profiles, share workspace",nicht vorhanden,"Switch+Members",M,"Kollaboration",sintra.ai
+billing,Pricing,"Pricing prominent",nicht vorhanden,"Seite + Stripe (stub)",M,"Feature-Gates per Plan",sintra.ai
+a11y,Focus/Contrast,"Marketing-Seite gut lesbar; App unklar","AA in App weitgehend ok","audit laufend",M,"CI Gates",internal

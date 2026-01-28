@@ -1,0 +1,161 @@
+name: Rollback Kubernetes Deployment (undo)
+on:
+  workflow_dispatch:
+    inputs:
+      namespace:
+        description: 'Kubernetes namespace'
+        required: true
+        type: string
+        default: production
+      deployment_name:
+        description: 'Deployment name to rollback'
+        required: true
+        type: string
+      to_revision:
+        description: 'Rollback to specific revision (optional; default = previous)'
+        required: false
+        type: string
+      context:
+        description: 'kubectl context name (optional if kubeconfig has a default)'
+        required: false
+        type: string
+      timeout_seconds:
+        description: 'Rollout wait timeout (seconds)'
+        required: true
+        type: number
+        default: 300
+      health_url:
+        description: 'HTTP health URL to verify after rollback (e.g., https://app.example.com/api/health)'
+        required: false
+        type: string
+      skip_health_check:
+        description: 'Skip health check (emergency only)'
+        required: false
+        type: boolean
+        default: false
+      reason:
+        description: 'Reason for rollback (included in audit summary)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  k8s-rollback-undo:
+    runs-on: ubuntu-latest
+    environment:
+      name: Production   # protect with required reviewers if you want a manual gate
+    steps:
+      - name: Checkout (base)
+        uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+
+      - name: Configure kubeconfig
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KUBE_CONFIG_DATA:-}" ]; then
+            echo "❌ Missing secret KUBE_CONFIG_DATA (base64 kubeconfig)"; exit 1
+          fi
+          mkdir -p "$HOME/.kube"
+          echo "$KUBE_CONFIG_DATA" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Select context (optional)
+        if: ${{ inputs.context != '' }}
+        run: kubectl config use-context "${{ inputs.context }}"
+
+      - name: Capture current revision
+        id: before
+        shell: bash
+        run: |
+          set -euo pipefail
+          NS="${{ inputs.namespace }}"
+          DEP="${{ inputs.deployment_name }}"
+          CUR=$(kubectl -n "$NS" get deploy "$DEP" -o jsonpath='{.metadata.annotations.deployment\.kubernetes\.io/revision}' 2>/dev/null || echo "unknown")
+          echo "current_revision=$CUR" >> $GITHUB_OUTPUT
+
+          echo "### Rollout history (before)" >> "$GITHUB_STEP_SUMMARY"
+          kubectl -n "$NS" rollout history deploy/"$DEP" | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Rollback (undo)
+        id: undo
+        shell: bash
+        run: |
+          set -euo pipefail
+          NS="${{ inputs.namespace }}"
+          DEP="${{ inputs.deployment_name }}"
+          REV="${{ inputs.to_revision }}"
+          if [ -n "$REV" ]; then
+            echo "Rolling back $DEP in ns=$NS to revision=$REV"
+            kubectl -n "$NS" rollout undo deploy/"$DEP" --to-revision="$REV"
+          else
+            echo "Rolling back $DEP in ns=$NS to previous revision"
+            kubectl -n "$NS" rollout undo deploy/"$DEP"
+          fi
+
+      - name: Wait for rollout
+        shell: bash
+        run: |
+          set -euo pipefail
+          NS="${{ inputs.namespace }}"
+          DEP="${{ inputs.deployment_name }}"
+          TO=${{ inputs.timeout_seconds }}
+          echo "Waiting for rollout status (timeout ${TO}s)…"
+          kubectl -n "$NS" rollout status deploy/"$DEP" --timeout="${TO}s"
+
+      - name: Capture new revision
+        id: after
+        shell: bash
+        run: |
+          set -euo pipefail
+          NS="${{ inputs.namespace }}"
+          DEP="${{ inputs.deployment_name }}"
+          NEW=$(kubectl -n "$NS" get deploy "$DEP" -o jsonpath='{.metadata.annotations.deployment\.kubernetes\.io/revision}')
+          echo "new_revision=$NEW" >> $GITHUB_OUTPUT
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Rollout history (after)" >> "$GITHUB_STEP_SUMMARY"
+          kubectl -n "$NS" rollout history deploy/"$DEP" | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Health check (optional)
+        if: ${{ inputs.health_url != '' && inputs.skip_health_check != true }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="${{ inputs.health_url }}"
+          echo "Pinging $URL"
+          for i in {1..20}; do
+            CODE=$(curl -s -o /tmp/h -w "%{http_code}" "$URL" || true)
+            CT=$(curl -sI "$URL" | awk 'BEGIN{IGNORECASE=1}/^content-type:/ {print $2}')
+            if [ "$CODE" = "200" ] && [[ "$CT" == application/json* ]]; then
+              echo "OK (200 + JSON)"; exit 0
+            fi
+            echo "Attempt $i failed (code=$CODE, ct=$CT); retry in 5s…"; sleep 5
+          done
+          echo "Health check failed"; cat /tmp/h || true; exit 1
+
+      - name: Summary
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          {
+            echo "## 🔁 Kubernetes Rollback (undo) Summary"
+            echo ""
+            echo "- **Namespace:** ${{ inputs.namespace }}"
+            echo "- **Deployment:** ${{ inputs.deployment_name }}"
+            echo "- **From revision:** ${{ steps.before.outputs.current_revision || 'unknown' }}"
+            echo "- **To revision:**   ${{ inputs.to_revision || 'previous' }}"
+            echo "- **New current revision:** ${{ steps.after.outputs.new_revision || 'unknown' }}"
+            echo "- **Timeout:** ${{ inputs.timeout_seconds }}s"
+            echo "- **Health URL:** ${{ inputs.health_url || '(none)' }}"
+            echo "- **Skip health check:** ${{ inputs.skip_health_check }}"
+            echo "- **Reason:** ${{ inputs.reason }}"
+          } >> "$GITHUB_STEP_SUMMARY"

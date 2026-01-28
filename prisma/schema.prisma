@@ -1,0 +1,452 @@
+// ============================================================================
+// LEVEL 14: FLOWENT AI - PRISMA SCHEMA
+// Multi-tenant architecture with Clerk Auth
+// ============================================================================
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ============================================================================
+// USER SETTINGS (Clerk-integrated, BYO-Key model)
+// ============================================================================
+
+model UserSettings {
+  id        String   @id @default(cuid())
+  userId    String   @unique // Clerk User ID
+
+  // BYO-Key API Keys (encrypted at rest)
+  openaiApiKey     String?  // User's OpenAI API key
+  resendApiKey     String?  // User's Resend API key for email
+  slackWebhookUrl  String?  // User's Slack webhook URL
+  tavilyApiKey     String?  // User's Tavily API key for web search
+
+  // Preferences
+  theme            String   @default("dark")
+  defaultModel     String   @default("gpt-4-turbo-preview")
+  defaultTemp      Float    @default(0.7)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_settings")
+  @@index([userId])
+}
+
+// ============================================================================
+// AGENTS (User-created AI Agents)
+// ============================================================================
+
+model Agent {
+  id        String   @id @default(cuid())
+  userId    String   // Clerk User ID - REQUIRED for multi-tenancy
+
+  // Identity
+  name      String
+  role      String
+  color     String   @default("#3B82F6")
+  icon      String   @default("bot")
+  bio       String?  @db.Text
+
+  // Configuration
+  systemPrompt      String?  @db.Text
+  temperature       Float    @default(0.7)
+  maxTokensPerReq   Int      @default(4000)
+
+  // Capabilities (stored as JSON for flexibility)
+  capabilities      Json     @default("{\"internetAccess\": true, \"longTermMemory\": true, \"codeExecution\": false, \"canSendEmail\": false, \"canPostToSlack\": false}")
+
+  // Status
+  status            AgentWorkStatus @default(IDLE)
+  currentTask       String?
+  taskStartedAt     DateTime?
+
+  // Metrics (updated periodically)
+  requests24h       Int      @default(0)
+  successRate24h    Float    @default(100)
+  avgResponseTime   Int      @default(0)  // in milliseconds
+  tokensUsed24h     Int      @default(0)
+  costToday         Float    @default(0)
+  lastActivity      DateTime @default(now())
+
+  // Knowledge Access
+  accessibleFiles   String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  logs       ActivityLog[]
+  pipelineSteps PipelineStep[]
+
+  @@map("agents")
+  @@index([userId])
+  @@index([userId, status])
+}
+
+enum AgentWorkStatus {
+  IDLE
+  WORKING
+  PAUSED
+  OFFLINE
+  ERROR
+}
+
+// ============================================================================
+// PIPELINES (Multi-step Agent Workflows)
+// ============================================================================
+
+model Pipeline {
+  id          String   @id @default(cuid())
+  userId      String   // Clerk User ID
+
+  // Identity
+  name        String
+  description String?  @db.Text
+
+  // Configuration
+  triggerType PipelineTriggerType @default(MANUAL)
+  isActive    Boolean  @default(true)
+  status      PipelineStatus @default(IDLE)
+
+  // Execution History
+  runCount    Int      @default(0)
+  lastRunAt   DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  steps       PipelineStep[]
+  runs        PipelineRun[]
+
+  @@map("pipelines")
+  @@index([userId])
+  @@index([userId, isActive])
+}
+
+enum PipelineTriggerType {
+  MANUAL
+  SCHEDULE
+  WEBHOOK
+}
+
+enum PipelineStatus {
+  IDLE
+  RUNNING
+  COMPLETED
+  FAILED
+  PAUSED
+}
+
+model PipelineStep {
+  id          String   @id @default(cuid())
+  pipelineId  String
+  pipeline    Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  // Agent Assignment
+  agentId     String
+  agent       Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  // Step Configuration
+  instruction String   @db.Text
+  order       Int      @default(0)
+
+  // Execution State (transient, updated during runs)
+  status      StepStatus @default(PENDING)
+  result      String?    @db.Text
+  error       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  tokensUsed  Int?
+
+  @@map("pipeline_steps")
+  @@index([pipelineId])
+  @@index([agentId])
+}
+
+enum StepStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+model PipelineRun {
+  id          String   @id @default(cuid())
+  pipelineId  String
+  pipeline    Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  status      PipelineStatus @default(RUNNING)
+
+  // Results stored as JSON array
+  stepResults Json     @default("[]")
+
+  // Metrics
+  totalTokensUsed Int  @default(0)
+  totalCost       Float @default(0)
+
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+
+  @@map("pipeline_runs")
+  @@index([pipelineId])
+  @@index([startedAt])
+}
+
+// ============================================================================
+// KNOWLEDGE FILES (RAG Documents)
+// ============================================================================
+
+model KnowledgeFile {
+  id          String   @id @default(cuid())
+  userId      String   // Clerk User ID
+
+  // File Info
+  name        String
+  originalName String
+  mimeType    String
+  size        Int      // bytes
+
+  // Content
+  content     String   @db.Text  // Extracted text content
+  chunks      Json?    // Pre-processed chunks for RAG
+
+  // Vector Storage (optional - for external vector DBs)
+  vectorId    String?  // Reference to vector in Pinecone/Supabase Vector
+  vectorized  Boolean  @default(false)
+
+  // Status
+  status      FileStatus @default(PROCESSING)
+  errorMessage String?
+
+  // Metadata
+  metadata    Json?    // author, summary, keywords, etc.
+  tags        String[] @default([])
+
+  uploadedAt  DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("knowledge_files")
+  @@index([userId])
+  @@index([userId, status])
+  @@index([vectorized])
+}
+
+enum FileStatus {
+  PROCESSING
+  READY
+  FAILED
+}
+
+// ============================================================================
+// ACTIVITY LOGS (Dashboard Activity Feed)
+// ============================================================================
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String   // Clerk User ID
+
+  // Log Info
+  type        LogEntryType @default(INFO)
+  status      LogEntryStatus @default(COMPLETED)
+  message     String
+
+  // Agent Association (optional)
+  agentId     String?
+  agent       Agent?   @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  agentName   String?
+  agentColor  String?
+
+  // Execution Details
+  duration    Int?     // milliseconds
+  tokensUsed  Int?
+  cost        Float?
+
+  // Output (JSON for rich results)
+  output      Json?    // { type, title, content, downloadable, filename }
+
+  // Tool Invocations (Level 10)
+  toolInvocations Json? // Array of tool calls with results
+
+  // Thread Support (Level 9)
+  parentId        String?
+  originalCommand String?
+  threadDepth     Int     @default(0)
+
+  // Level 16: Inbox Thread Link
+  threadId    String?
+  thread      Thread?  @relation("ThreadLogs", fields: [threadId], references: [id], onDelete: SetNull)
+
+  // Additional Metadata
+  metadata    Json?
+
+  timestamp   DateTime @default(now())
+
+  @@map("activity_logs")
+  @@index([userId])
+  @@index([userId, timestamp])
+  @@index([userId, agentId])
+  @@index([parentId])
+  @@index([threadId])
+}
+
+enum LogEntryType {
+  INFO
+  SUCCESS
+  ERROR
+  WARNING
+}
+
+enum LogEntryStatus {
+  COMPLETED
+  PENDING
+  FAILED
+  RUNNING
+}
+
+// ============================================================================
+// METRICS (Dashboard Stats & Token Usage)
+// ============================================================================
+
+model DailyMetrics {
+  id          String   @id @default(cuid())
+  userId      String   // Clerk User ID
+  date        DateTime @db.Date
+
+  // Usage
+  totalTokens Int      @default(0)
+  totalCost   Float    @default(0)
+  totalRequests Int    @default(0)
+
+  // Per-agent breakdown (JSON)
+  agentBreakdown Json? // { agentId: { tokens, cost, requests } }
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@map("daily_metrics")
+  @@index([userId])
+  @@index([userId, date])
+}
+
+// ============================================================================
+// JOB QUEUE (Background Tasks)
+// ============================================================================
+
+model QueuedJob {
+  id          String   @id @default(cuid())
+  userId      String   // Clerk User ID
+
+  command     String
+  assignedAgent String?
+  status      JobStatus @default(QUEUED)
+
+  // Execution
+  result      Json?
+  errorMessage String?
+
+  createdAt   DateTime @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  @@map("queued_jobs")
+  @@index([userId])
+  @@index([userId, status])
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+// ============================================================================
+// LEVEL 16: UNIFIED INBOX (Threads & Messages)
+// ============================================================================
+
+model Thread {
+  id            String       @id @default(cuid())
+  userId        String       // Clerk User ID
+
+  // Agent Association
+  agentId       String?
+  agentName     String?
+  agentColor    String?
+  agentIcon     String?
+
+  // Thread Info
+  title         String
+  preview       String?      // Preview of last message
+
+  // Status
+  status        ThreadStatus @default(OPEN)
+
+  // Timestamps
+  lastMessageAt DateTime     @default(now())
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relations
+  messages      Message[]
+  activityLogs  ActivityLog[] @relation("ThreadLogs")
+
+  @@map("threads")
+  @@index([userId])
+  @@index([userId, status])
+  @@index([userId, lastMessageAt])
+  @@index([agentId])
+  // FIX-004: Compound index for findThreadByAgent() optimization
+  // This query is used for "Resume Conversation" logic
+  @@index([userId, agentId, status])
+}
+
+enum ThreadStatus {
+  OPEN
+  PENDING_APPROVAL
+  ARCHIVED
+  RESOLVED
+}
+
+model Message {
+  id            String      @id @default(cuid())
+  threadId      String
+  thread        Thread      @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  // Message Content
+  role          MessageRole
+  content       String      @db.Text
+
+  // Tool Invocations (for assistant messages)
+  toolInvocations Json?     // Array of { id, name, args, result, status }
+
+  // Pending Actions (HITL)
+  pendingAction   Json?     // { type, data, status: 'pending'|'approved'|'rejected' }
+
+  // Metadata
+  tokensUsed    Int?
+  model         String?
+  metadata      Json?
+
+  createdAt     DateTime    @default(now())
+
+  @@map("messages")
+  @@index([threadId])
+  @@index([threadId, createdAt])
+  // FIX-004: Index for role-based queries (finding latest assistant message, etc.)
+  @@index([threadId, createdAt, role])
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  TOOL
+}

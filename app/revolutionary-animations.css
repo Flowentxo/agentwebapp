@@ -1,0 +1,481 @@
+/**
+ * REVOLUTIONARY ANIMATIONS
+ *
+ * Breathing, pulsing, living UI elements.
+ * Every frame is intentional. Every movement has meaning.
+ */
+
+/* ==========================================
+   BREATHING EFFECTS
+   ========================================== */
+
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 0.95;
+  }
+}
+
+@keyframes breathe-glow {
+  0%, 100% {
+    filter: blur(20px) brightness(1);
+    opacity: 0.6;
+  }
+  50% {
+    filter: blur(30px) brightness(1.2);
+    opacity: 0.8;
+  }
+}
+
+.breathing {
+  animation: breathe 4s ease-in-out infinite;
+}
+
+.breathing-fast {
+  animation: breathe 2s ease-in-out infinite;
+}
+
+.breathing-slow {
+  animation: breathe 6s ease-in-out infinite;
+}
+
+/* ==========================================
+   MICRO-INTERACTIONS
+   ========================================== */
+
+.micro-bounce {
+  transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.micro-bounce:active {
+  transform: scale(0.95);
+}
+
+.micro-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.micro-lift:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.3),
+    0 0 40px var(--agent-glow, rgba(99, 102, 241, 0.5));
+}
+
+.micro-press {
+  transition: all 0.15s ease;
+}
+
+.micro-press:active {
+  transform: scale(0.97);
+  filter: brightness(0.9);
+}
+
+/* Haptic-like feedback */
+@keyframes haptic-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.haptic-feedback {
+  animation: haptic-pulse 0.15s ease-out;
+}
+
+/* ==========================================
+   FLOATING & DRIFTING
+   ========================================== */
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-10px) translateX(5px);
+  }
+  50% {
+    transform: translateY(-20px) translateX(-5px);
+  }
+  75% {
+    transform: translateY(-10px) translateX(5px);
+  }
+}
+
+@keyframes drift {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(10px, -10px);
+  }
+  50% {
+    transform: translate(-5px, -20px);
+  }
+  75% {
+    transform: translate(-10px, -10px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+.floating {
+  animation: float 6s ease-in-out infinite;
+}
+
+.drifting {
+  animation: drift 20s ease-in-out infinite;
+}
+
+/* ==========================================
+   PULSING & GLOWING
+   ========================================== */
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 20px var(--agent-glow, rgba(99, 102, 241, 0.4)),
+      inset 0 0 20px var(--agent-glow, rgba(99, 102, 241, 0.2));
+  }
+  50% {
+    box-shadow:
+      0 0 40px var(--agent-glow, rgba(99, 102, 241, 0.6)),
+      inset 0 0 30px var(--agent-glow, rgba(99, 102, 241, 0.3));
+  }
+}
+
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid var(--agent-primary, #6366f1);
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+.glowing {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+/* ==========================================
+   SHIMMER & SHINE
+   ========================================== */
+
+@keyframes shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(200%) rotate(45deg);
+  }
+}
+
+.shine-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-effect::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shine 3s infinite;
+}
+
+/* ==========================================
+   MAGNETIC EFFECTS
+   ========================================== */
+
+.magnetic {
+  transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* JavaScript will add data-magnetic-x and data-magnetic-y attributes */
+.magnetic[data-magnetic="active"] {
+  transform: translate(var(--magnetic-x, 0), var(--magnetic-y, 0)) scale(1.05);
+}
+
+/* ==========================================
+   PARTICLES & AMBIENT EFFECTS
+   ========================================== */
+
+.particle-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+@keyframes particle-float {
+  0%, 100% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100vh) translateX(50px) scale(0.5);
+    opacity: 0;
+  }
+}
+
+.agent-particle {
+  animation: particle-float 15s linear infinite;
+}
+
+/* ==========================================
+   THEME TRANSITION
+   ========================================== */
+
+.theme-transitioning * {
+  transition:
+    color 1s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 1s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 1s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 1s cubic-bezier(0.4, 0, 0.2, 1),
+    fill 1s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* ==========================================
+   CONTEXTUAL CURSORS
+   ========================================== */
+
+.cursor-agent {
+  cursor: var(--agent-cursor, pointer);
+}
+
+.cursor-agent-primary::after {
+  content: '';
+  position: fixed;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--agent-primary, #6366f1);
+  pointer-events: none;
+  z-index: 9999;
+  left: var(--cursor-x, 0);
+  top: var(--cursor-y, 0);
+  transform: translate(-50%, -50%);
+  transition: width 0.2s, height 0.2s;
+  opacity: 0.5;
+}
+
+.cursor-agent-primary:hover::after {
+  width: 60px;
+  height: 60px;
+}
+
+/* ==========================================
+   ENERGY STATES
+   ========================================== */
+
+[data-agent-energy="high"] {
+  animation-duration: 2s !important;
+}
+
+[data-agent-energy="medium"] {
+  animation-duration: 4s !important;
+}
+
+[data-agent-energy="low"] {
+  animation-duration: 6s !important;
+}
+
+/* ==========================================
+   EMOTIONAL TONES
+   ========================================== */
+
+[data-agent-tone="electric"] .breathing {
+  animation: breathe 1.5s ease-in-out infinite;
+}
+
+[data-agent-tone="warm"] .breathing {
+  animation: breathe 4s ease-in-out infinite;
+}
+
+[data-agent-tone="cool"] .breathing {
+  animation: breathe 5s ease-in-out infinite;
+}
+
+[data-agent-tone="fierce"] .breathing {
+  animation: breathe 2s ease-in-out infinite;
+}
+
+[data-agent-tone="calm"] .breathing {
+  animation: breathe 8s ease-in-out infinite;
+}
+
+[data-agent-tone="enigmatic"] .breathing {
+  animation: breathe 6s ease-in-out infinite;
+}
+
+/* ==========================================
+   GRADIENT ANIMATIONS
+   ========================================== */
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.gradient-animated {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+/* ==========================================
+   RIPPLE EFFECT
+   ========================================== */
+
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-effect::before {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--agent-accent, rgba(255, 255, 255, 0.5));
+  top: var(--ripple-y, 50%);
+  left: var(--ripple-x, 50%);
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ripple-effect.active::before {
+  animation: ripple 0.6s ease-out;
+}
+
+/* ==========================================
+   PERSPECTIVE & 3D
+   ========================================== */
+
+.card-3d {
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease;
+}
+
+.card-3d:hover {
+  transform:
+    perspective(1000px)
+    rotateX(var(--rotate-x, 0deg))
+    rotateY(var(--rotate-y, 0deg))
+    scale(1.05);
+}
+
+/* ==========================================
+   TEXT EFFECTS
+   ========================================== */
+
+@keyframes text-glow {
+  0%, 100% {
+    text-shadow:
+      0 0 10px var(--agent-glow, rgba(99, 102, 241, 0.5)),
+      0 0 20px var(--agent-glow, rgba(99, 102, 241, 0.3));
+  }
+  50% {
+    text-shadow:
+      0 0 20px var(--agent-glow, rgba(99, 102, 241, 0.8)),
+      0 0 40px var(--agent-glow, rgba(99, 102, 241, 0.5));
+  }
+}
+
+.text-glowing {
+  animation: text-glow 3s ease-in-out infinite;
+}
+
+@keyframes text-flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.text-flickering {
+  animation: text-flicker 0.15s infinite;
+}
+
+/* ==========================================
+   FADE IN ANIMATIONS
+   ========================================== */
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.6s ease-out forwards;
+}

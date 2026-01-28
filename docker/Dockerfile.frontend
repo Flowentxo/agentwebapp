@@ -1,0 +1,104 @@
+# =============================================================================
+# Flowent AI Studio - Frontend Dockerfile
+# Multi-stage build for Next.js with standalone output
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Stage 1: Dependencies
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS deps
+
+# Install build dependencies
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install dependencies
+RUN npm ci --legacy-peer-deps
+
+# -----------------------------------------------------------------------------
+# Stage 2: Builder
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy dependencies
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Set build-time environment variables
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_WS_URL
+ARG NEXT_PUBLIC_APP_NAME="Flowent AI Studio"
+
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+ENV NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL:-ws://localhost:4000}
+ENV NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
+
+# Disable telemetry during build
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Enable standalone output in next.config.js
+ENV BUILD_STANDALONE=true
+
+# Build the application
+RUN npm run build
+
+# -----------------------------------------------------------------------------
+# Stage 3: Production Runner
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS runner
+
+# Add labels
+LABEL org.opencontainers.image.title="Flowent AI Studio Frontend"
+LABEL org.opencontainers.image.description="Next.js Frontend for Flowent AI Studio"
+LABEL org.opencontainers.image.version="1.0.0"
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    libc6-compat \
+    curl \
+    tini \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup --system --gid 1001 flowent && \
+    adduser --system --uid 1001 flowent
+
+WORKDIR /app
+
+# Set production environment
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Copy public assets
+COPY --from=builder /app/public ./public
+
+# Copy standalone build
+COPY --from=builder --chown=flowent:flowent /app/.next/standalone ./
+COPY --from=builder --chown=flowent:flowent /app/.next/static ./.next/static
+
+# Create cache directory with correct permissions
+RUN mkdir -p .next/cache && chown -R flowent:flowent .next
+
+# Switch to non-root user
+USER flowent
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || curl -f http://localhost:3000/ || exit 1
+
+# Use tini as init system
+ENTRYPOINT ["/sbin/tini", "--"]
+
+# Start the application
+CMD ["node", "server.js"]

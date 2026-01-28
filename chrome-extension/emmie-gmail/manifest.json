@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "Emmie - AI Email Assistant for Gmail",
+  "version": "1.0.0",
+  "description": "Your intelligent AI email assistant. Compose, reply, summarize and manage emails with AI-powered assistance directly in Gmail.",
+  "author": "Sintra AI",
+
+  "permissions": [
+    "storage",
+    "activeTab",
+    "identity"
+  ],
+
+  "host_permissions": [
+    "https://mail.google.com/*",
+    "http://localhost:3000/*",
+    "http://localhost:4000/*"
+  ],
+
+  "background": {
+    "service_worker": "src/background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["src/content.js"],
+      "css": ["styles/emmie.css"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/emmie-16.png",
+      "32": "icons/emmie-32.png",
+      "48": "icons/emmie-48.png",
+      "128": "icons/emmie-128.png"
+    },
+    "default_title": "Emmie - AI Email Assistant"
+  },
+
+  "icons": {
+    "16": "icons/emmie-16.png",
+    "32": "icons/emmie-32.png",
+    "48": "icons/emmie-48.png",
+    "128": "icons/emmie-128.png"
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*", "styles/*"],
+      "matches": ["https://mail.google.com/*"]
+    }
+  ]
+}

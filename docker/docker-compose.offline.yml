@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # PostgreSQL with pgvector (Offline/Local)
+  # ============================================
+  postgres-offline:
+    image: pgvector/pgvector:pg15
+    container_name: sintra-postgres-offline
+    environment:
+      POSTGRES_DB: brain_ai
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password_local
+    volumes:
+      - postgres_data_offline:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Redis Cache (Offline/Local)
+  # ============================================
+  redis-offline:
+    image: redis:7-alpine
+    container_name: sintra-redis-offline
+    command: redis-server --appendonly yes --requirepass redis_password_local
+    volumes:
+      - redis_data_offline:/data
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # MongoDB (Offline/Local)
+  # ============================================
+  mongo-offline:
+    image: mongo:7.0
+    container_name: sintra-mongo-offline
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo_user
+      MONGO_INITDB_ROOT_PASSWORD: mongo_password_local
+    volumes:
+      - mongo_data_offline:/data/db
+    ports:
+      - "27017:27017"
+    restart: unless-stopped
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # MinIO (Local S3)
+  # ============================================
+  minio:
+    image: minio/minio
+    container_name: sintra-minio-offline
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio_user
+      MINIO_ROOT_PASSWORD: minio_password_local
+    volumes:
+      - minio_data_offline:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # ============================================
+  # MinIO Bucket Creator
+  # ============================================
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc config host add myminio http://minio:9000 minio_user minio_password_local;
+      /usr/bin/mc mb myminio/flowent-ai-files;
+      /usr/bin/mc anonymous set public myminio/flowent-ai-files;
+      exit 0;
+      "
+
+volumes:
+  postgres_data_offline:
+    driver: local
+  redis_data_offline:
+    driver: local
+  mongo_data_offline:
+    driver: local
+  minio_data_offline:
+    driver: local

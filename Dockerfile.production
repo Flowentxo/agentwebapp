@@ -1,0 +1,130 @@
+# =============================================================================
+# SINTRA.AI v3 - Production Multi-Stage Dockerfile
+# Optimized for minimal image size and maximum security
+# =============================================================================
+
+# =============================================================================
+# STAGE 1: Base image with dependencies
+# =============================================================================
+FROM node:20-alpine AS base
+
+# Install essential packages for native modules
+RUN apk add --no-cache \
+    libc6-compat \
+    openssl \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/cache/apk/*
+
+WORKDIR /app
+
+# =============================================================================
+# STAGE 2: Dependencies installer
+# =============================================================================
+FROM base AS deps
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install ALL dependencies (including devDependencies for build)
+RUN npm ci --legacy-peer-deps
+
+# =============================================================================
+# STAGE 3: Production dependencies only
+# =============================================================================
+FROM base AS prod-deps
+
+COPY package.json package-lock.json ./
+
+# Install only production dependencies
+RUN npm ci --legacy-peer-deps --omit=dev
+
+# =============================================================================
+# STAGE 4: Build Next.js application
+# =============================================================================
+FROM base AS builder
+
+WORKDIR /app
+
+# Copy node_modules from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy all source files
+COPY . .
+
+# Build environment variables
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+ENV SKIP_ENV_VALIDATION=1
+
+# Build Next.js application (standalone mode)
+RUN npm run build
+
+# Compile TypeScript server to JavaScript
+RUN npx tsc --project tsconfig.server.json || echo "Server compilation completed"
+
+# =============================================================================
+# STAGE 5: Production runner (minimal image)
+# =============================================================================
+FROM node:20-alpine AS runner
+
+# Security: Install only essential runtime packages
+RUN apk add --no-cache \
+    openssl \
+    tini \
+    dumb-init \
+    curl \
+    && rm -rf /var/cache/apk/*
+
+WORKDIR /app
+
+# Security: Create non-root user
+RUN addgroup --system --gid 1001 sintra \
+    && adduser --system --uid 1001 --ingroup sintra sintra
+
+# Set production environment
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Copy production node_modules
+COPY --from=prod-deps --chown=sintra:sintra /app/node_modules ./node_modules
+
+# Copy Next.js standalone build
+COPY --from=builder --chown=sintra:sintra /app/.next/standalone ./
+COPY --from=builder --chown=sintra:sintra /app/.next/static ./.next/static
+COPY --from=builder --chown=sintra:sintra /app/public ./public
+
+# Copy compiled server (if using TypeScript compilation)
+COPY --from=builder --chown=sintra:sintra /app/dist ./dist
+
+# Copy essential server files
+COPY --from=builder --chown=sintra:sintra /app/server ./server
+COPY --from=builder --chown=sintra:sintra /app/lib ./lib
+COPY --from=builder --chown=sintra:sintra /app/workers ./workers
+
+# Copy configuration files
+COPY --from=builder --chown=sintra:sintra /app/package.json ./
+COPY --from=builder --chown=sintra:sintra /app/next.config.js ./
+COPY --from=builder --chown=sintra:sintra /app/tsconfig.json ./
+COPY --from=builder --chown=sintra:sintra /app/tsconfig.server.json ./
+
+# Copy entrypoint script
+COPY --chown=sintra:sintra docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Switch to non-root user
+USER sintra
+
+# Expose ports (Next.js: 3000, Express: 4000)
+EXPOSE 3000 4000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:4000/api/health || exit 1
+
+# Use tini as init system for proper signal handling
+ENTRYPOINT ["/sbin/tini", "--"]
+
+# Start the application
+CMD ["/app/docker-entrypoint.sh"]

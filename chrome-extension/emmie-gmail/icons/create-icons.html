@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate Emmie Icons</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #1a1a1a; color: white; }
+    .icon-container { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 20px; }
+    .icon { background: #2a2a2a; padding: 20px; border-radius: 10px; text-align: center; }
+    canvas { border-radius: 8px; }
+    button { margin-top: 10px; padding: 8px 16px; background: #ec4899; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    button:hover { background: #db2777; }
+  </style>
+</head>
+<body>
+  <h1>Emmie Icon Generator</h1>
+  <p>Click each button to download the icon</p>
+
+  <div class="icon-container">
+    <div class="icon">
+      <canvas id="icon-16" width="16" height="16"></canvas>
+      <br><button onclick="downloadIcon(16)">Download 16x16</button>
+    </div>
+    <div class="icon">
+      <canvas id="icon-32" width="32" height="32"></canvas>
+      <br><button onclick="downloadIcon(32)">Download 32x32</button>
+    </div>
+    <div class="icon">
+      <canvas id="icon-48" width="48" height="48"></canvas>
+      <br><button onclick="downloadIcon(48)">Download 48x48</button>
+    </div>
+    <div class="icon">
+      <canvas id="icon-128" width="128" height="128"></canvas>
+      <br><button onclick="downloadIcon(128)">Download 128x128</button>
+    </div>
+  </div>
+
+  <script>
+    const sizes = [16, 32, 48, 128];
+
+    function drawIcon(size) {
+      const canvas = document.getElementById(`icon-${size}`);
+      const ctx = canvas.getContext('2d');
+
+      // Background gradient
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#ec4899');
+      gradient.addColorStop(1, '#db2777');
+
+      // Rounded rectangle background
+      const radius = size * 0.2;
+      ctx.beginPath();
+      ctx.roundRect(0, 0, size, size, radius);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+
+      // Email icon
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = size * 0.06;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      const padding = size * 0.25;
+      const w = size - padding * 2;
+      const h = w * 0.7;
+      const x = padding;
+      const y = (size - h) / 2;
+
+      // Envelope
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, size * 0.05);
+      ctx.stroke();
+
+      // V shape for envelope flap
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + w / 2, y + h * 0.5);
+      ctx.lineTo(x + w, y);
+      ctx.stroke();
+
+      // Sparkle
+      if (size >= 32) {
+        ctx.fillStyle = 'white';
+        const sparkleSize = size * 0.12;
+        const sparkleX = x + w - sparkleSize / 2;
+        const sparkleY = y - sparkleSize / 2;
+
+        ctx.beginPath();
+        ctx.arc(sparkleX, sparkleY, sparkleSize, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function downloadIcon(size) {
+      const canvas = document.getElementById(`icon-${size}`);
+      const link = document.createElement('a');
+      link.download = `emmie-${size}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    // Draw all icons
+    sizes.forEach(drawIcon);
+  </script>
+</body>
+</html>

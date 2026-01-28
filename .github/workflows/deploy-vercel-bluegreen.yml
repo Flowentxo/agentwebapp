@@ -1,0 +1,80 @@
+name: Blue/Green Promote (Vercel)
+on:
+  workflow_run:
+    workflows: ["E2E Tests"]
+    types: [completed]
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  promote:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: Production
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      HEALTH_PATH: /api/health
+      PROD_ALIAS: ${{ vars.PROD_ALIAS }} # optional, e.g. app.example.com
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+
+      - name: Vercel pull (production env)
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Vercel build (preview candidate)
+        run: vercel build --token="$VERCEL_TOKEN"
+
+      - name: Vercel deploy (candidate)
+        id: deploy
+        run: |
+          URL=$(vercel deploy --prebuilt --token="$VERCEL_TOKEN")
+          echo "url=${URL}" >> $GITHUB_OUTPUT
+          echo "Candidate URL: ${URL}"
+
+      - name: Smoke check candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="${{ steps.deploy.outputs.url }}"
+          url="${base}${HEALTH_PATH}"
+          echo "Checking $url"
+          for i in {1..15}; do
+            code=$(curl -s -o /tmp/h -w "%{http_code}" "$url" || true)
+            ct=$(curl -sI "$url" | awk 'BEGIN{IGNORECASE=1}/^content-type:/ {print $2}')
+            if [ "$code" = "200" ] && [[ "$ct" == application/json* ]]; then
+              echo "OK (200 + JSON)"; exit 0
+            fi
+            echo "Attempt $i failed (code=$code, ct=$ct); retrying…"; sleep 4
+          done
+          echo "Health check failed"; cat /tmp/h || true; exit 1
+
+      - name: Promote to Production (vercel promote)
+        id: promote
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="${{ steps.deploy.outputs.url }}"
+          if vercel --help | grep -q "promote"; then
+            vercel promote "$url" --prod --token="$VERCEL_TOKEN"
+            echo "promoted=true" >> $GITHUB_OUTPUT
+          else
+            echo "promote command not available; falling back to alias"
+            echo "promoted=false" >> $GITHUB_OUTPUT
+
+      - name: Fallback alias (if promote unavailable)
+        if: ${{ steps.promote.outputs.promoted == 'false' && env.PROD_ALIAS != '' }}
+        run: vercel alias set "${{ steps.deploy.outputs.url }}" "$PROD_ALIAS" --token="$VERCEL_TOKEN"
+
+      - name: Post-deploy ping (production)
+        if: ${{ always() }}
+        run: |
+          if [ -n "${PROD_ALIAS}" ]; then
+            curl -fsS "https://${PROD_ALIAS}${HEALTH_PATH}" -o /dev/null || true
+          fi

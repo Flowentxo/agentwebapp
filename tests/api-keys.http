@@ -1,0 +1,243 @@
+###
+# SINTRA.AI API Key Management - HTTP Tests
+#
+# Requirements:
+# 1. Server running: npm run dev
+# 2. Session cookie from login
+# 3. Replace {{session}} and {{apiKeyId}} with actual values
+###
+
+@baseUrl = http://localhost:3000
+@session = YOUR_SESSION_COOKIE_HERE
+@apiKeyId = YOUR_KEY_ID_HERE
+@apiSecret = YOUR_API_SECRET_HERE
+
+###
+# =====================================================
+# 1. GET AVAILABLE SCOPES
+# =====================================================
+
+GET {{baseUrl}}/api/api-keys/scopes HTTP/1.1
+Content-Type: application/json
+
+###
+# =====================================================
+# 2. CREATE API KEY (Development)
+# =====================================================
+
+POST {{baseUrl}}/api/api-keys HTTP/1.1
+Content-Type: application/json
+Cookie: session={{session}}
+
+{
+  "name": "Development Test Key",
+  "scopes": ["agents:read", "knowledge:read"],
+  "environment": "development",
+  "description": "Key for local testing",
+  "expiresInDays": 30,
+  "rateLimit": 100
+}
+
+###
+# =====================================================
+# 3. CREATE API KEY (Production with IP Whitelist)
+# =====================================================
+
+POST {{baseUrl}}/api/api-keys HTTP/1.1
+Content-Type: application/json
+Cookie: session={{session}}
+
+{
+  "name": "Production API Key",
+  "scopes": ["agents:read", "agents:execute", "analytics:read"],
+  "environment": "production",
+  "description": "Production key with restricted IP access",
+  "expiresInDays": 90,
+  "rateLimit": 1000,
+  "ipWhitelist": ["203.0.113.0/24"]
+}
+
+###
+# =====================================================
+# 4. LIST ALL API KEYS
+# =====================================================
+
+GET {{baseUrl}}/api/api-keys HTTP/1.1
+Cookie: session={{session}}
+
+###
+# =====================================================
+# 5. GET SPECIFIC API KEY DETAILS
+# =====================================================
+
+GET {{baseUrl}}/api/api-keys/{{apiKeyId}} HTTP/1.1
+Cookie: session={{session}}
+
+###
+# =====================================================
+# 6. UPDATE API KEY
+# =====================================================
+
+PATCH {{baseUrl}}/api/api-keys/{{apiKeyId}} HTTP/1.1
+Content-Type: application/json
+Cookie: session={{session}}
+
+{
+  "name": "Updated Development Key",
+  "description": "Updated description",
+  "scopes": ["agents:read", "agents:write"],
+  "expiresInDays": 60,
+  "rateLimit": 200
+}
+
+###
+# =====================================================
+# 7. ROTATE API KEY (Generate new secret)
+# =====================================================
+
+POST {{baseUrl}}/api/api-keys/{{apiKeyId}}/rotate HTTP/1.1
+Cookie: session={{session}}
+
+###
+# =====================================================
+# 8. GET USAGE LOGS (Last 7 days)
+# =====================================================
+
+GET {{baseUrl}}/api/api-keys/{{apiKeyId}}/logs?days=7&limit=100 HTTP/1.1
+Cookie: session={{session}}
+
+###
+# =====================================================
+# 9. GET AUDIT EVENTS
+# =====================================================
+
+GET {{baseUrl}}/api/api-keys/{{apiKeyId}}/audit?limit=50 HTTP/1.1
+Cookie: session={{session}}
+
+###
+# =====================================================
+# 10. REVOKE API KEY
+# =====================================================
+
+DELETE {{baseUrl}}/api/api-keys/{{apiKeyId}}?reason=Security+audit HTTP/1.1
+Cookie: session={{session}}
+
+###
+# =====================================================
+# 11. TEST API KEY AUTHENTICATION - Success
+# =====================================================
+
+GET {{baseUrl}}/api/v1/agents HTTP/1.1
+Authorization: Bearer {{apiSecret}}
+
+###
+# =====================================================
+# 12. TEST API KEY AUTHENTICATION - Alternative Header
+# =====================================================
+
+GET {{baseUrl}}/api/v1/agents HTTP/1.1
+X-API-Key: {{apiSecret}}
+
+###
+# =====================================================
+# 13. TEST API KEY AUTHENTICATION - No Key (401)
+# =====================================================
+
+GET {{baseUrl}}/api/v1/agents HTTP/1.1
+
+###
+# =====================================================
+# 14. TEST API KEY AUTHENTICATION - Invalid Key (401)
+# =====================================================
+
+GET {{baseUrl}}/api/v1/agents HTTP/1.1
+Authorization: Bearer sk_invalid_key_12345678901234567890
+
+###
+# =====================================================
+# 15. TEST RATE LIMITING
+# =====================================================
+
+# Run this multiple times to trigger rate limit (429)
+GET {{baseUrl}}/api/v1/agents HTTP/1.1
+Authorization: Bearer {{apiSecret}}
+
+###
+# =====================================================
+# 16. CREATE KEY WITH MINIMAL SCOPES (Read-Only Preset)
+# =====================================================
+
+POST {{baseUrl}}/api/api-keys HTTP/1.1
+Content-Type: application/json
+Cookie: session={{session}}
+
+{
+  "name": "Read-Only Key",
+  "scopes": ["agents:read", "knowledge:read", "workflows:read", "analytics:read"],
+  "environment": "production",
+  "expiresInDays": 365,
+  "rateLimit": 500
+}
+
+###
+# =====================================================
+# 17. CREATE SHORT-LIVED TEST KEY
+# =====================================================
+
+POST {{baseUrl}}/api/api-keys HTTP/1.1
+Content-Type: application/json
+Cookie: session={{session}}
+
+{
+  "name": "Temporary Test Key",
+  "scopes": ["agents:read"],
+  "environment": "test",
+  "expiresInDays": 7,
+  "rateLimit": 50
+}
+
+###
+# =====================================================
+# 18. TEST SCOPE PERMISSIONS - Forbidden (403)
+# =====================================================
+
+# Use a key with only "agents:read" scope
+# Trying to access endpoint requiring "agents:write"
+POST {{baseUrl}}/api/some-protected-endpoint HTTP/1.1
+Authorization: Bearer {{apiSecret}}
+Content-Type: application/json
+
+{
+  "action": "write"
+}
+
+###
+# =====================================================
+# 19. VALIDATE INVALID SCOPE (400)
+# =====================================================
+
+POST {{baseUrl}}/api/api-keys HTTP/1.1
+Content-Type: application/json
+Cookie: session={{session}}
+
+{
+  "name": "Invalid Scope Test",
+  "scopes": ["invalid:scope", "agents:read"],
+  "environment": "development"
+}
+
+###
+# =====================================================
+# 20. CREATE KEY WITHOUT EXPIRATION (Optional)
+# =====================================================
+
+POST {{baseUrl}}/api/api-keys HTTP/1.1
+Content-Type: application/json
+Cookie: session={{session}}
+
+{
+  "name": "No Expiration Key",
+  "scopes": ["agents:read"],
+  "environment": "development",
+  "rateLimit": 100
+}

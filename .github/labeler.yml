@@ -1,0 +1,31 @@
+tests:
+  - changed-files:
+      - any-glob-to-any-file: 'tests/**'
+
+api:
+  - changed-files:
+      - any-glob-to-any-file: 'app/api/**'
+
+frontend:
+  - changed-files:
+      - any-glob-to-any-file: 'app/**'
+      - all-globs-to-all-files: '!app/api/**'
+
+backend:
+  - changed-files:
+      - any-glob-to-any-file: 'lib/**'
+      - any-glob-to-any-file: 'server/**'
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file: '.github/**'
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file: '**/*.md'
+      - any-glob-to-any-file: 'docs/**'
+
+security:
+  - changed-files:
+      - any-glob-to-any-file: 'lib/security/**'
+      - any-glob-to-any-file: 'app/api/**/secure/**'

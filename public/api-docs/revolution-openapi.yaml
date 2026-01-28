@@ -1,0 +1,742 @@
+openapi: 3.0.0
+info:
+  title: Revolution AI Agent System API
+  version: 1.0.0
+  description: |
+    Complete API documentation for the Revolution AI Agent Creation Platform.
+
+    **Features:**
+    - Create and manage custom AI agents
+    - Execute agents with OpenAI GPT-4
+    - OAuth integration (HubSpot, Google)
+    - Subscription management (Free/Pro/Enterprise)
+    - Rate limiting and usage tracking
+
+    **Base URL:** `http://localhost:3000/api`
+
+    **Authentication:** All endpoints require `x-user-id` header
+
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+  - url: https://api.revolution.ai/api
+    description: Production server
+
+tags:
+  - name: Reference Data
+    description: Categories, use cases, and integrations
+  - name: Agent Management
+    description: Create, read, update, delete agents
+  - name: Agent Execution
+    description: Execute agents and track results
+  - name: OAuth
+    description: External service integrations
+  - name: Subscription
+    description: Subscription management and billing
+  - name: Rate Limiting
+    description: Rate limit status
+  - name: Webhooks
+    description: HubSpot webhook management
+
+components:
+  parameters:
+    UserIdHeader:
+      name: x-user-id
+      in: header
+      required: true
+      schema:
+        type: string
+      description: User ID for authentication
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+        - message
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+        displayOrder:
+          type: integer
+
+    UseCase:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: string
+          format: uuid
+        requiredCapabilities:
+          type: array
+          items:
+            type: string
+
+    Integration:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        provider:
+          type: string
+        type:
+          type: string
+          enum: [oauth, api_key, webhook]
+        icon:
+          type: string
+
+    Agent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+        systemInstructions:
+          type: string
+        model:
+          type: string
+        capabilities:
+          type: object
+        status:
+          type: string
+          enum: [draft, active, archived]
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateAgentRequest:
+      type: object
+      required:
+        - agentType
+        - industries
+        - useCases
+        - agentName
+        - tone
+        - languages
+        - responseStyle
+      properties:
+        agentType:
+          type: string
+          enum: [sales, support, operations, marketing, hr, finance]
+        industries:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        useCases:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        integrations:
+          type: array
+          items:
+            type: string
+        agentName:
+          type: string
+          minLength: 3
+        tone:
+          type: string
+          enum: [professional, friendly, technical, casual]
+        languages:
+          type: array
+          items:
+            type: string
+        responseStyle:
+          type: string
+          enum: [quick, detailed]
+
+    ExecuteAgentRequest:
+      type: object
+      required:
+        - input
+      properties:
+        input:
+          oneOf:
+            - type: string
+            - type: object
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 5
+        metadata:
+          type: object
+
+    Execution:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        agentId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, running, completed, failed, timeout]
+        input:
+          type: object
+        output:
+          type: object
+        tokensUsed:
+          type: integer
+        cost:
+          type: string
+        executionTimeMs:
+          type: integer
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+
+    Subscription:
+      type: object
+      properties:
+        plan:
+          type: string
+          enum: [free, pro, enterprise]
+        status:
+          type: string
+          enum: [active, canceled, past_due, trial]
+        agentLimit:
+          type: integer
+        executionLimit:
+          type: integer
+        agentsCreated:
+          type: integer
+        executionsThisMonth:
+          type: integer
+        remainingAgents:
+          type: integer
+        remainingExecutions:
+          type: integer
+        canCreateAgent:
+          type: boolean
+        canExecuteAgent:
+          type: boolean
+
+paths:
+  /revolution/categories:
+    get:
+      tags:
+        - Reference Data
+      summary: Get all categories
+      description: Returns all available agent categories (Sales, Support, etc.)
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  categories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+
+  /revolution/use-cases:
+    get:
+      tags:
+        - Reference Data
+      summary: Get use cases
+      description: Returns all use cases, optionally filtered by category
+      parameters:
+        - name: categorySlug
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UseCase'
+
+  /revolution/integrations:
+    get:
+      tags:
+        - Reference Data
+      summary: Get integrations
+      description: Returns all available integrations
+      parameters:
+        - name: popular
+          in: query
+          schema:
+            type: boolean
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [oauth, api_key, webhook]
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  integrations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Integration'
+
+  /revolution/agents:
+    get:
+      tags:
+        - Agent Management
+      summary: Get user's agents
+      description: Returns all agents created by the user
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  agents:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Agent'
+                  subscription:
+                    $ref: '#/components/schemas/Subscription'
+
+    post:
+      tags:
+        - Agent Management
+      summary: Create new agent
+      description: Creates a new agent from the Revolution wizard
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAgentRequest'
+      responses:
+        '200':
+          description: Agent created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  agent:
+                    $ref: '#/components/schemas/Agent'
+        '403':
+          description: Agent limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /revolution/agents/{id}:
+    get:
+      tags:
+        - Agent Management
+      summary: Get agent details
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  agent:
+                    $ref: '#/components/schemas/Agent'
+
+    put:
+      tags:
+        - Agent Management
+      summary: Update agent
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                systemInstructions:
+                  type: string
+                capabilities:
+                  type: object
+      responses:
+        '200':
+          description: Agent updated successfully
+
+    delete:
+      tags:
+        - Agent Management
+      summary: Delete agent
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Agent deleted successfully
+
+  /revolution/agents/{id}/execute:
+    post:
+      tags:
+        - Agent Execution
+      summary: Execute agent
+      description: Queues an agent execution job
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteAgentRequest'
+      responses:
+        '200':
+          description: Execution queued successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  execution:
+                    $ref: '#/components/schemas/Execution'
+        '403':
+          description: Execution limit reached
+
+    get:
+      tags:
+        - Agent Execution
+      summary: Get execution status
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: executionId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  execution:
+                    $ref: '#/components/schemas/Execution'
+
+  /revolution/subscription:
+    get:
+      tags:
+        - Subscription
+      summary: Get subscription status
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  subscription:
+                    $ref: '#/components/schemas/Subscription'
+
+  /revolution/rate-limit:
+    get:
+      tags:
+        - Rate Limiting
+      summary: Get rate limit status
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  rateLimit:
+                    type: object
+                    properties:
+                      plan:
+                        type: string
+                      limit:
+                        type: integer
+                      used:
+                        type: integer
+                      remaining:
+                        type: integer
+                      resetTime:
+                        type: string
+
+  /stripe/checkout:
+    post:
+      tags:
+        - Subscription
+      summary: Create checkout session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - plan
+                - userId
+                - userEmail
+              properties:
+                plan:
+                  type: string
+                  enum: [pro, enterprise]
+                userId:
+                  type: string
+                userEmail:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  sessionId:
+                    type: string
+                  url:
+                    type: string
+
+  /oauth/hubspot/authorize:
+    get:
+      tags:
+        - OAuth
+      summary: Start HubSpot OAuth
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to HubSpot authorization
+
+  /oauth/google/authorize:
+    get:
+      tags:
+        - OAuth
+      summary: Start Google OAuth
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to Google authorization
+
+  /webhooks/hubspot:
+    post:
+      tags:
+        - Webhooks
+      summary: Receive HubSpot webhooks
+      description: Receives webhook events from HubSpot for contact and deal changes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  objectId:
+                    type: integer
+                  propertyName:
+                    type: string
+                  propertyValue:
+                    type: string
+                  subscriptionType:
+                    type: string
+                  portalId:
+                    type: integer
+      responses:
+        '200':
+          description: Webhook processed successfully
+
+  /revolution/webhooks:
+    get:
+      tags:
+        - Webhooks
+      summary: Get user's webhooks
+      description: Returns all webhook subscriptions for the user
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  webhooks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        eventType:
+                          type: string
+                        objectType:
+                          type: string
+                        status:
+                          type: string
+                        triggerCount:
+                          type: integer
+
+    delete:
+      tags:
+        - Webhooks
+      summary: Deactivate webhook
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Webhook deactivated

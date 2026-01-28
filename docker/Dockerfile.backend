@@ -1,0 +1,108 @@
+# =============================================================================
+# Flowent AI Studio - Backend Dockerfile
+# Multi-stage build for API Server and Worker processes
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Stage 1: Dependencies
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS deps
+
+# Install build dependencies for native modules
+RUN apk add --no-cache libc6-compat python3 make g++
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install all dependencies (including devDependencies for build)
+RUN npm ci --legacy-peer-deps
+
+# -----------------------------------------------------------------------------
+# Stage 2: Builder
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Generate Prisma client (if using Prisma)
+RUN npx prisma generate 2>/dev/null || true
+
+# Build TypeScript
+RUN npm run build:server 2>/dev/null || \
+    npx tsc --project tsconfig.server.json 2>/dev/null || \
+    npx tsc -p tsconfig.json --outDir dist 2>/dev/null || \
+    echo "Using ts-node for runtime compilation"
+
+# -----------------------------------------------------------------------------
+# Stage 3: Production Runner
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS runner
+
+# Add labels for container identification
+LABEL org.opencontainers.image.title="Flowent AI Studio Backend"
+LABEL org.opencontainers.image.description="API Server and Worker for Flowent AI Studio"
+LABEL org.opencontainers.image.version="1.0.0"
+
+# Install runtime dependencies (including redis-cli and postgresql-client for health checks)
+RUN apk add --no-cache \
+    libc6-compat \
+    curl \
+    tini \
+    redis \
+    postgresql-client \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user for security
+RUN addgroup --system --gid 1001 flowent && \
+    adduser --system --uid 1001 flowent
+
+WORKDIR /app
+
+# Set production environment
+ENV NODE_ENV=production
+ENV PORT=4000
+
+# Copy package files
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json ./
+
+# Copy built files (or source if no build)
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/server ./server
+COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/workers ./workers
+
+# Copy Prisma schema and migrations
+COPY prisma ./prisma
+COPY drizzle.config.ts ./
+COPY lib/db/migrations ./lib/db/migrations
+
+# Copy entrypoint script
+COPY docker/scripts/backend-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/uploads /app/temp && \
+    chown -R flowent:flowent /app
+
+# Switch to non-root user
+USER flowent
+
+# Expose API port
+EXPOSE 4000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:4000/api/health || exit 1
+
+# Use tini as init system
+ENTRYPOINT ["/sbin/tini", "--"]
+
+# Default command (can be overridden for worker)
+CMD ["/entrypoint.sh", "api"]

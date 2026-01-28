@@ -1,0 +1,271 @@
+# =============================================================================
+# Flowent AI Studio - Docker Compose Configuration
+# Complete stack orchestration for production deployment
+# =============================================================================
+#
+# Usage:
+#   Development:  docker-compose up -d
+#   Production:   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   Stop:         docker-compose down
+#   Logs:         docker-compose logs -f [service]
+#   Rebuild:      docker-compose build --no-cache
+#   With Worker:  docker-compose --profile with-worker up -d
+#
+# =============================================================================
+
+version: '3.9'
+
+# =============================================================================
+# Services
+# =============================================================================
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database with pgvector
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: flowent-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-flowent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-flowent_secret_2024}
+      POSTGRES_DB: ${POSTGRES_DB:-flowent_db}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-scripts:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - flowent-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-flowent} -d ${POSTGRES_DB:-flowent_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  # ---------------------------------------------------------------------------
+  # Redis Queue & Cache
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: flowent-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:-flowent_redis_2024}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - flowent-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-flowent_redis_2024}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ---------------------------------------------------------------------------
+  # Backend API Server
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+      args:
+        - NODE_ENV=production
+    container_name: flowent-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-flowent}:${POSTGRES_PASSWORD:-flowent_secret_2024}@postgres:5432/${POSTGRES_DB:-flowent_db}?schema=public
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-flowent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-flowent_secret_2024}
+      POSTGRES_DB: ${POSTGRES_DB:-flowent_db}
+
+      # Redis
+      REDIS_URL: redis://:${REDIS_PASSWORD:-flowent_redis_2024}@redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-flowent_redis_2024}
+
+      # Security
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      SESSION_SECRET: ${SESSION_SECRET}
+
+      # API Keys
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+
+      # Frontend URL (for CORS)
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+
+      # Feature Flags
+      ENABLE_SWAGGER: ${ENABLE_SWAGGER:-false}
+      ENABLE_METRICS: ${ENABLE_METRICS:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - backend_uploads:/app/uploads
+      - backend_logs:/app/logs
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    networks:
+      - flowent-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  # ---------------------------------------------------------------------------
+  # Background Worker (BullMQ)
+  # ---------------------------------------------------------------------------
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: flowent-worker
+    restart: unless-stopped
+    command: ["/entrypoint.sh", "worker"]
+    environment:
+      NODE_ENV: production
+      WORKER_MODE: true
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-5}
+
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-flowent}:${POSTGRES_PASSWORD:-flowent_secret_2024}@postgres:5432/${POSTGRES_DB:-flowent_db}?schema=public
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-flowent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-flowent_secret_2024}
+      POSTGRES_DB: ${POSTGRES_DB:-flowent_db}
+
+      # Redis
+      REDIS_URL: redis://:${REDIS_PASSWORD:-flowent_redis_2024}@redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-flowent_redis_2024}
+
+      # Security
+      JWT_SECRET: ${JWT_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+
+      # API Keys (for workflow execution)
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+
+      # Worker Settings
+      MAX_RETRIES: ${WORKER_MAX_RETRIES:-3}
+      RETRY_DELAY: ${WORKER_RETRY_DELAY:-5000}
+      JOB_TIMEOUT: ${WORKER_JOB_TIMEOUT:-300000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - worker_logs:/app/logs
+    networks:
+      - flowent-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    profiles:
+      - with-worker
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  # ---------------------------------------------------------------------------
+  # Frontend (Next.js)
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:4000}
+        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Flowent AI Studio}
+    container_name: flowent-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+      NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:4000}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    networks:
+      - flowent-network
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  flowent-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  backend_uploads:
+    driver: local
+  backend_logs:
+    driver: local
+  worker_logs:
+    driver: local

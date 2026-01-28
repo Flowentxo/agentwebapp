@@ -1,0 +1,255 @@
+name: Rollback Container (GHCR)
+on:
+  workflow_dispatch:
+    inputs:
+      tag_strategy:
+        description: 'How to choose the image tag'
+        required: true
+        type: choice
+        options:
+          - latest            # newest tag by update time
+          - previous          # second-newest by update time
+          - semver_latest     # highest vX.Y.Z
+          - manual            # use "tag" input
+        default: latest
+      tag:
+        description: 'Exact tag to deploy (required if tag_strategy=manual)'
+        required: false
+        type: string
+      deployment_system:
+        description: 'Where to apply the image (optional)'
+        required: true
+        type: choice
+        options:
+          - none
+          - kubernetes
+          - flyio
+        default: none
+      k8s_namespace:
+        description: 'Kubernetes namespace (if deployment_system=kubernetes)'
+        required: false
+        type: string
+        default: default
+      k8s_deployment:
+        description: 'Kubernetes Deployment name (if deployment_system=kubernetes)'
+        required: false
+        type: string
+      k8s_container:
+        description: 'Container name in the Deployment (if deployment_system=kubernetes)'
+        required: false
+        type: string
+      fly_app:
+        description: 'Fly.io app name (if deployment_system=flyio)'
+        required: false
+        type: string
+      health_url:
+        description: 'HTTP URL to smoke-test after rollout (e.g., https://app.example.com/api/health)'
+        required: false
+        type: string
+      skip_health_check:
+        description: 'Skip health check? (emergency only)'
+        required: false
+        type: boolean
+        default: false
+      reason:
+        description: 'Reason for rollback (included in summary)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+  deployments: write
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment:
+      name: Production   # gate with Environment approvers if desired
+    env:
+      IMAGE_REPO: ghcr.io/${{ github.repository }}  # e.g. ghcr.io/org/repo
+    steps:
+      - name: Checkout (base)
+        uses: actions/checkout@v4
+
+      - name: Resolve tag from GHCR
+        id: resolve
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;  // container package name
+            const strategy = core.getInput('tag_strategy');
+            const manualTag = core.getInput('tag');
+
+            // Fetch container versions from GHCR (org first, then user)
+            async function listVersions() {
+              try {
+                const r = await github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg({
+                  package_type: 'container',
+                  package_name: repo,
+                  org: owner,
+                  per_page: 100
+                });
+                return r.data;
+              } catch (e) {
+                if (e.status !== 404) throw e;
+                const r2 = await github.rest.packages.getAllPackageVersionsForPackageOwnedByUser({
+                  package_type: 'container',
+                  package_name: repo,
+                  username: owner,
+                  per_page: 100
+                });
+                return r2.data;
+              }
+            }
+
+            const versions = await listVersions();
+            const allTags = [];
+            for (const v of versions) {
+              const tags = v?.metadata?.container?.tags || [];
+              for (const t of tags) {
+                if (t && !allTags.includes(t)) allTags.push(t);
+              }
+            }
+            // Sort by most-recent update across versions
+            const updatedOrder = versions
+              .flatMap(v => (v?.metadata?.container?.tags || []).map(t => ({ tag: t, updated_at: v.updated_at || v.created_at })))
+              .filter(e => !!e.tag)
+              .sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at))
+              .map(e => e.tag);
+
+            function semverScore(t) {
+              const m = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(t);
+              if (!m) return null;
+              return [parseInt(m[1],10), parseInt(m[2],10), parseInt(m[3],10)];
+            }
+            const semverSorted = allTags
+              .map(t => ({ t, s: semverScore(t) }))
+              .filter(x => x.s)
+              .sort((a,b)=> (b.s[0]-a.s[0]) || (b.s[1]-a.s[1]) || (b.s[2]-a.s[2]))
+              .map(x => x.t);
+
+            // Choose tag
+            let chosen;
+            if (strategy === 'manual') {
+              if (!manualTag) core.setFailed('tag_strategy=manual requires "tag" input.');
+              chosen = manualTag;
+            } else if (strategy === 'semver_latest') {
+              if (semverSorted.length === 0) core.setFailed('No semver tags found (vX.Y.Z).');
+              chosen = semverSorted[0];
+            } else if (strategy === 'previous') {
+              const ordered = [...new Set(updatedOrder)];
+              if (ordered.length < 2) core.setFailed('Not enough tags to pick "previous".');
+              chosen = ordered[1];
+            } else { // latest
+              const ordered = [...new Set(updatedOrder)];
+              if (ordered.length === 0) core.setFailed('No tags found in GHCR for this package.');
+              chosen = ordered[0];
+            }
+
+            // Validate chosen exists
+            if (!allTags.includes(chosen)) {
+              core.setFailed(`Chosen tag "${chosen}" not found in GHCR tags.`);
+            }
+
+            core.setOutput('tag', chosen);
+            core.setOutput('image', `${process.env.IMAGE_REPO}:${chosen}`);
+
+            // Summarize top tags
+            const uniq = [...new Set(updatedOrder)];
+            const top = uniq.slice(0, 30);
+            core.summary
+              .addHeading('GHCR Tag Resolution')
+              .addTable([
+                [{data:'Strategy',header:true},{data:'Chosen Tag',header:true},{data:'Image',header:true}],
+                [strategy, chosen, `${process.env.IMAGE_REPO}:${chosen}`]
+              ])
+              .addHeading('Most recent tags (by update)', 3)
+              .addList(top.map(t=>`${t}`))
+              .write();
+
+      - name: Ensure tag resolved
+        run: |
+          echo "Using image: ${{ steps.resolve.outputs.image }}"
+          test -n "${{ steps.resolve.outputs.tag }}" || (echo "No tag resolved" && exit 1)
+
+      # --- Optional: Kubernetes rollout ---
+      - name: Configure kubectl (if k8s)
+        if: ${{ inputs.deployment_system == 'kubernetes' }}
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+        run: |
+          if [ -z "$KUBE_CONFIG_DATA" ]; then
+            echo "KUBE_CONFIG_DATA secret (base64 kubeconfig) is required."; exit 1;
+          fi
+          mkdir -p $HOME/.kube
+          echo "$KUBE_CONFIG_DATA" | base64 -d > $HOME/.kube/config
+
+      - name: Rollout to Kubernetes
+        if: ${{ inputs.deployment_system == 'kubernetes' }}
+        run: |
+          set -euo pipefail
+          DEPLOY="${{ inputs.k8s_deployment }}"
+          CONTAINER="${{ inputs.k8s_container }}"
+          NS="${{ inputs.k8s_namespace }}"
+          IMG="${{ steps.resolve.outputs.image }}"
+          if [ -z "$DEPLOY" ] || [ -z "$CONTAINER" ]; then
+            echo "k8s_deployment and k8s_container inputs are required for Kubernetes."; exit 1;
+          fi
+          kubectl -n "$NS" set image deployment/"$DEPLOY" "$CONTAINER"="$IMG" --record
+          kubectl -n "$NS" rollout status deployment/"$DEPLOY" --timeout=300s
+
+      # --- Optional: Fly.io rollout ---
+      - name: Setup flyctl (if Fly.io)
+        if: ${{ inputs.deployment_system == 'flyio' }}
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Rollout to Fly.io
+        if: ${{ inputs.deployment_system == 'flyio' }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          APP="${{ inputs.fly_app }}"
+          IMG="${{ steps.resolve.outputs.image }}"
+          if [ -z "$FLY_API_TOKEN" ]; then echo "FLY_API_TOKEN secret is required"; exit 1; fi
+          if [ -z "$APP" ]; then echo "fly_app input is required"; exit 1; fi
+          flyctl deploy --app "$APP" --image "$IMG" --yes --strategy immediate --wait-timeout 600
+
+      # --- Smoke test (optional) ---
+      - name: Smoke check (health_url)
+        if: ${{ inputs.health_url != '' && inputs.skip_health_check != true }}
+        run: |
+          set -euo pipefail
+          URL="${{ inputs.health_url }}"
+          echo "Health checking: $URL"
+          for i in {1..20}; do
+            CODE=$(curl -s -o /tmp/rr -w "%{http_code}" "$URL" || true)
+            CT=$(curl -sI "$URL" | awk 'BEGIN{IGNORECASE=1}/^content-type:/ {print $2}')
+            if [ "$CODE" = "200" ] && [[ "$CT" == application/json* ]]; then
+              echo "OK (200 + JSON)"; exit 0
+            fi
+            echo "Attempt $i failed (code=$CODE, ct=$CT); retrying…"; sleep 5
+          done
+          echo "Health check failed"; cat /tmp/rr || true; exit 1
+
+      - name: Summary
+        if: ${{ always() }}
+        run: |
+          {
+            echo "## 🔁 GHCR Rollback Summary"
+            echo ""
+            echo "- **Image:** ${{ steps.resolve.outputs.image }}"
+            echo "- **Tag strategy:** ${{ inputs.tag_strategy }}"
+            echo "- **Deployment system:** ${{ inputs.deployment_system }}"
+            if [ "${{ inputs.deployment_system }}" = "kubernetes" ]; then
+              echo "- **K8s:** ns=${{ inputs.k8s_namespace }}, deploy=${{ inputs.k8s_deployment }}, container=${{ inputs.k8s_container }}"
+            fi
+            if [ "${{ inputs.deployment_system }}" = "flyio" ]; then
+              echo "- **Fly.io app:** ${{ inputs.fly_app }}"
+            fi
+            echo "- **Health URL:** ${{ inputs.health_url || '(none)' }}"
+            echo "- **Skip health check:** ${{ inputs.skip_health_check }}"
+            echo "- **Reason:** ${{ inputs.reason }}"
+          } >> "$GITHUB_STEP_SUMMARY"

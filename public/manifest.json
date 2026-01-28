@@ -1,0 +1,17 @@
+{
+  "name": "Flowent AI",
+  "short_name": "Flowent",
+  "description": "Build, deploy, and manage AI agents with real-world capabilities",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0b",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

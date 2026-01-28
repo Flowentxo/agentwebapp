@@ -1,0 +1,767 @@
+/**
+ * 🍎 Brain AI v3.0 "Oracle" - Extended Edition
+ *
+ * "Design is not just what it looks like and feels like.
+ *  Design is how it works." - Steve Jobs
+ *
+ * PRINCIPLES:
+ * - Spotlight-Style Focus
+ * - Radical Simplicity
+ * - Immediate Clarity
+ * - No Distractions
+ * - Pure Magic
+ *
+ * NEW IN v3.0:
+ * - Meeting Intelligence (Predictive Context Engine)
+ * - Business Ideas Generator
+ * - Daily Learning Questions
+ */
+
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Search,
+  Sparkles,
+  Upload,
+  Lightbulb,
+  FileText,
+  Brain,
+  ArrowRight,
+  Calendar,
+  GraduationCap,
+  LayoutGrid,
+} from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { KnowledgeGraph } from '@/components/brain/KnowledgeGraph';
+import { PredictiveContextEngine } from '@/components/brain/PredictiveContextEngine';
+import { BusinessIdeas } from '@/components/brain/BusinessIdeas';
+import { DailyLearningQuestions } from '@/components/brain/DailyLearningQuestions';
+import { useToast } from '@/components/ui/toast';
+
+// ===== TYPES =====
+
+interface QuickAction {
+  id: string;
+  icon: React.ReactNode;
+  label: string;
+  description: string;
+  action: () => void;
+}
+
+type TabType = 'overview' | 'meetings' | 'ideas' | 'learning';
+
+interface Tab {
+  id: TabType;
+  label: string;
+  icon: React.ReactNode;
+  badge?: string;
+}
+
+// ===== MAIN COMPONENT =====
+
+export default function BrainOracle() {
+  // Tab State
+  const [activeTab, setActiveTab] = useState<TabType>('overview');
+
+  // Search State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResult, setSearchResult] = useState('');
+  const [showResults, setShowResults] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const { push: showToast } = useToast();
+
+  // Tabs Configuration
+  const tabs: Tab[] = [
+    {
+      id: 'overview',
+      label: 'Übersicht',
+      icon: <LayoutGrid className="h-4 w-4" />,
+    },
+    {
+      id: 'meetings',
+      label: 'Meetings',
+      icon: <Calendar className="h-4 w-4" />,
+      badge: 'NEU',
+    },
+    {
+      id: 'ideas',
+      label: 'Ideen',
+      icon: <Lightbulb className="h-4 w-4" />,
+      badge: 'NEU',
+    },
+    {
+      id: 'learning',
+      label: 'Lernen',
+      icon: <GraduationCap className="h-4 w-4" />,
+      badge: 'NEU',
+    },
+  ];
+
+  // Handle Quick Action click
+  const handleQuickAction = (query: string) => {
+    setSearchQuery(query);
+    setActiveTab('overview'); // Switch to overview tab
+    showToast({
+      variant: 'info',
+      title: 'Suche gestartet',
+      description: 'Brain AI analysiert deine Anfrage...',
+      duration: 2000,
+    });
+    // Trigger search automatically
+    setTimeout(() => {
+      const form = document.querySelector('form') as HTMLFormElement;
+      if (form) {
+        form.requestSubmit();
+      }
+    }, 100);
+  };
+
+  // Quick Actions (Minimal, Intelligent)
+  const quickActions: QuickAction[] = [
+    {
+      id: 'insights',
+      icon: <Sparkles className="h-5 w-5" />,
+      label: 'Zeig mir wichtige Insights',
+      description: 'AI-generierte Erkenntnisse aus deinen Daten',
+      action: () => handleQuickAction('Zeig mir die wichtigsten Insights aus meinen Daten und Aktivitäten der letzten 7 Tage'),
+    },
+    {
+      id: 'documents',
+      icon: <FileText className="h-5 w-5" />,
+      label: 'Dokumente durchsuchen',
+      description: 'Finde relevante Informationen in deinen Uploads',
+      action: () => handleQuickAction('Durchsuche meine hochgeladenen Dokumente und fasse die wichtigsten Inhalte zusammen'),
+    },
+    {
+      id: 'ideas',
+      icon: <Lightbulb className="h-5 w-5" />,
+      label: 'Business-Ideen generieren',
+      description: 'Proaktive Vorschläge basierend auf deiner Aktivität',
+      action: () => handleQuickAction('Generiere 3 innovative Business-Ideen basierend auf meinen Daten und aktuellen Trends'),
+    },
+  ];
+
+  // Auto-focus search on mount (only in overview tab)
+  useEffect(() => {
+    if (activeTab === 'overview') {
+      searchRef.current?.focus();
+    }
+  }, [activeTab]);
+
+  // Handle search submit
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim() || isSearching) return;
+
+    setIsSearching(true);
+    setSearchResult('');
+    setShowResults(true);
+
+    try {
+      abortControllerRef.current = new AbortController();
+
+      const response = await fetch('/api/brain/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: searchQuery,
+          userId: 'default-user',
+          workspaceId: 'default-workspace',
+        }),
+        signal: abortControllerRef.current.signal,
+      });
+
+      if (!response.ok) throw new Error('Search failed');
+      if (!response.body) throw new Error('No response body');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let accumulatedResult = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+
+              if (data.chunk) {
+                accumulatedResult += data.chunk;
+                setSearchResult(accumulatedResult);
+              }
+
+              if (data.done) {
+                console.log('[Brain AI] Search completed:', data.metadata);
+                showToast({
+                  variant: 'success',
+                  title: 'Suche abgeschlossen',
+                  description: 'Antwort wurde erfolgreich generiert',
+                  duration: 3000,
+                });
+              }
+
+              if (data.error) {
+                throw new Error(data.error);
+              }
+            } catch (parseError) {
+              console.error('[Brain AI] Parse error:', parseError);
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error('[Brain AI] Search failed:', error);
+        setSearchResult('⚠️ Suche fehlgeschlagen. Bitte versuche es erneut.');
+        showToast({
+          variant: 'error',
+          title: 'Suche fehlgeschlagen',
+          description: 'Bitte überprüfe deine Internetverbindung und versuche es erneut.',
+          duration: 5000,
+        });
+      }
+    } finally {
+      setIsSearching(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
+  return (
+    <div className="oracle-page">
+      {/* ===== HERO SECTION ===== */}
+      <section className="oracle-container">
+        <div className="flex flex-col items-center justify-center py-12 md:py-16">
+          {/* Icon */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{
+              duration: 0.5,
+              ease: [0.16, 1, 0.3, 1],
+            }}
+            className="mb-6"
+          >
+            <div className="flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-[var(--oracle-blue)] to-[var(--oracle-blue-hover)] oracle-glow-blue">
+              <Brain className="h-8 w-8 md:h-10 md:w-10 text-white" />
+            </div>
+          </motion.div>
+
+          {/* Title */}
+          <motion.h1
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="oracle-title-1 mb-3 text-center"
+            style={{ color: 'var(--oracle-text-primary)' }}
+          >
+            Brain AI
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="oracle-body text-center mb-8"
+            style={{ color: 'var(--oracle-text-secondary)' }}
+          >
+            Dein intelligenter Wissensassistent
+          </motion.p>
+
+          {/* Tab Navigation */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="flex gap-2 mb-8 flex-wrap justify-center"
+          >
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`
+                  relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm
+                  transition-all duration-200
+                  ${
+                    activeTab === tab.id
+                      ? 'bg-[var(--oracle-blue)] text-white shadow-lg'
+                      : 'bg-[var(--oracle-surface-secondary)] hover:bg-[var(--oracle-surface-tertiary)] text-[var(--oracle-text-secondary)]'
+                  }
+                `}
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+                {tab.badge && (
+                  <span
+                    className={`
+                      ml-1 px-1.5 py-0.5 text-xs font-semibold rounded
+                      ${
+                        activeTab === tab.id
+                          ? 'bg-white/20 text-white'
+                          : 'bg-[var(--oracle-blue)]/20 text-[var(--oracle-blue)]'
+                      }
+                    `}
+                  >
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </motion.div>
+
+          {/* Search Bar (Only in Overview Tab) */}
+          {activeTab === 'overview' && (
+            <motion.form
+              onSubmit={handleSearch}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{
+                duration: 0.4,
+                ease: [0.16, 1, 0.3, 1],
+              }}
+              className="w-full max-w-3xl mb-8 md:mb-12"
+            >
+              <div className="oracle-search relative">
+                <Search
+                  className={`absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 transition-colors duration-300 ${
+                    isFocused
+                      ? 'text-[var(--oracle-blue)]'
+                      : 'text-[var(--oracle-text-tertiary)]'
+                  }`}
+                />
+                <input
+                  ref={searchRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
+                  placeholder="Was möchtest du wissen?"
+                  className="oracle-search-input pl-16 pr-6 text-center"
+                  style={{
+                    fontSize: 'var(--oracle-text-title-3)',
+                    fontWeight: 'var(--oracle-weight-regular)',
+                  }}
+                />
+                <AnimatePresence>
+                  {searchQuery && (
+                    <motion.button
+                      type="submit"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center justify-center w-10 h-10 rounded-full bg-[var(--oracle-blue)] text-white hover:bg-[var(--oracle-blue-hover)] transition-all duration-200 hover:scale-110"
+                    >
+                      <ArrowRight className="h-5 w-5" />
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.form>
+          )}
+
+          {/* Search Results (Only in Overview Tab) */}
+          {activeTab === 'overview' && (
+            <AnimatePresence>
+              {showResults && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{
+                    duration: 0.3,
+                    ease: [0.16, 1, 0.3, 1],
+                  }}
+                  className="w-full max-w-3xl mb-8"
+                >
+                  <div className="oracle-card">
+                    {/* Search Query Header */}
+                    <div className="flex items-start justify-between mb-6 pb-4 border-b border-[var(--oracle-surface-secondary)]">
+                      <div className="flex-1">
+                        <p
+                          className="text-xs font-medium mb-1"
+                          style={{ color: 'var(--oracle-text-tertiary)' }}
+                        >
+                          ANTWORT AUF
+                        </p>
+                        <p
+                          className="font-medium"
+                          style={{
+                            fontSize: 'var(--oracle-text-callout)',
+                            color: 'var(--oracle-text-primary)',
+                          }}
+                        >
+                          {searchQuery}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setShowResults(false);
+                          setSearchResult('');
+                          setSearchQuery('');
+                        }}
+                        className="p-2 oracle-hover-secondary rounded-lg transition-colors duration-200"
+                        aria-label="Close results"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          style={{ color: 'var(--oracle-text-tertiary)' }}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* AI Response */}
+                    <div
+                      className="prose prose-sm max-w-none"
+                      style={{
+                        color: 'var(--oracle-text-secondary)',
+                        fontSize: 'var(--oracle-text-body)',
+                        lineHeight: '1.6',
+                      }}
+                    >
+                      {isSearching && !searchResult && (
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            <span
+                              className="w-2 h-2 rounded-full bg-[var(--oracle-blue)] animate-pulse"
+                              style={{ animationDelay: '0ms' }}
+                            />
+                            <span
+                              className="w-2 h-2 rounded-full bg-[var(--oracle-blue)] animate-pulse"
+                              style={{ animationDelay: '150ms' }}
+                            />
+                            <span
+                              className="w-2 h-2 rounded-full bg-[var(--oracle-blue)] animate-pulse"
+                              style={{ animationDelay: '300ms' }}
+                            />
+                          </div>
+                          <span
+                            className="text-sm"
+                            style={{ color: 'var(--oracle-text-tertiary)' }}
+                          >
+                            Denke nach...
+                          </span>
+                        </div>
+                      )}
+
+                      {searchResult && (
+                        <div>
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            className="markdown-content"
+                          >
+                            {searchResult}
+                          </ReactMarkdown>
+                          {isSearching && (
+                            <span className="inline-block w-1 h-4 ml-1 bg-[var(--oracle-blue)] animate-pulse" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
+
+          {/* Quick Actions (Only in Overview Tab when no results) */}
+          {activeTab === 'overview' && !showResults && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{
+                duration: 0.8,
+                delay: 0.4,
+                ease: [0.16, 1, 0.3, 1],
+              }}
+              className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl"
+            >
+              {quickActions.map((action, index) => (
+                <motion.button
+                  key={action.id}
+                  onClick={action.action}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.4,
+                    delay: 0.5 + index * 0.1,
+                    ease: [0.16, 1, 0.3, 1],
+                  }}
+                  className="oracle-card-minimal group text-left hover:shadow-md transition-all duration-300"
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-300"
+                      style={{
+                        background: 'var(--oracle-blue-light)',
+                        color: 'var(--oracle-blue)',
+                      }}
+                    >
+                      {action.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className="font-medium mb-1 group-hover:text-[var(--oracle-blue)] transition-colors duration-200"
+                        style={{
+                          fontSize: 'var(--oracle-text-callout)',
+                          color: 'var(--oracle-text-primary)',
+                        }}
+                      >
+                        {action.label}
+                      </p>
+                      <p
+                        className="text-xs leading-relaxed"
+                        style={{
+                          color: 'var(--oracle-text-tertiary)',
+                        }}
+                      >
+                        {action.description}
+                      </p>
+                    </div>
+                  </div>
+                </motion.button>
+              ))}
+            </motion.div>
+          )}
+        </div>
+      </section>
+
+      {/* ===== TAB CONTENT SECTIONS ===== */}
+
+      {/* Overview Tab Content */}
+      {activeTab === 'overview' && (
+        <>
+          {/* Knowledge Graph Section */}
+          <motion.section
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{
+              duration: 1,
+              delay: 0.8,
+              ease: [0.16, 1, 0.3, 1],
+            }}
+            className="oracle-container-wide py-12 md:py-20"
+          >
+            <div className="text-center mb-8 md:mb-12">
+              <h2
+                className="oracle-title-2 mb-4"
+                style={{ color: 'var(--oracle-text-primary)' }}
+              >
+                Dein Wissensgraph
+              </h2>
+              <p
+                className="oracle-body max-w-2xl mx-auto"
+                style={{ color: 'var(--oracle-text-secondary)' }}
+              >
+                Visualisierung deiner Verbindungen zwischen Dokumenten, Ideen und Insights
+              </p>
+            </div>
+
+            <div className="oracle-card">
+              <KnowledgeGraph />
+            </div>
+          </motion.section>
+
+          {/* Smart Actions Bar */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: 0.8,
+              delay: 1,
+              ease: [0.16, 1, 0.3, 1],
+            }}
+            className="oracle-container py-12 md:py-16"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+              {/* Upload Document */}
+              <button
+                onClick={() => handleQuickAction('Ich möchte ein Dokument hochladen und analysieren lassen. Welche Formate werden unterstützt?')}
+                className="oracle-card group hover:shadow-xl transition-all duration-300"
+              >
+                <div className="flex flex-col items-center text-center p-6 md:p-8">
+                  <div
+                    className="flex items-center justify-center w-16 h-16 rounded-full mb-6 transition-all duration-300 group-hover:scale-110"
+                    style={{
+                      background: 'var(--oracle-blue-light)',
+                      color: 'var(--oracle-blue)',
+                    }}
+                  >
+                    <Upload className="h-8 w-8" />
+                  </div>
+                  <h3
+                    className="oracle-title-3 mb-2"
+                    style={{ color: 'var(--oracle-text-primary)' }}
+                  >
+                    Dokument hochladen
+                  </h3>
+                  <p
+                    className="oracle-subhead"
+                    style={{ color: 'var(--oracle-text-secondary)' }}
+                  >
+                    PDF, DOCX, TXT, Markdown oder CSV analysieren lassen
+                  </p>
+                </div>
+              </button>
+
+              {/* Generate Idea */}
+              <button
+                onClick={() => setActiveTab('ideas')}
+                className="oracle-card group hover:shadow-xl transition-all duration-300"
+              >
+                <div className="flex flex-col items-center text-center p-6 md:p-8">
+                  <div
+                    className="flex items-center justify-center w-16 h-16 rounded-full mb-6 transition-all duration-300 group-hover:scale-110"
+                    style={{
+                      background: 'var(--oracle-blue-light)',
+                      color: 'var(--oracle-blue)',
+                    }}
+                  >
+                    <Lightbulb className="h-8 w-8" />
+                  </div>
+                  <h3
+                    className="oracle-title-3 mb-2"
+                    style={{ color: 'var(--oracle-text-primary)' }}
+                  >
+                    Idee generieren
+                  </h3>
+                  <p
+                    className="oracle-subhead"
+                    style={{ color: 'var(--oracle-text-secondary)' }}
+                  >
+                    AI-generierte Business-Ideen basierend auf deinem Kontext
+                  </p>
+                </div>
+              </button>
+
+              {/* Ask Question */}
+              <button
+                onClick={() => setActiveTab('learning')}
+                className="oracle-card group hover:shadow-xl transition-all duration-300"
+              >
+                <div className="flex flex-col items-center text-center p-6 md:p-8">
+                  <div
+                    className="flex items-center justify-center w-16 h-16 rounded-full mb-6 transition-all duration-300 group-hover:scale-110"
+                    style={{
+                      background: 'var(--oracle-blue-light)',
+                      color: 'var(--oracle-blue)',
+                    }}
+                  >
+                    <Sparkles className="h-8 w-8" />
+                  </div>
+                  <h3
+                    className="oracle-title-3 mb-2"
+                    style={{ color: 'var(--oracle-text-primary)' }}
+                  >
+                    Frage stellen
+                  </h3>
+                  <p
+                    className="oracle-subhead"
+                    style={{ color: 'var(--oracle-text-secondary)' }}
+                  >
+                    Tägliche Lernfragen für strategisches Denken
+                  </p>
+                </div>
+              </button>
+            </div>
+          </motion.section>
+        </>
+      )}
+
+      {/* Meetings Tab Content */}
+      {activeTab === 'meetings' && (
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.4 }}
+          className="oracle-container-wide py-12"
+        >
+          <div className="mb-8 text-center">
+            <h2 className="oracle-title-2 mb-3" style={{ color: 'var(--oracle-text-primary)' }}>
+              Meeting Intelligence
+            </h2>
+            <p className="oracle-body max-w-2xl mx-auto" style={{ color: 'var(--oracle-text-secondary)' }}>
+              Automatische Meeting-Vorbereitung mit KI-gestützten Briefings und Context-Vorhersagen
+            </p>
+          </div>
+          <PredictiveContextEngine />
+        </motion.section>
+      )}
+
+      {/* Ideas Tab Content */}
+      {activeTab === 'ideas' && (
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.4 }}
+          className="oracle-container-wide py-12"
+        >
+          <div className="mb-8 text-center">
+            <h2 className="oracle-title-2 mb-3" style={{ color: 'var(--oracle-text-primary)' }}>
+              Business-Ideen Generator
+            </h2>
+            <p className="oracle-body max-w-2xl mx-auto" style={{ color: 'var(--oracle-text-secondary)' }}>
+              AI-generierte, datenbasierte Business-Ideen mit Impact/Effort-Matrix und Implementierungsschritten
+            </p>
+          </div>
+          <BusinessIdeas />
+        </motion.section>
+      )}
+
+      {/* Learning Tab Content */}
+      {activeTab === 'learning' && (
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.4 }}
+          className="oracle-container-wide py-12"
+        >
+          <div className="mb-8 text-center">
+            <h2 className="oracle-title-2 mb-3" style={{ color: 'var(--oracle-text-primary)' }}>
+              Tägliche Lernfragen
+            </h2>
+            <p className="oracle-body max-w-2xl mx-auto" style={{ color: 'var(--oracle-text-secondary)' }}>
+              Personalisierte AI-Fragen basierend auf deiner Aktivität für strategisches Denken und Continuous Learning
+            </p>
+          </div>
+          <DailyLearningQuestions />
+        </motion.section>
+      )}
+    </div>
+  );
+}

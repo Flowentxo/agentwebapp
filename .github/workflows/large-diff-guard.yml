@@ -1,0 +1,69 @@
+name: Large Diff Guard
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  large-diff:
+    runs-on: ubuntu-latest
+    env:
+      MAX_CHANGED_LINES: "2000"
+      ALLOW_LABELS: "infra,chore,skip-large-diff-check"
+      ALLOW_DRAFT: "true"
+    steps:
+      - name: Evaluate PR size
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const prNumber = context.payload.pull_request.number;
+
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: prNumber });
+
+            const additions = pr.additions || 0;
+            const deletions = pr.deletions || 0;
+            const changed = additions + deletions;
+            const isDraft = !!pr.draft;
+
+            const max = parseInt(process.env.MAX_CHANGED_LINES || "2000", 10);
+            const allowDraft = (process.env.ALLOW_DRAFT || "true").toLowerCase() === "true";
+            const allowLabels = (process.env.ALLOW_LABELS || "")
+              .split(",")
+              .map(s => s.trim().toLowerCase())
+              .filter(Boolean);
+
+            const labels = (pr.labels || []).map(l => (typeof l === 'string' ? l : l.name).toLowerCase());
+            const hasAllowedLabel = labels.some(l => allowLabels.includes(l));
+
+            if (allowDraft && isDraft) {
+              core.notice(`PR is draft; skipping large diff check.`);
+              return;
+            }
+
+            core.info(`Additions: ${additions}, Deletions: ${deletions}, Total: ${changed}`);
+            core.info(`Labels: ${labels.join(", ") || "(none)"}`);
+
+            if (changed > max && !hasAllowedLabel) {
+              const marker = "<!-- large-diff-guard -->";
+              const msg = `${marker}
+🚫 **Large diff guard:** ${changed} changed lines exceeds the limit of ${max}.
+
+Add one of the allowed labels: \`${allowLabels.join("`, `")}\`
+or convert to a Draft PR while it's still WIP.`;
+
+              const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number: prNumber, per_page: 100 });
+              const existing = comments.find(c => (c.user?.type === "Bot") && c.body?.includes(marker));
+              if (existing) {
+                await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body: msg });
+              } else {
+                await github.rest.issues.createComment({ owner, repo, issue_number: prNumber, body: msg });
+              }
+
+              core.setFailed(`Large diff: ${changed} > ${max}.`);
+            } else {
+              core.notice(`Large diff check passed (${changed} ≤ ${max} or allowed label present).`);
+            }

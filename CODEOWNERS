@@ -1,0 +1,21 @@
+# Auto-request reviewers for specific paths
+# Replace @org/team with your real org/team handles
+
+# Default owner for everything
+* @your-org/eng-leads
+
+# API routes require backend approval
+/app/api/** @your-org/backend
+
+# Security-critical modules
+/lib/security/** @your-org/security
+
+# Libraries & backend logic
+/lib/** @your-org/backend
+
+# E2E & API tests
+/tests/e2e/** @your-org/qa
+/tests/api/**  @your-org/qa
+
+# CI & workflows
+/.github/** @your-org/dev-infra

@@ -1,0 +1,42 @@
+# Grafana datasources configuration for Prometheus
+apiVersion: 1
+
+datasources:
+  # Main Prometheus datasource for Brain AI metrics
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    version: 1
+    editable: true
+    jsonData:
+      httpMethod: POST
+      timeInterval: 15s
+      queryTimeout: 60s
+
+  # PostgreSQL metrics (via postgres_exporter)
+  - name: PostgreSQL Metrics
+    type: prometheus
+    access: proxy
+    url: http://postgres-exporter:9187
+    version: 1
+    editable: false
+    jsonData:
+      httpMethod: POST
+      timeInterval: 30s
+
+  # Redis metrics (via redis_exporter)
+  - name: Redis Metrics
+    type: prometheus
+    access: proxy
+    url: http://redis-exporter:9121
+    version: 1
+    editable: false
+    jsonData:
+      httpMethod: POST
+      timeInterval: 30s
+
+deleteDatasources:
+  - name: Prometheus
+    orgId: 1

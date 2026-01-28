@@ -1,0 +1,24 @@
+# ============================================
+# Simplified Dockerfile for Local Testing
+# Runs in development mode to avoid build issues
+# ============================================
+
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm install
+
+# Copy all files
+COPY . .
+
+# Install tsx globally
+RUN npm install -g tsx
+
+# Cloud Run sets PORT environment variable
+EXPOSE 8080
+
+# Run backend server only (development mode)
+CMD ["tsx", "server/index.ts"]

@@ -1,0 +1,1435 @@
+openapi: 3.0.3
+info:
+  title: Sintra AI Orchestration Platform API
+  description: |
+    Enterprise-grade AI orchestration platform for intelligent automation and workflow management.
+    
+    ## Features
+    - Multi-agent AI orchestration
+    - Real-time chat and collaboration
+    - Knowledge base management
+    - Workflow automation
+    - Analytics and monitoring
+    
+    ## Authentication
+    The API uses JWT Bearer token authentication. Include the token in the Authorization header:
+    ```
+    Authorization: Bearer <your-jwt-token>
+    ```
+    
+    ## Rate Limiting
+    - Standard endpoints: 1000 requests per hour
+    - AI chat endpoints: 100 requests per hour
+    - Admin endpoints: 500 requests per hour
+    
+    ## Error Handling
+    All endpoints return standardized error responses with German error messages.
+    
+    ## SDKs
+    - JavaScript/TypeScript: `@sintra-ai/sdk`
+    - Python: `sintra-ai-python`
+    - Go: `github.com/sintra-ai/go-sdk`
+  version: 3.0.0
+  contact:
+    name: Sintra AI Support
+    email: support@sintra-ai.com
+    url: https://sintra-ai.com/support
+  license:
+    name: Proprietary
+    url: https://sintra-ai.com/license
+  termsOfService: https://sintra-ai.com/terms
+
+servers:
+  - url: https://api.sintra-ai.com/v3
+    description: Production server
+  - url: https://staging-api.sintra-ai.com/v3
+    description: Staging server
+  - url: http://localhost:3000/api
+    description: Development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Health Check Endpoints
+  /health:
+    get:
+      tags:
+        - Health
+      summary: System health check
+      description: Returns the health status of all system components
+      operationId: getHealth
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: System is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /health/openai:
+    get:
+      tags:
+        - Health
+      summary: OpenAI service health check
+      description: Returns the health status of OpenAI API integration
+      operationId: getOpenAIHealth
+      responses:
+        '200':
+          description: OpenAI service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceHealth'
+        '503':
+          description: OpenAI service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceHealth'
+
+  /health/anthropic:
+    get:
+      tags:
+        - Health
+      summary: Anthropic service health check
+      description: Returns the health status of Anthropic API integration
+      operationId: getAnthropicHealth
+      responses:
+        '200':
+          description: Anthropic service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceHealth'
+        '503':
+          description: Anthropic service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceHealth'
+
+  /health/database:
+    get:
+      tags:
+        - Health
+      summary: Database health check
+      description: Returns the health status of database connection
+      operationId: getDatabaseHealth
+      responses:
+        '200':
+          description: Database is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceHealth'
+        '503':
+          description: Database is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceHealth'
+
+  /health/redis:
+    get:
+      tags:
+        - Health
+      summary: Redis health check
+      description: Returns the health status of Redis connection
+      operationId: getRedisHealth
+      responses:
+        '200':
+          description: Redis is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceHealth'
+        '503':
+          description: Redis is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceHealth'
+
+  # Agent Endpoints
+  /agents:
+    get:
+      tags:
+        - Agents
+      summary: List all agents
+      description: Returns a list of all available AI agents
+      operationId: listAgents
+      parameters:
+        - name: status
+          in: query
+          description: Filter by agent status
+          schema:
+            type: string
+            enum: [active, inactive, maintenance]
+        - name: type
+          in: query
+          description: Filter by agent type
+          schema:
+            type: string
+            enum: [chat, analysis, automation, custom]
+        - name: limit
+          in: query
+          description: Maximum number of agents to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of agents to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of agents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags:
+        - Agents
+      summary: Create a new agent
+      description: Creates a new custom AI agent
+      operationId: createAgent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAgentRequest'
+      responses:
+        '201':
+          description: Agent created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /agents/{agentId}:
+    get:
+      tags:
+        - Agents
+      summary: Get agent by ID
+      description: Returns detailed information about a specific agent
+      operationId: getAgent
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          description: Unique identifier of the agent
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Agent details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Agents
+      summary: Update agent
+      description: Updates an existing agent's configuration
+      operationId: updateAgent
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          description: Unique identifier of the agent
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAgentRequest'
+      responses:
+        '200':
+          description: Agent updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Agents
+      summary: Delete agent
+      description: Permanently deletes an agent
+      operationId: deleteAgent
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          description: Unique identifier of the agent
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Agent deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /agents/{agentId}/chat:
+    post:
+      tags:
+        - Agents
+      summary: Chat with agent
+      description: Send a message to an AI agent and receive a response
+      operationId: chatWithAgent
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          description: Unique identifier of the agent
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+          text/event-stream:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: Chat response (streaming)
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                example: |
+                  data: {"type": "message", "content": "Hello! How can I help you?", "agentId": "dexter"}
+                  
+                  data: {"type": "done"}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+    get:
+      tags:
+        - Agents
+      summary: Get agent chat history
+      description: Returns the chat history for a specific agent
+      operationId: getAgentChatHistory
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          description: Unique identifier of the agent
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maximum number of messages to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: before
+          in: query
+          description: Return messages before this timestamp
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Chat history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatHistory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Knowledge Base Endpoints
+  /knowledge:
+    get:
+      tags:
+        - Knowledge
+      summary: List knowledge base entries
+      description: Returns a list of knowledge base entries
+      operationId: listKnowledge
+      parameters:
+        - name: category
+          in: query
+          description: Filter by category
+          schema:
+            type: string
+        - name: tags
+          in: query
+          description: Filter by tags (comma-separated)
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maximum number of entries to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of entries to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of knowledge entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags:
+        - Knowledge
+      summary: Create knowledge entry
+      description: Creates a new knowledge base entry
+      operationId: createKnowledge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateKnowledgeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateKnowledgeWithFileRequest'
+      responses:
+        '201':
+          description: Knowledge entry created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /knowledge/search:
+    post:
+      tags:
+        - Knowledge
+      summary: Search knowledge base
+      description: Searches the knowledge base using semantic search
+      operationId: searchKnowledge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /knowledge/{knowledgeId}:
+    get:
+      tags:
+        - Knowledge
+      summary: Get knowledge entry
+      description: Returns a specific knowledge base entry
+      operationId: getKnowledge
+      parameters:
+        - name: knowledgeId
+          in: path
+          required: true
+          description: Unique identifier of the knowledge entry
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Knowledge entry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Knowledge
+      summary: Update knowledge entry
+      description: Updates an existing knowledge base entry
+      operationId: updateKnowledge
+      parameters:
+        - name: knowledgeId
+          in: path
+          required: true
+          description: Unique identifier of the knowledge entry
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateKnowledgeRequest'
+      responses:
+        '200':
+          description: Knowledge entry updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Knowledge
+      summary: Delete knowledge entry
+      description: Permanently deletes a knowledge base entry
+      operationId: deleteKnowledge
+      parameters:
+        - name: knowledgeId
+          in: path
+          required: true
+          description: Unique identifier of the knowledge entry
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Knowledge entry deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Analytics Endpoints
+  /analytics/overview:
+    get:
+      tags:
+        - Analytics
+      summary: Get analytics overview
+      description: Returns overview analytics data
+      operationId: getAnalyticsOverview
+      parameters:
+        - name: period
+          in: query
+          description: Time period for analytics
+          schema:
+            type: string
+            enum: [day, week, month, quarter, year]
+            default: month
+        - name: startDate
+          in: query
+          description: Start date for the period
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          description: End date for the period
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Analytics overview data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsOverview'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /analytics/agents:
+    get:
+      tags:
+        - Analytics
+      summary: Get agent analytics
+      description: Returns analytics data for agents
+      operationId: getAgentAnalytics
+      parameters:
+        - name: agentId
+          in: query
+          description: Specific agent ID (optional)
+          schema:
+            type: string
+        - name: period
+          in: query
+          description: Time period for analytics
+          schema:
+            type: string
+            enum: [day, week, month, quarter, year]
+            default: month
+      responses:
+        '200':
+          description: Agent analytics data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentAnalytics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # User Management Endpoints
+  /profile:
+    get:
+      tags:
+        - Profile
+      summary: Get user profile
+      description: Returns the current user's profile information
+      operationId: getUserProfile
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      tags:
+        - Profile
+      summary: Update user profile
+      description: Updates the current user's profile information
+      operationId: updateUserProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserProfileRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /profile/sessions:
+    get:
+      tags:
+        - Profile
+      summary: List user sessions
+      description: Returns a list of active user sessions
+      operationId: listUserSessions
+      responses:
+        '200':
+          description: List of user sessions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      tags:
+        - Profile
+      summary: Revoke user session
+      description: Revokes a specific user session
+      operationId: revokeUserSession
+      parameters:
+        - name: sessionId
+          in: query
+          required: true
+          description: ID of the session to revoke
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Session revoked successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Bearer token authentication
+
+  schemas:
+    # Health Schemas
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy, degraded]
+          description: Overall system health status
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp of the health check
+        services:
+          type: object
+          properties:
+            database:
+              $ref: '#/components/schemas/ServiceHealth'
+            redis:
+              $ref: '#/components/schemas/ServiceHealth'
+            openai:
+              $ref: '#/components/schemas/ServiceHealth'
+            anthropic:
+              $ref: '#/components/schemas/ServiceHealth'
+
+    ServiceHealth:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy, unknown]
+          description: Service health status
+        latency:
+          type: number
+          description: Response latency in milliseconds
+        details:
+          type: object
+          description: Additional service-specific details
+
+    # Agent Schemas
+    Agent:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the agent
+        name:
+          type: string
+          description: Display name of the agent
+        description:
+          type: string
+          description: Description of the agent's capabilities
+        type:
+          type: string
+          enum: [chat, analysis, automation, custom]
+          description: Type of the agent
+        status:
+          type: string
+          enum: [active, inactive, maintenance]
+          description: Current status of the agent
+        model:
+          type: string
+          description: AI model used by the agent
+        capabilities:
+          type: array
+          items:
+            type: string
+          description: List of agent capabilities
+        configuration:
+          type: object
+          description: Agent-specific configuration
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AgentListResponse:
+      type: object
+      properties:
+        agents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Agent'
+        total:
+          type: integer
+          description: Total number of agents
+        limit:
+          type: integer
+          description: Number of agents returned
+        offset:
+          type: integer
+          description: Number of agents skipped
+
+    CreateAgentRequest:
+      type: object
+      required:
+        - name
+        - type
+        - model
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Display name of the agent
+        description:
+          type: string
+          maxLength: 500
+          description: Description of the agent's capabilities
+        type:
+          type: string
+          enum: [chat, analysis, automation, custom]
+          description: Type of the agent
+        model:
+          type: string
+          description: AI model to use
+        capabilities:
+          type: array
+          items:
+            type: string
+          description: List of agent capabilities
+        configuration:
+          type: object
+          description: Agent-specific configuration
+
+    UpdateAgentRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        status:
+          type: string
+          enum: [active, inactive, maintenance]
+        capabilities:
+          type: array
+          items:
+            type: string
+        configuration:
+          type: object
+
+    # Chat Schemas
+    ChatRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: The message content to send to the agent
+        context:
+          type: object
+          description: Additional context for the conversation
+        stream:
+          type: boolean
+          default: true
+          description: Whether to stream the response
+
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the message
+        role:
+          type: string
+          enum: [user, assistant, system]
+          description: Role of the message sender
+        content:
+          type: string
+          description: Message content
+        timestamp:
+          type: string
+          format: date-time
+          description: When the message was created
+        metadata:
+          type: object
+          description: Additional message metadata
+
+    ChatHistory:
+      type: object
+      properties:
+        agentId:
+          type: string
+          description: ID of the agent
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+        total:
+          type: integer
+          description: Total number of messages
+        hasMore:
+          type: boolean
+          description: Whether there are more messages
+
+    # Knowledge Schemas
+    KnowledgeEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the knowledge entry
+        title:
+          type: string
+          description: Title of the knowledge entry
+        content:
+          type: string
+          description: Content of the knowledge entry
+        category:
+          type: string
+          description: Category of the entry
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags associated with the entry
+        author:
+          type: string
+          description: Author of the entry
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          description: Additional metadata
+
+    KnowledgeListResponse:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/KnowledgeEntry'
+        total:
+          type: integer
+          description: Total number of entries
+        limit:
+          type: integer
+          description: Number of entries returned
+        offset:
+          type: integer
+          description: Number of entries skipped
+
+    CreateKnowledgeRequest:
+      type: object
+      required:
+        - title
+        - content
+        - category
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Title of the knowledge entry
+        content:
+          type: string
+          minLength: 1
+          description: Content of the knowledge entry
+        category:
+          type: string
+          description: Category of the entry
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags associated with the entry
+        metadata:
+          type: object
+          description: Additional metadata
+
+    CreateKnowledgeWithFileRequest:
+      type: object
+      required:
+        - title
+        - category
+      properties:
+        title:
+          type: string
+          description: Title of the knowledge entry
+        category:
+          type: string
+          description: Category of the entry
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags associated with the entry
+        file:
+          type: string
+          format: binary
+          description: File to upload
+        metadata:
+          type: object
+          description: Additional metadata
+
+    UpdateKnowledgeRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        content:
+          type: string
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+
+    SearchRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Search query
+        filters:
+          type: object
+          description: Search filters
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+          description: Maximum number of results to return
+
+    SearchResult:
+      type: object
+      properties:
+        entry:
+          $ref: '#/components/schemas/KnowledgeEntry'
+        score:
+          type: number
+          description: Relevance score (0-1)
+        highlights:
+          type: array
+          items:
+            type: string
+          description: Text highlights from the search
+
+    SearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+        total:
+          type: integer
+          description: Total number of matching entries
+        query:
+          type: string
+          description: The original search query
+        processingTime:
+          type: number
+          description: Search processing time in milliseconds
+
+    # Analytics Schemas
+    AnalyticsOverview:
+      type: object
+      properties:
+        period:
+          type: string
+          description: Time period covered
+        totalAgents:
+          type: integer
+          description: Total number of agents
+        activeAgents:
+          type: integer
+          description: Number of active agents
+        totalMessages:
+          type: integer
+          description: Total number of messages processed
+        totalKnowledgeEntries:
+          type: integer
+          description: Total number of knowledge entries
+        responseTime:
+          type: object
+          properties:
+            average:
+              type: number
+              description: Average response time in milliseconds
+            p95:
+              type: number
+              description: 95th percentile response time
+            p99:
+              type: number
+              description: 99th percentile response time
+
+    AgentAnalytics:
+      type: object
+      properties:
+        agentId:
+          type: string
+          description: ID of the agent
+        period:
+          type: string
+          description: Time period covered
+        totalMessages:
+          type: integer
+          description: Total messages processed
+        uniqueUsers:
+          type: integer
+          description: Number of unique users
+        averageResponseTime:
+          type: number
+          description: Average response time in milliseconds
+        errorRate:
+          type: number
+          description: Error rate (0-1)
+        usageByHour:
+          type: array
+          items:
+            type: object
+            properties:
+              hour:
+                type: integer
+                description: Hour of the day (0-23)
+              count:
+                type: integer
+                description: Number of messages
+
+    # User Profile Schemas
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the user
+        email:
+          type: string
+          format: email
+          description: User's email address
+        name:
+          type: string
+          description: User's full name
+        avatar:
+          type: string
+          format: uri
+          description: URL to user's avatar image
+        role:
+          type: string
+          enum: [user, admin, super_admin]
+          description: User's role
+        preferences:
+          type: object
+          description: User preferences
+        createdAt:
+          type: string
+          format: date-time
+        lastLoginAt:
+          type: string
+          format: date-time
+
+    UpdateUserProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        avatar:
+          type: string
+          format: uri
+        preferences:
+          type: object
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the session
+        userAgent:
+          type: string
+          description: User agent string
+        ipAddress:
+          type: string
+          description: IP address of the session
+        createdAt:
+          type: string
+          format: date-time
+        lastActivityAt:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+          description: Whether the session is currently active
+
+    SessionList:
+      type: object
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Session'
+        total:
+          type: integer
+          description: Total number of sessions
+
+    # Error Schemas
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            id:
+              type: string
+              description: Unique error identifier
+            type:
+              type: string
+              description: Error type
+            title:
+              type: string
+              description: Error title in German
+            message:
+              type: string
+              description: Error message in German
+            suggestion:
+              type: string
+              description: Suggested solution in German
+            severity:
+              type: string
+              enum: [LOW, MEDIUM, HIGH, CRITICAL]
+              description: Error severity level
+            timestamp:
+              type: string
+              format: date-time
+            requestId:
+              type: string
+              description: Request identifier for tracing
+            context:
+              type: object
+              description: Additional error context
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              id: "err_1640995200_abc123"
+              type: "VALIDATION_ERROR"
+              title: "Validierungsfehler"
+              message: "Die bereitgestellten Daten sind ungültig."
+              suggestion: "Bitte überprüfen Sie Ihre Eingaben und versuchen Sie es erneut."
+              severity: "MEDIUM"
+              timestamp: "2025-12-14T20:59:59.000Z"
+
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              id: "err_1640995200_def456"
+              type: "AUTHENTICATION_ERROR"
+              title: "Authentifizierung fehlgeschlagen"
+              message: "Sie müssen angemeldet sein, um auf diese Ressource zuzugreifen."
+              suggestion: "Bitte melden Sie sich an und versuchen Sie es erneut."
+              severity: "HIGH"
+              timestamp: "2025-12-14T20:59:59.000Z"
+
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              id: "err_1640995200_ghi789"
+              type: "AUTHORIZATION_ERROR"
+              title: "Zugriff verweigert"
+              message: "Sie haben keine Berechtigung für diese Aktion."
+              suggestion: "Kontaktieren Sie Ihren Administrator für weitere Unterstützung."
+              severity: "HIGH"
+              timestamp: "2025-12-14T20:59:59.000Z"
+
+    NotFound:
+      description: Not found - resource does not exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              id: "err_1640995200_jkl012"
+              type: "NOT_FOUND_ERROR"
+              title: "Ressource nicht gefunden"
+              message: "Die angeforderte Ressource konnte nicht gefunden werden."
+              suggestion: "Überprüfen Sie die URL oder navigieren Sie zurück zur Hauptseite."
+              severity: "MEDIUM"
+              timestamp: "2025-12-14T20:59:59.000Z"
+
+    Conflict:
+      description: Conflict - resource already exists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              id: "err_1640995200_mno345"
+              type: "CONFLICT_ERROR"
+              title: "Konflikt"
+              message: "Ein Konflikt ist mit dem aktuellen Zustand der Ressource aufgetreten."
+              suggestion: "Versuchen Sie es später erneut oder aktualisieren Sie die Seite."
+              severity: "MEDIUM"
+              timestamp: "2025-12-14T20:59:59.000Z"
+
+    RateLimited:
+      description: Rate limited - too many requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              id: "err_1640995200_pqr678"
+              type: "RATE_LIMIT_ERROR"
+              title: "Rate Limit überschritten"
+              message: "Zu viele Anfragen. Bitte warten Sie einen Moment."
+              suggestion: "Versuchen Sie es in ein paar Minuten erneut."
+              severity: "MEDIUM"
+              timestamp: "2025-12-14T20:59:59.000Z"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              id: "err_1640995200_stu901"
+              type: "INTERNAL_SERVER_ERROR"
+              title: "Interner Serverfehler"
+              message: "Ein unerwarteter Fehler ist aufgetreten."
+              suggestion: "Versuchen Sie es später erneut. Falls das Problem bestehen bleibt, kontaktieren Sie den Support."
+              severity: "CRITICAL"
+              timestamp: "2025-12-14T20:59:59.000Z"
+
+tags:
+  - name: Health
+    description: System health monitoring endpoints
+  - name: Agents
+    description: AI agent management and interaction endpoints
+  - name: Knowledge
+    description: Knowledge base management endpoints
+  - name: Analytics
+    description: Analytics and reporting endpoints
+  - name: Profile
+    description: User profile management endpoints

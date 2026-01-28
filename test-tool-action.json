@@ -1,0 +1,5 @@
+{
+  "content": "Gerne erstelle ich einen Kontakt für Elon Musk im HubSpot CRM.\n\n[[TOOL_ACTION: { \"type\": \"hubspot-create-contact\", \"params\": { \"email\": \"elon@spacex.com\", \"firstName\": \"Elon\", \"lastName\": \"Musk\", \"company\": \"SpaceX\" } }]]\n\nBitte bestätige die Aktion, um den Kontakt zu erstellen.",
+  "role": "agent",
+  "type": "text"
+}

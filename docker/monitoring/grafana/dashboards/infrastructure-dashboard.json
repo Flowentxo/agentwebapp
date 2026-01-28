@@ -1,0 +1,707 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "brain-ai-infra",
+    "title": "Brain AI - Infrastructure Dashboard",
+    "tags": ["brain-ai", "infrastructure", "kubernetes"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "type": "row",
+        "title": "Kubernetes Cluster Status",
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 24,
+          "h": 1
+        }
+      },
+      {
+        "id": 2,
+        "type": "stat",
+        "title": "Blue Deployment Status",
+        "gridPos": {
+          "x": 0,
+          "y": 1,
+          "w": 6,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "kube_deployment_status_replicas_available{deployment=\"brain-ai-blue\"}",
+            "legendFormat": "Available Replicas",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "yellow"},
+                {"value": 3, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "type": "stat",
+        "title": "Green Deployment Status",
+        "gridPos": {
+          "x": 6,
+          "y": 1,
+          "w": 6,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "kube_deployment_status_replicas_available{deployment=\"brain-ai-green\"}",
+            "legendFormat": "Available Replicas",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "yellow"},
+                {"value": 3, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "type": "stat",
+        "title": "Active Version",
+        "gridPos": {
+          "x": 12,
+          "y": 1,
+          "w": 6,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "kube_service_selector{service=\"brain-ai\",label_version=~\"blue|green\"}",
+            "legendFormat": "{{label_version}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "textMode": "value"
+        }
+      },
+      {
+        "id": 5,
+        "type": "stat",
+        "title": "HPA Current Replicas",
+        "gridPos": {
+          "x": 18,
+          "y": 1,
+          "w": 6,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "kube_horizontalpodautoscaler_status_current_replicas{horizontalpodautoscaler=\"brain-ai-hpa\"}",
+            "legendFormat": "Current",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "min": 0,
+            "max": 10
+          }
+        }
+      },
+      {
+        "id": 6,
+        "type": "row",
+        "title": "Node Resources",
+        "gridPos": {
+          "x": 0,
+          "y": 5,
+          "w": 24,
+          "h": 1
+        }
+      },
+      {
+        "id": 7,
+        "type": "timeseries",
+        "title": "Node CPU Usage",
+        "gridPos": {
+          "x": 0,
+          "y": 6,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "legendFormat": "{{instance}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 20
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 70, "color": "yellow"},
+                {"value": 85, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 8,
+        "type": "timeseries",
+        "title": "Node Memory Usage",
+        "gridPos": {
+          "x": 12,
+          "y": 6,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+            "legendFormat": "{{instance}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 20
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 80, "color": "yellow"},
+                {"value": 90, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 9,
+        "type": "row",
+        "title": "PostgreSQL Database",
+        "gridPos": {
+          "x": 0,
+          "y": 14,
+          "w": 24,
+          "h": 1
+        }
+      },
+      {
+        "id": 10,
+        "type": "stat",
+        "title": "Database Status",
+        "gridPos": {
+          "x": 0,
+          "y": 15,
+          "w": 4,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "pg_up",
+            "legendFormat": "PostgreSQL",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "green"}
+              ]
+            },
+            "mappings": [
+              {"type": "value", "value": "1", "text": "UP"},
+              {"type": "value", "value": "0", "text": "DOWN"}
+            ]
+          }
+        }
+      },
+      {
+        "id": 11,
+        "type": "stat",
+        "title": "Active Connections",
+        "gridPos": {
+          "x": 4,
+          "y": 15,
+          "w": 4,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "pg_stat_database_numbackends{datname=\"brain_ai\"}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 80, "color": "yellow"},
+                {"value": 95, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 12,
+        "type": "stat",
+        "title": "Database Size",
+        "gridPos": {
+          "x": 8,
+          "y": 15,
+          "w": 4,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "pg_database_size_bytes{datname=\"brain_ai\"} / 1024 / 1024 / 1024",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "decgbytes",
+            "decimals": 2
+          }
+        }
+      },
+      {
+        "id": 13,
+        "type": "timeseries",
+        "title": "Query Performance",
+        "gridPos": {
+          "x": 12,
+          "y": 15,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(pg_stat_statements_calls[5m])",
+            "legendFormat": "Queries/sec",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(pg_stat_statements_total_time[5m]) / rate(pg_stat_statements_calls[5m])",
+            "legendFormat": "Avg Query Time (ms)",
+            "refId": "B"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Queries/sec"},
+              "properties": [
+                {"id": "unit", "value": "qps"},
+                {"id": "custom.axisPlacement", "value": "right"}
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 14,
+        "type": "timeseries",
+        "title": "Transaction Rate",
+        "gridPos": {
+          "x": 0,
+          "y": 19,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(pg_stat_database_xact_commit{datname=\"brain_ai\"}[5m])",
+            "legendFormat": "Commits",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(pg_stat_database_xact_rollback{datname=\"brain_ai\"}[5m])",
+            "legendFormat": "Rollbacks",
+            "refId": "B"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 15
+            }
+          }
+        }
+      },
+      {
+        "id": 15,
+        "type": "row",
+        "title": "Redis Cache",
+        "gridPos": {
+          "x": 0,
+          "y": 27,
+          "w": 24,
+          "h": 1
+        }
+      },
+      {
+        "id": 16,
+        "type": "stat",
+        "title": "Redis Status",
+        "gridPos": {
+          "x": 0,
+          "y": 28,
+          "w": 4,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "redis_up",
+            "legendFormat": "Redis",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "green"}
+              ]
+            },
+            "mappings": [
+              {"type": "value", "value": "1", "text": "UP"},
+              {"type": "value", "value": "0", "text": "DOWN"}
+            ]
+          }
+        }
+      },
+      {
+        "id": 17,
+        "type": "stat",
+        "title": "Connected Clients",
+        "gridPos": {
+          "x": 4,
+          "y": 28,
+          "w": 4,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "redis_connected_clients",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 18,
+        "type": "stat",
+        "title": "Memory Usage",
+        "gridPos": {
+          "x": 8,
+          "y": 28,
+          "w": 4,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "redis_memory_used_bytes / 1024 / 1024",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "decmbytes",
+            "decimals": 0
+          }
+        }
+      },
+      {
+        "id": 19,
+        "type": "timeseries",
+        "title": "Cache Operations",
+        "gridPos": {
+          "x": 12,
+          "y": 28,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(redis_commands_processed_total[5m])",
+            "legendFormat": "Commands/sec",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(redis_keyspace_hits_total[5m])",
+            "legendFormat": "Cache Hits",
+            "refId": "B"
+          },
+          {
+            "expr": "rate(redis_keyspace_misses_total[5m])",
+            "legendFormat": "Cache Misses",
+            "refId": "C"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            }
+          }
+        }
+      },
+      {
+        "id": 20,
+        "type": "timeseries",
+        "title": "Keys in Memory",
+        "gridPos": {
+          "x": 0,
+          "y": 32,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "redis_db_keys",
+            "legendFormat": "Total Keys",
+            "refId": "A"
+          },
+          {
+            "expr": "redis_db_keys_expiring",
+            "legendFormat": "Expiring Keys",
+            "refId": "B"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 15
+            }
+          }
+        }
+      },
+      {
+        "id": 21,
+        "type": "row",
+        "title": "Network & I/O",
+        "gridPos": {
+          "x": 0,
+          "y": 40,
+          "w": 24,
+          "h": 1
+        }
+      },
+      {
+        "id": 22,
+        "type": "timeseries",
+        "title": "Network Traffic",
+        "gridPos": {
+          "x": 0,
+          "y": 41,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(container_network_receive_bytes_total{pod=~\"brain-ai.*\"}[5m])",
+            "legendFormat": "Received",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(container_network_transmit_bytes_total{pod=~\"brain-ai.*\"}[5m])",
+            "legendFormat": "Transmitted",
+            "refId": "B"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "Bps",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 15
+            }
+          }
+        }
+      },
+      {
+        "id": 23,
+        "type": "timeseries",
+        "title": "Disk I/O",
+        "gridPos": {
+          "x": 12,
+          "y": 41,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(container_fs_reads_bytes_total{pod=~\"brain-ai.*\"}[5m])",
+            "legendFormat": "Read",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(container_fs_writes_bytes_total{pod=~\"brain-ai.*\"}[5m])",
+            "legendFormat": "Write",
+            "refId": "B"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "Bps",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 15
+            }
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,1286 @@
+#!/usr/bin/env node
+
+/**
+ * Comprehensive API Integration Test Suite
+ * Tests all external API integrations, database connections, and service dependencies
+ * 
+ * Usage: npx tsx api-integration-test-suite.ts
+ */
+
+import { createClient } from 'redis';
+import { Client } from 'pg';
+import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
+import { google } from 'googleapis';
+import fetch from 'node-fetch';
+
+// =====================================================
+// CONFIGURATION
+// =====================================================
+
+interface TestConfig {
+  timeout: number;
+  retries: number;
+  expectedResponseTime: number;
+}
+
+interface APIEndpoint {
+  name: string;
+  url: string;
+  method: 'GET' | 'POST';
+  headers?: Record<string, string>;
+  body?: any;
+  expectedStatus?: number[];
+  timeout?: number;
+}
+
+const CONFIG: TestConfig = {
+  timeout: 10000, // 10 seconds
+  retries: 3,
+  expectedResponseTime: 5000, // 5 seconds
+};
+
+// Environment variables
+const ENV = {
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+  DATABASE_URL: process.env.DATABASE_URL,
+  REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
+  APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+};
+
+// =====================================================
+// TEST RESULTS
+// =====================================================
+
+interface TestResult {
+  name: string;
+  status: 'PASS' | 'FAIL' | 'WARN' | 'SKIP';
+  responseTime?: number;
+  error?: string;
+  details?: any;
+  timestamp: string;
+}
+
+interface TestSuite {
+  name: string;
+  tests: TestResult[];
+  summary: {
+    total: number;
+    passed: number;
+    failed: number;
+    warnings: number;
+    skipped: number;
+  };
+}
+
+// =====================================================
+// UTILITY FUNCTIONS
+// =====================================================
+
+function log(message: string, type: 'info' | 'error' | 'success' | 'warn' = 'info') {
+  const timestamp = new Date().toISOString();
+  const emoji = {
+    info: '🔍',
+    error: '❌',
+    success: '✅',
+    warn: '⚠️'
+  }[type];
+  
+  console.log(`${emoji} [${timestamp}] ${message}`);
+}
+
+function createTestResult(name: string, status: TestResult['status'], details?: any, error?: string, responseTime?: number): TestResult {
+  return {
+    name,
+    status,
+    details,
+    error,
+    responseTime,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+function calculateSuiteSummary(tests: TestResult[]) {
+  return {
+    total: tests.length,
+    passed: tests.filter(t => t.status === 'PASS').length,
+    failed: tests.filter(t => t.status === 'FAIL').length,
+    warnings: tests.filter(t => t.status === 'WARN').length,
+    skipped: tests.filter(t => t.status === 'SKIP').length,
+  };
+}
+
+async function testWithTimeout<T>(promise: Promise<T>, timeoutMs: number, operationName: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error(`Operation '${operationName}' timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    promise
+      .then(resolve)
+      .catch(reject)
+      .finally(() => clearTimeout(timeout));
+  });
+}
+
+// =====================================================
+// API CONNECTIVITY TESTS
+// =====================================================
+
+class OpenAITester {
+  private client: OpenAI | null = null;
+
+  constructor() {
+    if (ENV.OPENAI_API_KEY) {
+      this.client = new OpenAI({ apiKey: ENV.OPENAI_API_KEY });
+    }
+  }
+
+  async testConnectivity(): Promise<TestResult> {
+    const startTime = Date.now();
+    
+    if (!this.client) {
+      return createTestResult('OpenAI API Connectivity', 'SKIP', null, 'API key not configured');
+    }
+
+    try {
+      // Test with a simple models list request
+      const response = await testWithTimeout(
+        this.client.models.list(),
+        'OpenAI Models List'
+      );
+
+ CONFIG.timeout,
+             const responseTime = Date.now() - startTime;
+      
+      if (response.data && response.data.length > 0) {
+        return createTestResult(
+          'OpenAI API Connectivity',
+          'PASS',
+          { 
+            modelsAvailable: response.data.length,
+            responseTime,
+            sampleModels: response.data.slice(0, 3).map(m => m.id)
+          },
+          undefined,
+          responseTime
+        );
+      } else {
+        return createTestResult(
+          'OpenAI API Connectivity',
+          'WARN',
+          { responseTime },
+          'No models returned from API',
+          responseTime
+        );
+      }
+    } catch (error: any) {
+      const responseTime = Date.now() - startTime;
+      return createTestResult(
+        'OpenAI API Connectivity',
+        'FAIL',
+        { responseTime },
+        error.message,
+        responseTime
+      );
+    }
+  }
+
+  async testChatCompletion(): Promise<TestResult> {
+    const startTime = Date.now();
+    
+    if (!this.client) {
+      return createTestResult('OpenAI Chat Completion', 'SKIP', null, 'API key not configured');
+    }
+
+    try {
+      const response = await testWithTimeout(
+        this.client.chat.completions.create({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            { role: 'user', content: 'Say "API test successful" if you receive this.' }
+          ],
+          max_tokens: 10,
+        }),
+        CONFIG.timeout,
+        'OpenAI Chat Completion'
+      );
+
+      const responseTime = Date.now() - startTime;
+      
+      if (response.choices && response.choices.length > 0) {
+        const content = response.choices[0].message?.content || '';
+        const isValidResponse = content.toLowerCase().includes('api test successful');
+        
+        return createTestResult(
+          'OpenAI Chat Completion',
+          isValidResponse ? 'PASS' : 'WARN',
+          {
+            responseTime,
+            model: response.model,
+            tokensUsed: response.usage?.total_tokens || 0,
+            responsePreview: content.substring(0, 100)
+          },
+          isValidResponse ? undefined : 'Unexpected response content',
+          responseTime
+        );
+      } else {
+        return createTestResult(
+          'OpenAI Chat Completion',
+          'FAIL',
+          { responseTime },
+          'No choices returned from API',
+          responseTime
+        );
+      }
+    } catch (error: any) {
+      const responseTime = Date.now() - startTime;
+      return createTestResult(
+        'OpenAI Chat Completion',
+        'FAIL',
+        { responseTime },
+        error.message,
+        responseTime
+      );
+    }
+  }
+
+  async testEmbedding(): Promise<TestResult> {
+    const startTime = Date.now();
+    
+    if (!this.client) {
+      return createTestResult('OpenAI Embeddings', 'SKIP', null, 'API key not configured');
+    }
+
+    try {
+      const response = await testWithTimeout(
+        this.client.embeddings.create({
+          model: 'text-embedding-3-small',
+          input: 'Test embedding for API integration testing',
+        }),
+        CONFIG.timeout,
+        'OpenAI Embeddings'
+      );
+
+      const responseTime = Date.now() - startTime;
+      
+      if (response.data && response.data.length > 0) {
+        const embedding = response.data[0].embedding;
+        
+        return createTestResult(
+          'OpenAI Embeddings',
+          'PASS',
+          {
+            responseTime,
+            model: response.model,
+            dimensions: embedding.length,
+            tokensUsed: response.usage?.total_tokens || 0
+          },
+          undefined,
+          responseTime
+        );
+      } else {
+        return createTestResult(
+          'OpenAI Embeddings',
+          'FAIL',
+          { responseTime },
+          'No embedding data returned',
+          responseTime
+        );
+      }
+    } catch (error: any) {
+      const responseTime = Date.now() - startTime;
+      return createTestResult(
+        'OpenAI Embeddings',
+        'FAIL',
+        { responseTime },
+        error.message,
+        responseTime
+      );
+    }
+  }
+}
+
+class AnthropicTester {
+  private client: Anthropic | null = null;
+
+  constructor() {
+    if (ENV.ANTHROPIC_API_KEY) {
+      this.client = new Anthropic({ apiKey: ENV.ANTHROPIC_API_KEY });
+    }
+  }
+
+  async testConnectivity(): Promise<TestResult> {
+    const startTime = Date.now();
+    
+    if (!this.client) {
+      return createTestResult('Anthropic API Connectivity', 'SKIP', null, 'API key not configured');
+    }
+
+    try {
+      // Test with a simple message count request
+      const response = await testWithTimeout(
+        this.client.messages.countTokens({
+          model: 'claude-3-haiku-20240307',
+          messages: [{ role: 'user', content: 'Test' }]
+        }),
+        CONFIG.timeout,
+        'Anthropic Token Count'
+      );
+
+      const responseTime = Date.now() - startTime;
+      
+      return createTestResult(
+        'Anthropic API Connectivity',
+        'PASS',
+        {
+          responseTime,
+          tokenCount: (response as any).count,
+          model: 'claude-3-haiku-20240307'
+        },
+        undefined,
+        responseTime
+      );
+    } catch (error: any) {
+      const responseTime = Date.now() - startTime;
+      return createTestResult(
+        'Anthropic API Connectivity',
+        'FAIL',
+        { responseTime },
+        error.message,
+        responseTime
+      );
+    }
+  }
+
+  async testChatCompletion(): Promise<TestResult> {
+    const startTime = Date.now();
+    
+    if (!this.client) {
+      return createTestResult('Anthropic Chat Completion', 'SKIP', null, 'API key not configured');
+    }
+
+    try {
+      const response = await testWithTimeout(
+        this.client.messages.create({
+          model: 'claude-3-haiku-20240307',
+          max_tokens: 10,
+          messages: [
+            { role: 'user', content: 'Say "Anthropic API test successful" if you receive this.' }
+          ],
+        }),
+        CONFIG.timeout,
+        'Anthropic Chat Completion'
+      );
+
+      const responseTime = Date.now() - startTime;
+      
+      if (response.content && response.content.length > 0) {
+        const content = response.content[0].type === 'text' ? response.content[0].text : '';
+        const isValidResponse = content.toLowerCase().includes('anthropic api test successful');
+        
+        return createTestResult(
+          'Anthropic Chat Completion',
+          isValidResponse ? 'PASS' : 'WARN',
+          {
+            responseTime,
+            model: response.model,
+            tokensUsed: response.usage?.input_tokens || 0,
+            responsePreview: content.substring(0, 100)
+          },
+          isValidResponse ? undefined : 'Unexpected response content',
+          responseTime
+        );
+      } else {
+        return createTestResult(
+          'Anthropic Chat Completion',
+          'FAIL',
+          { responseTime },
+          'No content returned from API',
+          responseTime
+        );
+      }
+    } catch (error: any) {
+      const responseTime = Date.now() - startTime;
+      return createTestResult(
+        'Anthropic Chat Completion',
+        'FAIL',
+        { responseTime },
+        error.message,
+        responseTime
+      );
+    }
+  }
+}
+
+// =====================================================
+// DATABASE TESTS
+// =====================================================
+
+class DatabaseTester {
+  private client: Client | null = null;
+
+  constructor() {
+    if (ENV.DATABASE_URL) {
+      this.client = new Client({ connectionString: ENV.DATABASE_URL });
+    }
+  }
+
+  async connect(): Promise<TestResult> {
+    const startTime = Date.now();
+    
+    if (!this.client) {
+      return createTestResult('SKIP', nullDatabase Connection', ', 'DATABASE_URL not configured');
+    }
+
+    try {
+      await testWithTimeout(
+        this.client.connect(),
+        CONFIG.timeout,
+        'Database Connection'
+      );
+
+      const responseTime = Date.now() - startTime;
+      
+      return createTestResult(
+        'Database Connection',
+        'PASS',
+        { responseTime, connectionString: ENV.DATABASE_URL?.substring(0, 50) + '...' },
+        undefined,
+        responseTime
+      );
+    } catch (error: any) {
+      const responseTime = Date.now() - startTime;
+      return createTestResult(
+        'Database Connection',
+        'FAIL',
+        { responseTime },
+        error.message,
+        responseTime
+      );
+    }
+  }
+
+  async testQuery(): Promise<TestResult> {
+    const startTime = Date.now();
+    
+    if (!this.client) {
+      return createTestResult('Database Query Test', 'SKIP', null, 'Database client not available');
+    }
+
+    try {
+      const result = await testWithTimeout(
+        this.client.query('SELECT NOW() as current_time, version() as db_version'),
+        CONFIG.timeout,
+        'Database Query'
+      );
+
+      const responseTime = Date.now() - startTime;
+      
+      if (result.rows && result.rows.length > 0) {
+        const row = result.rows[0];
+        
+        return createTestResult(
+          'Database Query Test',
+          'PASS',
+          {
+            responseTime,
+            currentTime: row.current_time,
+            dbVersion: row.db_version?.substring(0, 50) + '...',
+            rowCount: result.rowCount
+          },
+          undefined,
+          responseTime
+        );
+      } else {
+        return createTestResult(
+          'Database Query Test',
+          'FAIL',
+          { responseTime },
+          'No rows returned from query',
+          responseTime
+        );
+      }
+    } catch (error: any) {
+      const responseTime = Date.now() - startTime;
+      return createTestResult(
+        'Database Query Test',
+        'FAIL',
+        { responseTime },
+        error.message,
+        responseTime
+      );
+    }
+  }
+
+  async testTransaction(): Promise<TestResult> {
+    const startTime = Date.now();
+    
+    if (!this.client) {
+      return createTestResult('Database Transaction Test', 'SKIP', null, 'Database client not available');
+    }
+
+    try {
+      await testWithTimeout(
+        this.client.query('BEGIN'),
+        CONFIG.timeout,
+        'Transaction Begin'
+      );
+
+      // Create a temporary table for testing
+      await this.client.query(`
+        CREATE TEMP TABLE api_test_table (
+          id SERIAL PRIMARY KEY,
+          test_data VARCHAR(255),
+          created_at TIMESTAMP DEFAULT NOW()
+        )
+      `);
+
+      // Insert test data
+      const insertResult = await this.client.query(
+        'INSERT INTO api_test_table (test_data) VALUES ($1) RETURNING id',
+        ['api_integration_test']
+      );
+
+      // Query the data back
+      const selectResult = await this.client.query(
+        'SELECT * FROM api_test_table WHERE test_data = $1',
+        ['api_integration_test']
+      );
+
+      // Rollback (cleanup)
+      await this.client.query('ROLLBACK');
+
+      const responseTime = Date.now() - startTime;
+      
+      if (insertResult.rows.length > 0 && selectResult.rows.length > 0) {
+        return createTestResult(
+          'Database Transaction Test',
+          'PASS',
+          {
+            responseTime,
+            insertedId: insertResult.rows[0].id,
+            queriedData: selectResult.rows[0].test_data
+          },
+          undefined,
+          responseTime
+        );
+      } else {
+        return createTestResult(
+          'Database Transaction Test',
+          'FAIL',
+          { responseTime },
+          'Transaction data mismatch',
+          responseTime
+        );
+      }
+    } catch (error: any) {
+      // Attempt rollback on error
+      try {
+        await this.client.query('ROLLBACK');
+      } catch (rollbackError) {
+        // Ignore rollback errors
+      }
+      
+      const responseTime = Date.now() - startTime;
+      return createTestResult(
+        'Database Transaction Test',
+        'FAIL',
+        { responseTime },
+        error.message,
+        responseTime
+      );
+    }
+  }
+
+  async disconnect(): Promise<void> {
+    if (this.client) {
+      try {
+        await this.client.end();
+      } catch (error) {
+        log(`Database disconnect error: ${error}`, 'warn');
+      }
+    }
+  }
+}
+
+// =====================================================
+// REDIS TESTS
+// =====================================================
+
+class RedisTester {
+  private client: any = null;
+
+  async connect(): Promise<TestResult> {
+    const startTime = Date.now();
+    
+    try {
+      this.client = createClient({ url: ENV.REDIS_URL });
+      
+      await testWithTimeout(
+        this.client.connect(),
+        CONFIG.timeout,
+        'Redis Connection'
+      );
+
+      const responseTime = Date.now() - startTime;
+      
+      return createTestResult(
+        'Redis Connection',
+        'PASS',
+        { responseTime, url: ENV.REDIS_URL },
+        undefined,
+        responseTime
+      );
+    } catch (error: any) {
+      const responseTime = Date.now() - startTime;
+      return createTestResult(
+        'Redis Connection',
+        'FAIL',
+        { responseTime },
+        error.message,
+        responseTime
+      );
+    }
+  }
+
+  async testSetGet(): Promise<TestResult> {
+    const startTime = Date.now();
+    
+    if (!this.client) {
+      return createTestResult('Redis Set/Get Test', 'SKIP', null, 'Redis client not available');
+    }
+
+    try {
+      const testKey = 'api_integration_test_key';
+      const testValue = JSON.stringify({
+        timestamp: new Date().toISOString(),
+        test: 'api_integration_test',
+        data: { message: 'Redis connectivity test' }
+      });
+
+      // Set value
+      await testWithTimeout(
+        this.client.set(testKey, testValue, { EX: 60 }),
+        CONFIG.timeout,
+        'Redis Set'
+      );
+
+      // Get value
+      const retrievedValue = await testWithTimeout(
+        this.client.get(testKey),
+        CONFIG.timeout,
+        'Redis Get'
+      );
+
+      // Cleanup
+      await this.client.del(testKey);
+
+      const responseTime = Date.now() - startTime;
+      
+      if (retrievedValue === testValue) {
+        return createTestResult(
+          'Redis Set/Get Test',
+          'PASS',
+          {
+            responseTime,
+            key: testKey,
+            valueSize: testValue.length
+          },
+          undefined,
+          responseTime
+        );
+      } else {
+        return createTestResult(
+          'Redis Set/Get Test',
+          'FAIL',
+          { responseTime },
+          'Retrieved value does not match stored value',
+          responseTime
+        );
+      }
+    } catch (error: any) {
+      const responseTime = Date.now() - startTime;
+      return createTestResult(
+        'Redis Set/Get Test',
+        'FAIL',
+        { responseTime },
+        error.message,
+        responseTime
+      );
+    }
+  }
+
+  async testPipeline(): Promise<TestResult> {
+    const startTime = Date.now();
+    
+    if (!this.client) {
+      return createTestResult('Redis Pipeline Test', 'SKIP', null, 'Redis client not available');
+    }
+
+    try {
+      const pipeline = this.client.multi();
+      
+      // Add multiple operations to pipeline
+      pipeline.set('pipeline_key_1', 'value1', { EX: 60 });
+      pipeline.set('pipeline_key_2', 'value2', { EX: 60 });
+      pipeline.get('pipeline_key_1');
+      pipeline.get('pipeline_key_2');
+      
+      const results = await testWithTimeout(
+        pipeline.exec(),
+        CONFIG.timeout,
+        'Redis Pipeline'
+      );
+
+      // Cleanup
+      await this.client.del('pipeline_key_1', 'pipeline_key_2');
+
+      const responseTime = Date.now() - startTime;
+      
+      if (results && Array.isArray(results) && results.length >= 4) {
+        const setResults = results.slice(0, 2) as any[];
+        const getResults = results.slice(2, 4) as any[];
+        
+        const allSuccessful = setResults.every((r: any) => r[1] === 'OK') &&
+                             getResults.every((r: any) => r[1] !== null);
+        
+        return createTestResult(
+          'Redis Pipeline Test',
+          allSuccessful ? 'PASS' : 'WARN',
+          {
+            responseTime,
+            operationsCount: results.length,
+            setResults: setResults.map((r: any) => r[1]),
+            getResults: getResults.map((r: any) => r[1])
+          },
+          allSuccessful ? undefined : 'Some pipeline operations failed',
+          responseTime
+        );
+      } else {
+        return createTestResult(
+          'Redis Pipeline Test',
+          'FAIL',
+          { responseTime },
+          'Unexpected pipeline results',
+          responseTime
+        );
+      }
+    } catch (error: any) {
+      const responseTime = Date.now() - startTime;
+      return createTestResult(
+        'Redis Pipeline Test',
+        'FAIL',
+        { responseTime },
+        error.message,
+        responseTime
+      );
+    }
+  }
+
+  async disconnect(): Promise<void> {
+    if (this.client) {
+      try {
+        await this.client.disconnect();
+      } catch (error) {
+        log(`Redis disconnect error: ${error}`, 'warn');
+      }
+    }
+  }
+}
+
+// =====================================================
+// GOOGLE OAUTH TESTS
+// =====================================================
+
+class GoogleOAuthTester {
+  private oauth2Client: any = null;
+
+  constructor() {
+    if (ENV.GOOGLE_CLIENT_ID && ENV.GOOGLE_CLIENT_SECRET) {
+      this.oauth2Client = new google.auth.OAuth2(
+        ENV.GOOGLE_CLIENT_ID,
+        ENV.GOOGLE_CLIENT_SECRET,
+        `${ENV.APP_URL}/api/oauth/google/callback`
+      );
+    }
+  }
+
+  testConfiguration(): TestResult {
+    const startTime = Date.now();
+    
+    if (!this.oauth2Client) {
+      return createTestResult(
+        'Google OAuth Configuration',
+        'SKIP',
+        null,
+        'Google OAuth credentials not configured',
+        startTime
+      );
+    }
+
+    const requiredFields = {
+      clientId: !!ENV.GOOGLE_CLIENT_ID,
+      clientSecret: !!ENV.GOOGLE_CLIENT_SECRET,
+      redirectUri: !!ENV.APP_URL
+    };
+
+    const allConfigured = Object.values(requiredFields).every(Boolean);
+    const responseTime = Date.now() - startTime;
+
+    return createTestResult(
+      'Google OAuth Configuration',
+      allConfigured ? 'PASS' : 'FAIL',
+      {
+        responseTime,
+        configuredFields: requiredFields,
+        redirectUri: `${ENV.APP_URL}/api/oauth/google/callback`
+      },
+      allConfigured ? undefined : 'Missing required OAuth configuration',
+      responseTime
+    );
+  }
+
+  testAuthUrlGeneration(): TestResult {
+    const startTime = Date.now();
+    
+    if (!this.oauth2Client) {
+      return createTestResult(
+        'Google OAuth Auth URL Generation',
+        'SKIP',
+        null,
+        'Google OAuth client not available',
+        startTime
+      );
+    }
+
+    try {
+      const authUrl = this.oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: ['https://www.googleapis.com/auth/userinfo.profile'],
+        state: 'test_state'
+      });
+
+      const responseTime = Date.now() - startTime;
+      
+      if (authUrl && authUrl.includes('accounts.google.com')) {
+        return createTestResult(
+          'Google OAuth Auth URL Generation',
+          'PASS',
+          {
+            responseTime,
+            authUrl: authUrl.substring(0, 100) + '...',
+            containsRequiredParams: {
+              accounts: authUrl.includes('accounts.google.com'),
+              oauth: authUrl.includes('/oauth'),
+              scope: authUrl.includes('scope='),
+              state: authUrl.includes('state=')
+            }
+          },
+          undefined,
+          responseTime
+        );
+      } else {
+        return createTestResult(
+          'Google OAuth Auth URL Generation',
+          'FAIL',
+          { responseTime },
+          'Generated auth URL is invalid',
+          responseTime
+        );
+      }
+    } catch (error: any) {
+      const responseTime = Date.now() - startTime;
+      return createTestResult(
+        'Google OAuth Auth URL Generation',
+        'FAIL',
+        { responseTime },
+        error.message,
+        responseTime
+      );
+    }
+  }
+}
+
+// =====================================================
+// HTTP ENDPOINT TESTS
+// =====================================================
+
+class HTTPTester {
+  async testEndpoint(endpoint: APIEndpoint): Promise<TestResult> {
+    const startTime = Date.now();
+    
+    try {
+      const response = await testWithTimeout(
+        fetch(endpoint.url, {
+          method: endpoint.method,
+          headers: {
+            'Content-Type': 'application/json',
+            ...endpoint.headers
+          },
+          body: endpoint.body ? JSON.stringify(endpoint.body) : undefined
+        }),
+        endpoint.timeout || CONFIG.timeout,
+        `HTTP ${endpoint.method} ${endpoint.name}`
+      );
+
+      const responseTime = Date.now() - startTime;
+      
+      if (!response.ok) {
+        return createTestResult(
+          `HTTP ${endpoint.name}`,
+          'WARN',
+          {
+            responseTime,
+            status: response.status,
+            statusText: response.statusText
+          },
+          `HTTP ${response.status}: ${response.statusText}`,
+          responseTime
+        );
+      }
+
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch {
+        responseData = { message: 'Non-JSON response' };
+      }
+
+      return createTestResult(
+        `HTTP ${endpoint.name}`,
+        'PASS',
+        {
+          responseTime,
+          status: response.status,
+          statusText: response.statusText,
+          hasJson: response.headers.get('content-type')?.includes('application/json'),
+          responsePreview: typeof responseData === 'object' ? 
+            JSON.stringify(responseData).substring(0, 200) : 
+            String(responseData).substring(0, 200)
+        },
+        undefined,
+        responseTime
+      );
+    } catch (error: any) {
+      const responseTime = Date.now() - startTime;
+      return createTestResult(
+        `HTTP ${endpoint.name}`,
+        'FAIL',
+        { responseTime },
+        error.message,
+        responseTime
+      );
+    }
+  }
+}
+
+// =====================================================
+// MAIN TEST SUITE
+// =====================================================
+
+class APITestSuite {
+  private openAITester: OpenAITester;
+  private anthropicTester: AnthropicTester;
+  private databaseTester: DatabaseTester;
+  private redisTester: RedisTester;
+  private googleOAuthTester: GoogleOAuthTester;
+  private httpTester: HTTPTester;
+  private results: TestSuite[] = [];
+
+  constructor() {
+    this.openAITester = new OpenAITester();
+    this.anthropicTester = new AnthropicTester();
+    this.databaseTester = new DatabaseTester();
+    this.redisTester = new RedisTester();
+    this.googleOAuthTester = new GoogleOAuthTester();
+    this.httpTester = new HTTPTester();
+  }
+
+  async runAllTests(): Promise<void> {
+    log('🚀 Starting Comprehensive API Integration Test Suite', 'info');
+    log(`📊 Testing ${Object.keys(ENV).filter(k => ENV[k as keyof typeof ENV]).length} configured services`, 'info');
+
+    // Run all test suites
+    await this.testOpenAIIntegration();
+    await this.testAnthropicIntegration();
+    await this.testDatabaseIntegration();
+    await this.testRedisIntegration();
+    await this.testGoogleOAuth this.testHTTPEndpointsIntegration();
+    await();
+
+    // Generate final report
+    this.generateReport();
+  }
+
+  private async testOpenAIIntegration(): Promise<void> {
+    log('🤖 Testing OpenAI Integration...', 'info');
+    const tests: TestResult[] = [];
+
+    tests.push(await this.openAITester.testConnectivity());
+    tests.push(await this.openAITester.testChatCompletion());
+    tests.push(await this.openAITester.testEmbedding());
+
+    this.results.push({
+      name: 'OpenAI Integration',
+      tests,
+      summary: calculateSuiteSummary(tests)
+    });
+
+    this.printSuiteResults('OpenAI Integration', tests);
+  }
+
+  private async testAnthropicIntegration(): Promise<void> {
+    log('🧠 Testing Anthropic Integration...', 'info');
+    const tests: TestResult[] = [];
+
+    tests.push(await this.anthropicTester.testConnectivity());
+    tests.push(await this.anthropicTester.testChatCompletion());
+
+    this.results.push({
+      name: 'Anthropic Integration',
+      tests,
+      summary: calculateSuiteSummary(tests)
+    });
+
+    this.printSuiteResults('Anthropic Integration', tests);
+  }
+
+  private async testDatabaseIntegration(): Promise<void> {
+    log('🗄️ Testing Database Integration...', 'info');
+    const tests: TestResult[] = [];
+
+    tests.push(await this.databaseTester.connect());
+    tests.push(await this.databaseTester.testQuery());
+    tests.push(await this.databaseTester.testTransaction());
+
+    await this.databaseTester.disconnect();
+
+    this.results.push({
+      name: 'Database Integration',
+      tests,
+      summary: calculateSuiteSummary(tests)
+    });
+
+    this.printSuiteResults('Database Integration', tests);
+  }
+
+  private async testRedisIntegration(): Promise<void> {
+    log('⚡ Testing Redis Integration...', 'info');
+    const tests: TestResult[] = [];
+
+    tests.push(await this.redisTester.connect());
+    tests.push(await this.redisTester.testSetGet());
+    tests.push(await this.redisTester.testPipeline());
+
+    await this.redisTester.disconnect();
+
+    this.results.push({
+      name: 'Redis Integration',
+      tests,
+      summary: calculateSuiteSummary(tests)
+    });
+
+    this.printSuiteResults('Redis Integration', tests);
+  }
+
+  private async testGoogleOAuthIntegration(): Promise<void> {
+    log('🔐 Testing Google OAuth Integration...', 'info');
+    const tests: TestResult[] = [];
+
+    tests.push(this.googleOAuthTester.testConfiguration());
+    tests.push(this.googleOAuthTester.testAuthUrlGeneration());
+
+    this.results.push({
+      name: 'Google OAuth Integration',
+      tests,
+      summary: calculateSuiteSummary(tests)
+    });
+
+    this.printSuiteResults('Google OAuth Integration', tests);
+  }
+
+  private async testHTTPEndpoints(): Promise<void> {
+    log('🌐 Testing HTTP Endpoints...', 'info');
+    const tests: TestResult[] = [];
+
+    const endpoints: APIEndpoint[] = [
+      {
+        name: 'Health Check',
+        url: `${ENV.APP_URL}/api/health`,
+        method: 'GET',
+        expectedStatus: [200]
+      },
+      {
+        name: 'Revolution Health',
+        url: `${ENV.APP_URL}/api/revolution/health`,
+        method: 'GET',
+        expectedStatus: [200, 503]
+      },
+      {
+        name: 'Brain Health',
+        url: `${ENV.APP_URL}/api/brain/health`,
+        method: 'GET',
+        expectedStatus: [200, 404]
+      }
+    ];
+
+    for (const endpoint of endpoints) {
+      tests.push(await this.httpTester.testEndpoint(endpoint));
+    }
+
+    this.results.push({
+      name: 'HTTP Endpoints',
+      tests,
+      summary: calculateSuiteSummary(tests)
+    });
+
+    this.printSuiteResults('HTTP Endpoints', tests);
+  }
+
+  private printSuiteResults(suiteName: string, tests: TestResult[]): void {
+    const summary = calculateSuiteSummary(tests);
+    const emoji = summary.failed === 0 ? '✅' : summary.warnings === 0 ? '⚠️' : '❌';
+    
+    log(`${emoji} ${suiteName}: ${summary.passed}/${summary.total} passed`, 'info');
+    
+    tests.forEach(test => {
+      const testEmoji = {
+        PASS: '✅',
+        FAIL: '❌',
+        WARN: '⚠️',
+        SKIP: '⏭️'
+      }[test.status];
+      
+      const responseTime = test.responseTime ? ` (${test.responseTime}ms)` : '';
+      log(`  ${testEmoji} ${test.name}${responseTime}`, test.status === 'FAIL' ? 'error' : 'info');
+      
+      if (test.error) {
+        log(`    Error: ${test.error}`, 'error');
+      }
+    });
+  }
+
+  private generateReport(): void {
+    log('\n📋 GENERATING COMPREHENSIVE TEST REPORT', 'info');
+    
+    const totalTests = this.results.reduce((sum, suite) => sum + suite.summary.total, 0);
+    const totalPassed = this.results.reduce((sum, suite) => sum + suite.summary.passed, 0);
+    const totalFailed = this.results.reduce((sum, suite) => sum + suite.summary.failed, 0);
+    const totalWarnings = this.results.reduce((sum, suite) => sum + suite.summary.warnings, 0);
+    const totalSkipped = this.results.reduce((sum, suite) => sum + suite.summary.skipped, 0);
+
+    const successRate = totalTests > 0 ? ((totalPassed / totalTests) * 100).toFixed(1) : '0';
+
+    console.log('\n' + '='.repeat(80));
+    console.log('🎯 COMPREHENSIVE API INTEGRATION TEST RESULTS');
+    console.log('='.repeat(80));
+    console.log(`📊 Overall Summary:`);
+    console.log(`   Total Tests: ${totalTests}`);
+    console.log(`   ✅ Passed: ${totalPassed} (${successRate}%)`);
+    console.log(`   ❌ Failed: ${totalFailed}`);
+    console.log(`   ⚠️  Warnings: ${totalWarnings}`);
+    console.log(`   ⏭️  Skipped: ${totalSkipped}`);
+    
+    console.log('\n📋 Suite Breakdown:');
+    this.results.forEach(suite => {
+      const emoji = suite.summary.failed === 0 ? '✅' : '❌';
+      console.log(`   ${emoji} ${suite.name}: ${suite.summary.passed}/${suite.summary.total}`);
+    });
+
+    console.log('\n🔍 Detailed Results:');
+    this.results.forEach(suite => {
+      console.log(`\n📁 ${suite.name}:`);
+      suite.tests.forEach(test => {
+        const status = test.status.padEnd(5);
+        const time = test.responseTime ? `${test.responseTime}ms`.padStart(8) : 'N/A'.padStart(8);
+        console.log(`   [${status}] [${time}] ${test.name}`);
+        if (test.error) {
+          console.log(`      ❌ Error: ${test.error}`);
+        }
+      });
+    });
+
+    // Recommendations
+    console.log('\n💡 RECOMMENDATIONS:');
+    
+    if (totalFailed > 0) {
+      console.log('   🔴 CRITICAL: Fix failed connectivity tests before production deployment');
+    }
+    
+    if (totalWarnings > 0) {
+      console.log('   🟡 WARNING: Address warning conditions to improve reliability');
+    }
+    
+    if (totalSkipped > 0) {
+      console.log('   ℹ️  INFO: Configure missing services to improve test coverage');
+    }
+
+    const criticalServices = ['Database Integration', 'Redis Integration'];
+    const criticalFailed = this.results
+      .filter(suite => criticalServices.includes(suite.name))
+      .some(suite => suite.summary.failed > 0);
+
+    if (criticalFailed) {
+      console.log('   🚨 DEPLOYMENT BLOCKER: Critical infrastructure services are failing');
+    } else {
+      console.log('   ✅ Infrastructure services are healthy');
+    }
+
+    console.log('\n' + '='.repeat(80));
+
+    // Generate JSON report for automation
+    const jsonReport = {
+      timestamp: new Date().toISOString(),
+      summary: {
+        totalTests,
+        totalPassed,
+        totalFailed,
+        totalWarnings,
+        totalSkipped,
+        successRate: parseFloat(successRate)
+      },
+      suites: this.results,
+      environment: Object.keys(ENV).reduce((acc, key) => {
+        acc[key] = !!ENV[key as keyof typeof ENV];
+        return acc;
+      }, {} as Record<string, boolean>)
+    };
+
+    console.log('\n💾 JSON Report Generated (for CI/CD integration)');
+    
+    // Exit with appropriate code
+    const exitCode = totalFailed > 0 ? 1 : 0;
+    log(`🏁 Test suite completed with exit code: ${exitCode}`, exitCode === 0 ? 'success' : 'error');
+    
+    process.exit(exitCode);
+  }
+}
+
+// =====================================================
+// MAIN EXECUTION
+// =====================================================
+
+async function main() {
+  const testSuite = new APITestSuite();
+  
+  try {
+    await testSuite.runAllTests();
+  } catch (error) {
+    log(`💥 Test suite failed with error: ${error}`, 'error');
+    process.exit(1);
+  }
+}
+
+// Run the test suite
+if (require.main === module) {
+  main().catch(error => {
+    log(`💥 Unhandled error: ${error}`, 'error');
+    process.exit(1);
+  });
+}
+
+export { APITestSuite, OpenAITester, AnthropicTester, DatabaseTester, RedisTester, GoogleOAuthTester, HTTPTester };

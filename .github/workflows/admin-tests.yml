@@ -1,0 +1,201 @@
+name: Admin Panel Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'app/(app)/admin/**'
+      - 'app/api/admin/**'
+      - 'app/api/health/**'
+      - 'components/ui/**'
+      - 'tests/unit/admin-*.spec.ts'
+      - 'tests/ui/admin-*.spec.ts'
+      - '.github/workflows/admin-tests.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'app/(app)/admin/**'
+      - 'app/api/admin/**'
+      - 'app/api/health/**'
+      - 'components/ui/**'
+      - 'tests/unit/admin-*.spec.ts'
+      - 'tests/ui/admin-*.spec.ts'
+      - '.github/workflows/admin-tests.yml'
+
+jobs:
+  unit-tests:
+    name: Unit Tests (Vitest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run admin unit tests
+        run: npm run test:unit -- tests/unit/admin-*.spec.ts
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: coverage/
+          retention-days: 7
+
+  e2e-tests:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start application
+        run: |
+          npm run start &
+          npx wait-on http://localhost:3000 -t 60000
+
+      - name: Run admin E2E tests
+        run: npx playwright test tests/ui/admin-*.spec.ts
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload test screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-screenshots
+          path: test-results/
+          retention-days: 7
+
+  accessibility-tests:
+    name: Accessibility Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start application
+        run: |
+          npm run start &
+          npx wait-on http://localhost:3000 -t 60000
+
+      - name: Run accessibility tests
+        run: npx playwright test tests/ui/admin-accessibility.spec.ts
+
+      - name: Upload accessibility report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-report
+          path: playwright-report/
+          retention-days: 7
+
+  live-update-tests:
+    name: Live Update Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start application
+        run: |
+          npm run start &
+          npx wait-on http://localhost:3000 -t 60000
+
+      - name: Run live update tests
+        run: npx playwright test tests/ui/admin-live-update.spec.ts --timeout 120000
+
+      - name: Upload live update report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-update-report
+          path: playwright-report/
+          retention-days: 7
+
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [unit-tests, e2e-tests, accessibility-tests, live-update-tests]
+    if: always()
+
+    steps:
+      - name: Check test results
+        run: |
+          echo "Unit Tests: ${{ needs.unit-tests.result }}"
+          echo "E2E Tests: ${{ needs.e2e-tests.result }}"
+          echo "Accessibility Tests: ${{ needs.accessibility-tests.result }}"
+          echo "Live Update Tests: ${{ needs.live-update-tests.result }}"
+
+      - name: All tests passed
+        if: ${{ needs.unit-tests.result == 'success' && needs.e2e-tests.result == 'success' && needs.accessibility-tests.result == 'success' && needs.live-update-tests.result == 'success' }}
+        run: echo "✅ All admin panel tests passed!"
+
+      - name: Some tests failed
+        if: ${{ needs.unit-tests.result == 'failure' || needs.e2e-tests.result == 'failure' || needs.accessibility-tests.result == 'failure' || needs.live-update-tests.result == 'failure' }}
+        run: |
+          echo "❌ Some admin panel tests failed"
+          exit 1

@@ -1,0 +1,30 @@
+# Browser Support Configuration for Sintra System
+# https://githublist/browsers.com/browserslist#readme
+
+# Production browsers that are fully supported
+last 2 versions
+not dead
+not op_mini all
+
+# Specific browser support
+# Desktop browsers
+Chrome >= 90
+Firefox >= 88
+Safari >= 14
+Edge >= 90
+
+# Mobile browsers  
+ChromeAndroid >= 90
+iOS >= 14
+Samsung >= 13
+
+# Additional mobile support
+FirefoxAndroid >= 88
+
+# Exclude problematic browsers
+not IE <= 11
+not IE_mob <= 11
+
+# Note: This configuration targets modern browsers with graceful degradation
+# for older versions. For IE11 and older browsers, progressive enhancement
+# patterns should be implemented.

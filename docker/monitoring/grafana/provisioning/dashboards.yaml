@@ -1,0 +1,26 @@
+# Grafana dashboard provisioning configuration
+apiVersion: 1
+
+providers:
+  # Brain AI dashboards
+  - name: 'Brain AI Dashboards'
+    orgId: 1
+    folder: 'Brain AI'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: true
+
+  # Infrastructure dashboards
+  - name: 'Infrastructure'
+    orgId: 1
+    folder: 'Infrastructure'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/infrastructure

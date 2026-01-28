@@ -1,0 +1,42 @@
+name: Semantic PR Title
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  semantic:
+    name: Check PR title follows Conventional Commits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Allowed types
+          types: |
+            feat
+            fix
+            chore
+            docs
+            refactor
+            test
+            perf
+            build
+            ci
+          # Optional scopes — tune to your repo
+          scopes: |
+            a11y
+            agents
+            knowledge
+            automations
+            integrations
+            recipes
+            security
+            auth
+            e2e
+            infra
+            api
+            ui
+          requireScope: false
+          # Allow WIP: prefix (won't fail)
+          wip: true

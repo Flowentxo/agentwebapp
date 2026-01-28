@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(python tools/roi_calculator.py:*)",
+      "Bash(python test_roi.py:*)",
+      "Bash(python test_sales_forecaster.py:*)",
+      "Bash(python test_pnl.py:*)",
+      "Bash(python test_balance_sheet.py:*)",
+      "Bash(python:*)",
+      "Bash(chcp 65001)",
+      "Bash($env:PYTHONIOENCODING=\"utf-8\")",
+      "Bash(PYTHONIOENCODING=utf-8 python:*)",
+      "Bash(for file in dexter-agent/tools/*.py)",
+      "Bash(do python -m py_compile:*)",
+      "Bash(done)",
+      "Bash(dir \"C:\\Users\\luis\\Desktop\\Agents\" /s /b)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

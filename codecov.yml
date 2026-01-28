@@ -1,0 +1,17 @@
+codecov:
+  require_ci_to_pass: true
+
+coverage:
+  status:
+    project:
+      default:
+        target: 85%
+        threshold: 1%   # allow tiny drift
+    patch:
+      default:
+        target: 85%
+        threshold: 0%
+
+comment:
+  layout: "reach, diff, files"
+  require_changes: true

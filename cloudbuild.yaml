@@ -1,0 +1,14 @@
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "gcr.io/studio-3606300847-871c7/ai-agent-webapp:latest"
+      - "-f"
+      - "Dockerfile"
+      - "."
+images:
+  - "gcr.io/studio-3606300847-871c7/ai-agent-webapp:latest"
+options:
+  machineType: "E2_HIGHCPU_8"
+timeout: "1800s"

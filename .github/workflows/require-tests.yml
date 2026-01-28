@@ -1,0 +1,100 @@
+name: Require Tests When Code Changes
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  require-tests:
+    runs-on: ubuntu-latest
+    env:
+      ALLOW_LABELS: "no-tests,docs,ci,chore,infra,skip-tests-check"
+    steps:
+      - name: Analyze changed files
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const prNumber = context.payload.pull_request.number;
+
+            // Fetch PR & labels
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: prNumber });
+            const labels = (pr.labels || []).map(l => (typeof l === 'string' ? l : l.name).toLowerCase());
+            const allowLabels = (process.env.ALLOW_LABELS || "")
+              .split(",")
+              .map(s => s.trim().toLowerCase())
+              .filter(Boolean);
+            const hasAllowedLabel = labels.some(l => allowLabels.includes(l));
+
+            // List changed files (paginate)
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner, repo, pull_number: prNumber, per_page: 100
+            });
+
+            // Helpers
+            const isTestPath = (p) =>
+              /^tests\//i.test(p) ||
+              /__tests__\//i.test(p) ||
+              /\.(spec|test)\.[tj]sx?$/i.test(p);
+
+            const isCodePath = (p) =>
+              /^app\//i.test(p) ||
+              /^lib\//i.test(p) ||
+              /^server\//i.test(p) ||
+              /^src\//i.test(p) ||
+              /^packages\//i.test(p);
+
+            const isCodeFile = (p) =>
+              isCodePath(p) &&
+              /\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(p) &&
+              !isTestPath(p) &&
+              !/\.d\.ts$/i.test(p);
+
+            const changedPaths = files.map(f => f.filename);
+            const codeChanged = changedPaths.some(isCodeFile);
+            const testsChanged = changedPaths.some(isTestPath);
+
+            core.info(`Labels: ${labels.join(", ") || "(none)"}`);
+            core.info(`Code changed: ${codeChanged}, Tests changed: ${testsChanged}`);
+
+            if (!codeChanged) {
+              core.notice("No code files changed; skipping test requirement.");
+              return;
+            }
+            if (hasAllowedLabel) {
+              core.notice(`Allowed label present (${allowLabels.join(", ")}); skipping test requirement.`);
+              return;
+            }
+            if (!testsChanged) {
+              const MAX_LIST = 20;
+              const codeFiles = changedPaths.filter(isCodeFile).slice(0, MAX_LIST);
+              const marker = "<!-- require-tests -->";
+              const msg = [
+                marker,
+                "🚫 **Tests required:** This PR changes code but includes no test changes.",
+                "",
+                "Please add or update tests (e.g., in `tests/**`, `__tests__/`, or `*.spec.ts`/`*.test.ts`).",
+                "",
+                "If tests are **intentionally** not needed (docs/chore/infra), add one of these labels:",
+                "`" + allowLabels.join("`, `") + "`",
+                "",
+                "**Changed code files (sample):**",
+                ...codeFiles.map(f => `- \`${f}\``),
+                codeFiles.length === MAX_LIST ? "- …" : ""
+              ].join("\n");
+
+              const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number: prNumber, per_page: 100 });
+              const existing = comments.find(c => (c.user?.type === "Bot") && c.body?.includes(marker));
+              if (existing) {
+                await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body: msg });
+              } else {
+                await github.rest.issues.createComment({ owner, repo, issue_number: prNumber, body: msg });
+              }
+
+              core.setFailed("Code changed without accompanying tests.");
+            } else {
+              core.notice("Test requirement satisfied.");
+            }

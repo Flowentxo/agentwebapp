@@ -1,0 +1,85 @@
+{
+  "summary": "Größte Lücken: Automations, Knowledge/RAG, Integrations, Workspaces, Pricing.",
+  "items": [
+    {
+      "id": "G-001",
+      "area": "feature",
+      "title": "Automations (Listen, Erstellen, Zeitplan, History) fehlen",
+      "severity": "high",
+      "size": "M",
+      "acceptance": [
+        "/automations List + Create",
+        "RRULE/Cron speichern",
+        "Run-History UI",
+        "Retry"
+      ],
+      "notes": "Sintra bewirbt Automations prominent (Planen, Kommentare prüfen)."
+    },
+    {
+      "id": "G-002",
+      "area": "feature",
+      "title": "Brain AI / Knowledge (Uploads, URLs, RAG) fehlt",
+      "severity": "high",
+      "size": "L",
+      "acceptance": [
+        "Upload/URL",
+        "Chunking+Index",
+        "Context-Injection",
+        "Quellen im Antwort-UI"
+      ],
+      "notes": "„They learn your business… Remembers files, websites…""
+    },
+    {
+      "id": "G-003",
+      "area": "integration",
+      "title": "OAuth-Integrationen (z. B. Google/Slack/Social) fehlen",
+      "severity": "high",
+      "size": "M",
+      "acceptance": [
+        "Connect/Disconnect UI",
+        "Token-Speicher",
+        "E2E-Use in Run/Automation"
+      ],
+      "notes": "„Integrates with your favorite tools.""
+    },
+    {
+      "id": "G-004",
+      "area": "collab",
+      "title": "Workspaces & Team-Sharing (bis 5 Profile) fehlen",
+      "severity": "medium",
+      "size": "M",
+      "acceptance": [
+        "Workspace-Switch",
+        "Members+Roles",
+        "RLS/Tenancy Policies"
+      ],
+      "notes": "„Multiple workspaces… Up to 5 profiles… Share workspace.""
+    },
+    {
+      "id": "G-005",
+      "area": "ui",
+      "title": "Helpers-Katalog (12+ Rollen) nur rudimentär",
+      "severity": "medium",
+      "size": "S",
+      "acceptance": [
+        "Liste ≥ 8 Helpers",
+        "Role+Desc+CTA",
+        "Filter/StickySearch"
+      ],
+      "notes": "Startscreen mit Produkt-„Helpers" wie Dexter, Cassie, Soshie."
+    },
+    {
+      "id": "G-006",
+      "area": "billing",
+      "title": "Pricing/Plans & Feature-Gates fehlen",
+      "severity": "medium",
+      "size": "M",
+      "acceptance": [
+        "Pricing-Seite",
+        "Stripe Checkout/Webhooks (stub ok)",
+        "Feature-Gates"
+      ],
+      "notes": "Pricing prominent verlinkt."
+    }
+  ]
+}

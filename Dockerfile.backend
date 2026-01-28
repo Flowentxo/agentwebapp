@@ -1,0 +1,108 @@
+# =============================================================================
+# FLOWENT AI PLATFORM - BACKEND DOCKERFILE
+# =============================================================================
+# Multi-stage build for Express.js/Node.js backend with TypeScript
+# Uses tsx for TypeScript execution (same as dev mode for compatibility)
+# Optimized for production with minimal image size
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Stage 1: Base Dependencies
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS base
+
+# Install essential build dependencies for native modules
+# - libc6-compat: glibc compatibility layer for Alpine
+# - python3, make, g++: required for node-gyp (native addons)
+RUN apk add --no-cache libc6-compat python3 make g++
+
+WORKDIR /app
+
+# -----------------------------------------------------------------------------
+# Stage 2: Dependencies Installation
+# -----------------------------------------------------------------------------
+FROM base AS deps
+
+WORKDIR /app
+
+# Copy package files for dependency installation
+COPY package.json package-lock.json* ./
+
+# Copy prisma schema for client generation
+COPY prisma ./prisma/
+
+# Install all dependencies (including devDependencies for tsx)
+RUN npm ci --legacy-peer-deps
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# -----------------------------------------------------------------------------
+# Stage 3: Builder (prepare production files)
+# -----------------------------------------------------------------------------
+FROM base AS builder
+
+WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy source code
+COPY . .
+
+# Set production environment
+ENV NODE_ENV=production
+
+# -----------------------------------------------------------------------------
+# Stage 4: Production Runner
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+# Install runtime dependencies only
+RUN apk add --no-cache libc6-compat wget
+
+# Security: Create and use non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 backend
+
+# Set production environment
+ENV NODE_ENV=production
+ENV PORT=4000
+
+# Copy package files
+COPY --from=builder /app/package.json ./package.json
+
+# Copy node_modules (includes tsx, ts dependencies, prisma client)
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copy source files needed at runtime
+COPY --from=builder /app/server ./server
+COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/actions ./actions
+COPY --from=builder /app/workers ./workers
+COPY --from=builder /app/prisma ./prisma
+
+# Copy config files
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
+COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
+
+# Create logs directory with proper permissions
+RUN mkdir -p /app/logs && chown -R backend:nodejs /app/logs
+
+# Change ownership of app directory
+RUN chown -R backend:nodejs /app
+
+# Switch to non-root user
+USER backend
+
+# Expose the backend port
+EXPOSE 4000
+
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:4000/api/health || exit 1
+
+# Start the server using tsx (TypeScript execution)
+CMD ["npx", "tsx", "server/index.ts"]

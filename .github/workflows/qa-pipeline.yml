@@ -1,0 +1,263 @@
+name: QA Pipeline - UX/A11y (Legacy)
+
+# DISABLED: Workflow requires missing npm scripts (type-check, format:check, test:e2e:a11y, etc.)
+# Use e2e.yml for current CI pipeline
+# Re-enable by restoring original triggers or run manually via workflow_dispatch
+on:
+  workflow_dispatch:
+
+jobs:
+  # ========================================
+  # 1. Linting & Type Checking
+  # ========================================
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: TypeScript
+        run: npm run type-check
+
+      - name: Prettier
+        run: npm run format:check
+
+  # ========================================
+  # 2. Unit Tests
+  # ========================================
+  unit-tests:
+    name: Unit Tests (Vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run Vitest
+        run: npm run test:unit -- --coverage
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/coverage-final.json
+          flags: unittests
+
+  # ========================================
+  # 3. E2E Tests (Playwright)
+  # ========================================
+  e2e-tests:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build App
+        run: npm run build
+
+      - name: Run E2E Tests
+        run: npm run test:e2e
+        env:
+          NEXT_PUBLIC_FLAG_NEW_DASHBOARD: '1'
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-results
+          path: test-results/
+
+  # ========================================
+  # 4. A11y Tests (Playwright + axe-core)
+  # ========================================
+  a11y-tests:
+    name: Accessibility Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Build App
+        run: npm run build
+
+      - name: Run A11y Tests
+        run: npm run test:e2e:a11y
+        env:
+          NEXT_PUBLIC_FLAG_NEW_DASHBOARD: '1'
+
+      - name: Upload A11y Report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: a11y-report
+          path: test-results/a11y-report.json
+
+  # ========================================
+  # 5. Visual Regression Tests
+  # ========================================
+  visual-tests:
+    name: Visual Regression Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Build Storybook
+        run: npm run build-storybook
+
+      - name: Run VRT
+        run: npm run test:vrt
+
+      - name: Upload Screenshots
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: vrt-diff-screenshots
+          path: test-results/**/*-diff.png
+
+  # ========================================
+  # 6. Lighthouse CI
+  # ========================================
+  lighthouse:
+    name: Lighthouse CI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Build App
+        run: npm run build
+        env:
+          NEXT_PUBLIC_FLAG_NEW_DASHBOARD: '1'
+
+      - name: Run Lighthouse CI
+        run: |
+          npm install -g @lhci/cli@0.13.x
+          lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Upload Lighthouse Report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: lighthouse-report
+          path: .lighthouseci/
+
+  # ========================================
+  # 7. Bundle Size Check
+  # ========================================
+  bundle-size:
+    name: Bundle Size Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Build & Analyze
+        run: npm run build
+        env:
+          ANALYZE: true
+
+      - name: Check Bundle Size
+        uses: andresz1/size-limit-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  # ========================================
+  # 8. Security Audit
+  # ========================================
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Audit Dependencies
+        run: npm audit --audit-level=moderate
+
+      - name: Check for Known Vulnerabilities
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+  # ========================================
+  # 9. Final Status Check
+  # ========================================
+  qa-status:
+    name: QA Status
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests, e2e-tests, a11y-tests, visual-tests, lighthouse]
+    if: always()
+    steps:
+      - name: Check All Jobs
+        run: |
+          if [[ "${{ needs.lint.result }}" == "failure" ]] || \
+             [[ "${{ needs.unit-tests.result }}" == "failure" ]] || \
+             [[ "${{ needs.e2e-tests.result }}" == "failure" ]] || \
+             [[ "${{ needs.a11y-tests.result }}" == "failure" ]] || \
+             [[ "${{ needs.lighthouse.result }}" == "failure" ]]; then
+            echo "❌ QA Pipeline failed!"
+            exit 1
+          else
+            echo "✅ QA Pipeline passed!"
+          fi

@@ -1,0 +1,93 @@
+[
+  {
+    "title": "Q4 Sales Strategie 2024",
+    "content": "Unsere Q4 Strategie fokussiert sich auf Enterprise-Kunden im DACH-Raum. Hauptziele sind: 1) Erhöhung der durchschnittlichen Deal-Größe um 25%, 2) Reduzierung des Sales-Cycles auf unter 60 Tage, 3) Aufbau von 3 strategischen Partnerschaften. Key Actions: Fokussierung auf Top-50 Target Accounts, Einführung eines ROI-Calculators, Executive Sponsorship Programm.",
+    "category": "sales",
+    "tags": [
+      "strategie",
+      "q4",
+      "enterprise",
+      "dach"
+    ],
+    "sourceType": "upload",
+    "status": "published",
+    "authorId": "system",
+    "id": "kb-1766261372772-c6eto1",
+    "wordCount": 45,
+    "createdAt": "2025-12-20T20:09:32.772Z",
+    "updatedAt": "2025-12-20T20:09:32.772Z"
+  },
+  {
+    "title": "Produkt-Roadmap 2025",
+    "content": "Die Produkt-Roadmap für 2025 umfasst drei Hauptbereiche: AI-Integration, Enterprise-Features und Performance-Optimierung. Q1 Fokus liegt auf dem Brain AI System mit Semantic Search und RAG. Q2 bringt SSO und RBAC für Enterprise. Q3 fokussiert auf Performance und Skalierung. Q4 ist für neue AI-Agents und Workflow-Automatisierung reserviert.",
+    "category": "product",
+    "tags": [
+      "roadmap",
+      "2025",
+      "ai",
+      "enterprise"
+    ],
+    "sourceType": "upload",
+    "status": "published",
+    "authorId": "system",
+    "id": "kb-1766261372774-99jkzj",
+    "wordCount": 45,
+    "createdAt": "2025-12-20T20:09:32.774Z",
+    "updatedAt": "2025-12-20T20:09:32.774Z"
+  },
+  {
+    "title": "Best Practices für Lead Nurturing",
+    "content": "Effektives Lead Nurturing erfordert eine Kombination aus personalisiertem Content, timing-optimierter Kommunikation und datengesteuerter Entscheidungsfindung. Key-Metriken: Open Rate (Ziel: >25%), Click Rate (Ziel: >5%), Conversion Rate (Ziel: >2%). Wichtig: Segmentierung nach Buyer Persona, Lead Score und Engagement Level.",
+    "category": "sales",
+    "tags": [
+      "leads",
+      "nurturing",
+      "best-practices",
+      "email"
+    ],
+    "sourceType": "url",
+    "sourceUri": "https://example.com/lead-nurturing",
+    "status": "published",
+    "authorId": "system",
+    "id": "kb-1766261372776-d7r3og",
+    "wordCount": 37,
+    "createdAt": "2025-12-20T20:09:32.776Z",
+    "updatedAt": "2025-12-20T20:09:32.776Z"
+  },
+  {
+    "title": "Enterprise-Kundenanforderungen",
+    "content": "Enterprise-Kunden legen besonderen Wert auf: SSO-Integration (SAML 2.0, OIDC), Role-Based Access Control (RBAC), Audit-Logging für Compliance, SLA-Garantien (99.9% Uptime), Dedicated Support mit garantierten Response-Zeiten. Zusätzlich häufig angefragt: SCIM Provisioning, SOC2 Type II Zertifizierung, GDPR-Compliance-Dokumentation.",
+    "category": "customer",
+    "tags": [
+      "enterprise",
+      "anforderungen",
+      "security",
+      "compliance"
+    ],
+    "sourceType": "conversation",
+    "status": "published",
+    "authorId": "system",
+    "id": "kb-1766261372778-nl6e7o",
+    "wordCount": 34,
+    "createdAt": "2025-12-20T20:09:32.778Z",
+    "updatedAt": "2025-12-20T20:09:32.778Z"
+  },
+  {
+    "title": "Wettbewerbsanalyse Q4 2024",
+    "content": "Hauptwettbewerber im AI-Agent-Markt: Competitor A (Fokus Enterprise, starke Integration), Competitor B (SMB-Markt, günstig), Competitor C (Vertical SaaS, spezialisiert). Unser USP: Integriertes Brain AI System mit semantischer Suche, Multi-Agent-Orchestrierung, deutsche Datenhaltung. Schwächen der Konkurrenz: Keine echte AI-Integration, limitierte Anpassbarkeit.",
+    "category": "sales",
+    "tags": [
+      "wettbewerb",
+      "analyse",
+      "markt",
+      "competitor"
+    ],
+    "sourceType": "upload",
+    "status": "published",
+    "authorId": "system",
+    "id": "kb-1766261372779-vmwh6p",
+    "wordCount": 38,
+    "createdAt": "2025-12-20T20:09:32.779Z",
+    "updatedAt": "2025-12-20T20:09:32.779Z"
+  }
+]
