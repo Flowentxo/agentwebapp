@@ -50,7 +50,7 @@ export function VicyChatInterface({ threadId }: VicyChatInterfaceProps) {
       content: msg.content,
       createdAt: msg.createdAt,
       metadata: msg.metadata,
-      artifactId: (msg as any).artifactId,
+      artifactId: msg.artifactId,
     }));
   }, [messagesData]);
 

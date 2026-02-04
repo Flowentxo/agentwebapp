@@ -301,6 +301,7 @@ export interface ChatMessage {
   isOptimistic?: boolean;
   approval?: ApprovalData;
   artifact?: Artifact;
+  artifactId?: string | null;
   metadata?: MessageMetadata;
   toolActions?: ParsedToolAction[];
   createdAt?: string;
@@ -337,7 +338,7 @@ export interface TypingIndicator {
 
 export interface AgentRoutedData {
   threadId: string;
-  selectedAgent: string;
+  agentId: string;
   agentName: string;
   confidence: number;
   reasoning: string;
@@ -418,6 +419,7 @@ export function transformMessageToChat(message: InboxMessage, artifact?: Artifac
     isOptimistic: message.isOptimistic,
     approval: message.approval || undefined,
     artifact: artifact,
+    artifactId: message.artifactId || undefined,
     metadata: message.metadata || undefined,
   };
 }

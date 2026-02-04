@@ -71,6 +71,7 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
       content: msg.content,
       createdAt: msg.createdAt,
       metadata: msg.metadata,
+      artifactId: msg.artifactId,
     }));
   }, [messagesData]);
 
