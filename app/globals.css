@@ -329,6 +329,11 @@ input, select, textarea {
     --surface-2: rgba(39, 39, 42, 0.6);          /* Elevated glass */
     --surface-3: rgba(63, 63, 70, 0.4);          /* Hover state */
 
+    /* Inbox Column Layering - Visual Depth Differentiation */
+    --inbox-sidebar-bg: #0d0d0d;                 /* Darkest: thread list */
+    --inbox-chat-bg: #0a0a0a;                    /* Medium: main chat area */
+    --inbox-artifact-bg: #111113;                 /* Slightly elevated: output panel */
+
     /* Hairline - Ultra-subtle separators */
     --hairline: rgba(255, 255, 255, 0.05);
 
@@ -2066,4 +2071,194 @@ input[type="range"]::-moz-range-track {
 
 :root .recharts-legend-item-text {
   color: #52525b !important;
+}
+
+/* ============================================================================
+   ORCHESTRATION HUB - Inbox Animations
+   ============================================================================ */
+
+/* Status dot pulse for active threads */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.85); }
+}
+
+.animate-status-pulse {
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+/* Routing notification slide in */
+@keyframes routing-slide-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-routing-slide-in {
+  animation: routing-slide-in 0.3s ease-out forwards;
+}
+
+/* Universal Prompt focus glow */
+.universal-prompt-glow:focus-within {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.dark .universal-prompt-glow:focus-within {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Mention dropdown animation */
+@keyframes mention-dropdown {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-mention-dropdown {
+  animation: mention-dropdown 0.15s ease-out forwards;
+}
+
+/* ============================================================================
+   PAINKILLER WORKSPACE - Phase 2: Visual Depth & Utilities
+   ============================================================================ */
+
+/* Inbox workspace subtle violet glow (chat area background) */
+.inbox-workspace-glow {
+  background:
+    radial-gradient(ellipse 600px 400px at 50% 0%, rgba(139, 92, 246, 0.03), transparent 60%);
+}
+
+/* Sidebar status bar */
+.sidebar-status-bar {
+  height: 24px;
+  font-size: 10px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Quick Start card appear animation */
+@keyframes card-appear {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-card-appear {
+  animation: card-appear 0.3s ease-out forwards;
+}
+
+/* Progress bar pulse for active workflows */
+@keyframes progress-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+.progress-active {
+  animation: progress-pulse 2s ease-in-out infinite;
+}
+
+/* Vertical text for collapsed artifact tab */
+.writing-mode-vertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+/* ========================================
+   VICY DESIGN SYSTEM (v4 - AI-First UI)
+   Deep dark, glassmorphism, minimal
+   ======================================== */
+
+.vicy-theme {
+  --vicy-bg: #0A0A0A;
+  --vicy-surface: #111111;
+  --vicy-surface-hover: #1A1A1A;
+  --vicy-border: rgba(255, 255, 255, 0.06);
+  --vicy-border-focus: rgba(255, 255, 255, 0.12);
+  --vicy-text-primary: #FAFAFA;
+  --vicy-text-secondary: #71717A;
+  --vicy-text-tertiary: #3F3F46;
+  --vicy-glass-bg: rgba(255, 255, 255, 0.03);
+  --vicy-glass-border: rgba(255, 255, 255, 0.08);
+  --vicy-accent: #8b5cf6;
+  --vicy-accent-glow: rgba(139, 92, 246, 0.15);
+
+  color-scheme: dark;
+  background-color: var(--vicy-bg);
+  color: var(--vicy-text-primary);
+}
+
+/* Glassmorphism panels */
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-hover:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.glass-focus:focus-within {
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.1), 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Vicy omnibar input */
+.vicy-omnibar {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 16px;
+  transition: all 0.2s ease;
+}
+
+.vicy-omnibar:focus-within {
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.15), 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Agent glow effect when identified */
+.vicy-agent-glow {
+  transition: box-shadow 0.4s ease;
+}
+
+/* Vicy sidebar icon hover */
+.vicy-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: #71717A;
+  transition: all 0.15s ease;
+}
+
+.vicy-icon-btn:hover {
+  color: #FAFAFA;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.vicy-icon-btn.active {
+  color: #FAFAFA;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Vicy recents panel slide animation */
+@keyframes vicy-slide-in {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes vicy-slide-out {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(-100%); opacity: 0; }
+}
+
+.vicy-panel-enter {
+  animation: vicy-slide-in 0.2s ease-out forwards;
+}
+
+.vicy-panel-exit {
+  animation: vicy-slide-out 0.15s ease-in forwards;
 }

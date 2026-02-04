@@ -28,6 +28,7 @@ import {
   BookOpen,
   ExternalLink,
   Inbox,
+  Sparkles,
 } from 'lucide-react';
 import { useShell } from './ShellContext';
 import { WorkspaceSwitcher } from '../workspace/WorkspaceSwitcher';
@@ -290,7 +291,7 @@ export function Sidebar() {
       </div>
 
       {/* Management Section - Premium */}
-      <div className="px-3 py-3 border-t border-gray-200 dark:border-white/[0.04] bg-transparent">
+      <div className="flex-shrink-0 px-3 py-3 border-t border-gray-200 dark:border-white/[0.04] bg-transparent">
         {!sidebarCollapsed && (
           <h3 className="px-3 mb-2.5 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
             Management
@@ -304,30 +305,11 @@ export function Sidebar() {
       </div>
 
       {/* Footer - Premium Glass */}
-      <div className="px-3 py-3 border-t border-gray-200 dark:border-white/[0.04] bg-transparent">
+      <div className="flex-shrink-0 border-t border-gray-200 dark:border-white/[0.04] bg-transparent">
         {!sidebarCollapsed ? (
-          <div className="space-y-0.5">
-            <Link
-              href="/settings"
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
-                pathname === '/settings'
-                  ? 'bg-gray-100 dark:bg-white/[0.06] text-foreground font-medium'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-gray-100 dark:hover:bg-white/[0.04]'
-              }`}
-            >
-              <Settings className="w-[18px] h-[18px]" strokeWidth={pathname === '/settings' ? 2 : 1.75} />
-              <span className="text-[13px] font-medium">Settings</span>
-            </Link>
-
-            <button
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-gray-100 dark:hover:bg-white/[0.04] transition-all duration-200"
-            >
-              <HelpCircle className="w-[18px] h-[18px]" strokeWidth={1.75} />
-              <span className="text-[13px] font-medium">Help & Support</span>
-            </button>
-
-            {/* User Profile - Premium */}
-            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-white/[0.04]">
+          <div>
+            {/* User Profile */}
+            <div className="px-3 pt-3 pb-1">
               <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/[0.04] transition-all cursor-pointer group">
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-xs font-bold text-primary-foreground shadow-md shadow-primary/25 ring-2 ring-primary/20">
                   LE
@@ -339,9 +321,50 @@ export function Sidebar() {
                 <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
               </div>
             </div>
+
+            {/* Compact Settings + Help row */}
+            <div className="px-4 pb-1 flex items-center gap-1">
+              <Link
+                href="/settings"
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all duration-200 ${
+                  pathname === '/settings'
+                    ? 'bg-gray-100 dark:bg-white/[0.06] text-foreground font-medium'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-gray-100 dark:hover:bg-white/[0.04]'
+                }`}
+              >
+                <Settings className="w-3.5 h-3.5" strokeWidth={1.75} />
+                <span>Settings</span>
+              </Link>
+              <button
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-gray-100 dark:hover:bg-white/[0.04] transition-all duration-200"
+              >
+                <HelpCircle className="w-3.5 h-3.5" strokeWidth={1.75} />
+                <span>Help</span>
+              </button>
+            </div>
+
+            {/* Try Vicy v4 */}
+            <div className="px-4 pb-1">
+              <Link
+                href="/v4"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 transition-all duration-200"
+              >
+                <Sparkles className="w-3.5 h-3.5" strokeWidth={1.75} />
+                <span>Try Vicy UI</span>
+              </Link>
+            </div>
+
+            {/* Status bar */}
+            <div className="sidebar-status-bar border-t border-gray-100 dark:border-white/[0.03] text-muted-foreground/50">
+              <span>v2.0.0</span>
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-status-pulse" />
+                <span>Connected</span>
+              </div>
+            </div>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="py-2 space-y-2">
             {/* User Avatar */}
             <div className="flex items-center justify-center p-1">
               <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-xs font-bold text-primary-foreground shadow-md shadow-primary/25 ring-2 ring-primary/20">
@@ -359,13 +382,6 @@ export function Sidebar() {
           </div>
         )}
       </div>
-
-      {/* Version Tag - Vibrant */}
-      {!sidebarCollapsed && (
-        <div className="px-6 py-2 text-[10px] font-medium text-primary/50">
-          v2.0.0 · Flowent AI
-        </div>
-      )}
     </motion.nav>
   );
 

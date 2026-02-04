@@ -6,7 +6,8 @@
 import jwt from 'jsonwebtoken'
 
 // Environment variables with secure defaults
-const JWT_SECRET: string = process.env.JWT_SECRET || '3pPhKpcuAuPPWU1YoUDrRfYt42DyLzApfQgvbawOcdHChrTUn87EYyZLcBFyltp0sVkAuk39vWar0TN2lSxlHw'
+// EXPORTED: Used by socket.ts and auth middleware for consistent JWT verification
+export const JWT_SECRET: string = process.env.JWT_SECRET || '3pPhKpcuAuPPWU1YoUDrRfYt42DyLzApfQgvbawOcdHChrTUn87EYyZLcBFyltp0sVkAuk39vWar0TN2lSxlHw'
 const ACCESS_TOKEN_EXPIRES_IN: string = process.env.ACCESS_TOKEN_EXP || '15m'  // 15 minutes
 const REFRESH_TOKEN_EXPIRES_IN: string = process.env.REFRESH_TOKEN_EXP || '7d' // 7 days
 

@@ -8,7 +8,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { InboxFilter, InboxAgent, Artifact } from '@/types/inbox';
+import type { InboxFilter, InboxAgent, Artifact, AgentRoutedData } from '@/types/inbox';
 
 // Agent configuration (static data - could be fetched from API later)
 const agents: InboxAgent[] = [
@@ -18,8 +18,8 @@ const agents: InboxAgent[] = [
   { id: 'cassie', name: 'Cassie', color: '#f59e0b', isOnline: true, activeThreads: 0 },
 ];
 
-// View mode for sidebar (active vs archived threads)
-type ViewMode = 'all' | 'archive';
+// View mode for sidebar task board
+type ViewMode = 'active' | 'completed' | 'drafts';
 
 interface InboxState {
   // UI State
@@ -37,6 +37,12 @@ interface InboxState {
   activeArtifactId: string | null; // For lazy loading
   isArtifactPanelOpen: boolean;
 
+  // Orchestration State
+  routingFeedback: Record<string, { agentId?: string; agentName: string; confidence: number; reasoning: string; previousAgent?: string; timestamp: number }>;
+
+  // UI Version (Classic v3 vs Next/Vicy v4)
+  uiVersion: 'classic' | 'next';
+
   // Actions
   setFilter: (filter: InboxFilter) => void;
   setSelectedThread: (threadId: string | null) => void;
@@ -47,6 +53,7 @@ interface InboxState {
   setDebouncedSearchQuery: (query: string) => void;
   clearSearch: () => void;
   setViewMode: (mode: ViewMode) => void;
+  setUiVersion: (version: 'classic' | 'next') => void;
 
   // Artifact Actions
   openArtifact: (artifact: Artifact) => void;
@@ -54,6 +61,10 @@ interface InboxState {
   setActiveArtifact: (artifact: Artifact | null) => void;
   closeArtifact: () => void;
   updateArtifactContent: (content: string) => void;
+
+  // Orchestration Actions
+  setRoutingFeedback: (threadId: string, feedback: { agentId?: string; agentName: string; confidence: number; reasoning: string; previousAgent?: string }) => void;
+  clearRoutingFeedback: (threadId: string) => void;
 }
 
 export const useInboxStore = create<InboxState>()(
@@ -67,12 +78,18 @@ export const useInboxStore = create<InboxState>()(
       searchQuery: '',
       debouncedSearchQuery: '',
       agents,
-      viewMode: 'all',
+      viewMode: 'active',
 
       // Artifact initial state
       activeArtifact: null,
       activeArtifactId: null,
       isArtifactPanelOpen: false,
+
+      // Orchestration initial state
+      routingFeedback: {},
+
+      // UI Version
+      uiVersion: 'classic',
 
       // Actions
       setFilter: (filter) => set({
@@ -102,6 +119,8 @@ export const useInboxStore = create<InboxState>()(
       clearSearch: () => set({ searchQuery: '', debouncedSearchQuery: '' }),
 
       setViewMode: (mode) => set({ viewMode: mode }),
+
+      setUiVersion: (version) => set({ uiVersion: version }),
 
       // Artifact Actions
       openArtifact: (artifact) => set({
@@ -136,6 +155,19 @@ export const useInboxStore = create<InboxState>()(
             }
           : null,
       })),
+
+      // Orchestration Actions
+      setRoutingFeedback: (threadId, feedback) => set((state) => ({
+        routingFeedback: {
+          ...state.routingFeedback,
+          [threadId]: { ...feedback, timestamp: Date.now() },
+        },
+      })),
+
+      clearRoutingFeedback: (threadId) => set((state) => {
+        const { [threadId]: _, ...rest } = state.routingFeedback;
+        return { routingFeedback: rest };
+      }),
     }),
     {
       name: 'flowent-inbox-store',
@@ -144,6 +176,7 @@ export const useInboxStore = create<InboxState>()(
         activeAgentId: state.activeAgentId,
         isSidebarOpen: state.isSidebarOpen,
         viewMode: state.viewMode,
+        uiVersion: state.uiVersion,
       }),
     }
   )

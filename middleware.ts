@@ -49,6 +49,7 @@ const PROTECTED_ROUTES = [
   "/pipelines",
   "/brain",
   "/inbox",
+  "/v4",
 ];
 
 // API routes that require auth (checked by Next.js middleware for cookie-based auth)

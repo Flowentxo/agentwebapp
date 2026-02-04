@@ -89,6 +89,16 @@ export interface MessageResponse {
 /**
  * Thread interface (matches inboxThreads table)
  */
+export interface ThreadOrchestrationMetadata {
+  workflowId?: string;
+  executionId?: string;
+  tags?: string[];
+  context?: Record<string, unknown>;
+  involvedAgents?: { id: string; name: string; color: string }[];
+  routingHistory?: { agentId: string; agentName: string; confidence: number; reasoning: string; timestamp: string }[];
+  workflowProgress?: { current: number; total: number; currentStep: string };
+}
+
 export interface Thread {
   id: string;
   userId: string;
@@ -102,12 +112,7 @@ export interface Thread {
   unreadCount: number;
   messageCount: number;
   pendingApprovalId?: string | null;
-  metadata: {
-    workflowId?: string;
-    executionId?: string;
-    tags?: string[];
-    context?: Record<string, unknown>;
-  };
+  metadata: ThreadOrchestrationMetadata;
   lastMessageAt: string;
   createdAt: string;
   updatedAt: string;
@@ -257,12 +262,7 @@ export interface ThreadView {
   unreadCount: number;
   messageCount: number;
   pendingApprovalId?: string | null;
-  metadata: {
-    workflowId?: string;
-    executionId?: string;
-    tags?: string[];
-    context?: Record<string, unknown>;
-  };
+  metadata: ThreadOrchestrationMetadata;
   lastMessageAt: string;
   createdAt: string;
   updatedAt: string;
@@ -322,6 +322,7 @@ export type ChatSocketEvent =
   | 'thread:history'
   | 'approval:update'
   | 'artifact:created'
+  | 'agent:routed'
   | 'system:event'
   | 'error';
 
@@ -332,6 +333,15 @@ export interface TypingIndicator {
   agentId: string;
   agentName: string;
   isTyping: boolean;
+}
+
+export interface AgentRoutedData {
+  threadId: string;
+  selectedAgent: string;
+  agentName: string;
+  confidence: number;
+  reasoning: string;
+  previousAgent?: string;
 }
 
 // =====================================================

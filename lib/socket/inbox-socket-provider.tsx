@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { io, Socket } from 'socket.io-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { getValidToken } from '@/lib/auth/get-token';
+import { useInboxStore } from '@/lib/stores/useInboxStore';
 
 // ============================================================================
 // TYPES
@@ -49,6 +50,15 @@ interface TypingIndicator {
   isTyping: boolean;
 }
 
+interface AgentRoutedEvent {
+  threadId: string;
+  agentId: string;
+  agentName: string;
+  confidence: number;
+  reasoning: string;
+  previousAgent?: string;
+}
+
 interface InboxSocketContextValue {
   socket: Socket | null;
   isConnected: boolean;
@@ -69,6 +79,7 @@ interface InboxSocketContextValue {
   onApprovalUpdate: (callback: (approval: ApprovalUpdate) => void) => () => void;
   onTypingStart: (callback: (indicator: TypingIndicator) => void) => () => void;
   onTypingStop: (callback: (indicator: TypingIndicator) => void) => () => void;
+  onAgentRouted: (callback: (data: AgentRoutedEvent) => void) => () => void;
 }
 
 // ============================================================================
@@ -149,8 +160,22 @@ export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
     const token = authToken || getToken();
 
     if (!token) {
-      console.log('[InboxSocket] No token found, waiting for auth...');
-      return;
+      console.log('[InboxSocket] No token found, starting cascading retries...');
+      // Cascading retries: token might not be in localStorage yet after login
+      const retryDelays = [500, 1500, 3000];
+      const timers: ReturnType<typeof setTimeout>[] = [];
+
+      retryDelays.forEach((delay, i) => {
+        timers.push(setTimeout(() => {
+          const freshToken = getToken();
+          console.log(`[InboxSocket] Retry ${i + 1}/${retryDelays.length}: token`, freshToken ? 'FOUND' : 'STILL MISSING');
+          if (freshToken) {
+            setAuthToken(freshToken);
+          }
+        }, delay));
+      });
+
+      return () => timers.forEach(t => clearTimeout(t));
     }
 
     console.log('[InboxSocket] Token available, initiating connection');
@@ -188,6 +213,19 @@ export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
       setError(err.message);
       reconnectAttempts.current++;
 
+      // On auth-specific errors, try refreshing the token
+      const isAuthError = err.message === 'Authentication required' || err.message === 'Invalid or expired token';
+      if (isAuthError) {
+        console.log('[InboxSocket] Auth error detected, attempting token refresh...');
+        const freshToken = getToken();
+        if (freshToken && freshToken !== token) {
+          console.log('[InboxSocket] Fresh token found, triggering reconnect');
+          newSocket.disconnect();
+          setAuthToken(freshToken);
+          return; // useEffect will re-run with new authToken
+        }
+      }
+
       if (reconnectAttempts.current >= maxReconnectAttempts) {
         console.log('[InboxSocket] Max reconnect attempts reached');
         newSocket.disconnect();
@@ -223,6 +261,21 @@ export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
     newSocket.on('approval:update', (approval: ApprovalUpdate) => {
       console.log('[InboxSocket] Approval update:', approval.approvalId);
       queryClient.invalidateQueries({ queryKey: ['threads'] });
+    });
+
+    // Handle agent routing events - update store with routing feedback
+    newSocket.on('agent:routed', (data: AgentRoutedEvent) => {
+      console.log('[InboxSocket] Agent routed:', data.agentName, '(confidence:', data.confidence + ')');
+      useInboxStore.getState().setRoutingFeedback(data.threadId, {
+        agentId: data.agentId,
+        agentName: data.agentName,
+        confidence: data.confidence,
+        reasoning: data.reasoning,
+        previousAgent: data.previousAgent,
+      });
+      // Also refresh thread data since agent changed
+      queryClient.invalidateQueries({ queryKey: ['threads'] });
+      queryClient.invalidateQueries({ queryKey: ['thread', data.threadId] });
     });
 
     setSocket(newSocket);
@@ -293,6 +346,12 @@ export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
     return () => socket.off('typing:stop', callback);
   }, [socket]);
 
+  const onAgentRouted = useCallback((callback: (data: AgentRoutedEvent) => void) => {
+    if (!socket) return () => {};
+    socket.on('agent:routed', callback);
+    return () => socket.off('agent:routed', callback);
+  }, [socket]);
+
   const value: InboxSocketContextValue = {
     socket,
     isConnected,
@@ -309,6 +368,7 @@ export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
     onApprovalUpdate,
     onTypingStart,
     onTypingStop,
+    onAgentRouted,
   };
 
   return (

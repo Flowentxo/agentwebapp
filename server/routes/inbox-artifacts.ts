@@ -13,10 +13,12 @@ import { logger } from '../utils/logger';
 import { authenticateToken } from '../middleware/auth';
 import { toolActionParser } from '../services/ToolActionParser';
 import { inboxApprovalService } from '../services/InboxApprovalService';
-import { emitInboxMessage, emitInboxThreadUpdate, emitApprovalUpdate, emitInboxTyping } from '../socket';
+import { emitInboxMessage, emitInboxThreadUpdate, emitApprovalUpdate, emitInboxTyping, emitAgentRouted } from '../socket';
 import { getAgentById } from '../../lib/agents/personas';
 import { getAgentSystemPrompt } from '../../lib/agents/prompts';
 import { UnifiedAIService } from '../services/UnifiedAIService';
+import { routingService, type RoutingResult } from '../services/RoutingService';
+import { extractMentionedAgent, stripMention } from '../utils/extract-mention';
 
 const router = Router();
 
@@ -595,6 +597,12 @@ router.post('/threads/:threadId/messages', authenticateToken, async (req: Reques
 /**
  * Generate AI agent response for a user message
  * This runs asynchronously after the user message is saved
+ *
+ * Now includes Omni-Orchestrator routing:
+ * 1. Classify user intent
+ * 2. Route to best agent
+ * 3. Update thread if agent changed
+ * 4. Generate response with selected agent
  */
 async function generateAgentResponse(
   threadId: string,
@@ -604,11 +612,106 @@ async function generateAgentResponse(
   userMessage: string
 ) {
   const db = getDb();
-  const effectiveAgentId = agentId || 'omni';
-  const effectiveAgentName = agentName || 'AI Assistant';
+  let effectiveAgentId = agentId || 'omni';
+  let effectiveAgentName = agentName || 'AI Assistant';
+  let processedMessage = userMessage;
 
   try {
-    logger.info(`[INBOX_AI] Generating response for thread ${threadId} using agent ${effectiveAgentId}`);
+    logger.info(`[INBOX_AI] Processing message for thread ${threadId}, current agent: ${effectiveAgentId}`);
+
+    // ============================================
+    // OMNI-ORCHESTRATOR ROUTING
+    // ============================================
+
+    // Check for explicit @mention override first
+    const mentionedAgent = extractMentionedAgent(userMessage);
+    if (mentionedAgent) {
+      logger.info(`[INBOX_AI] @mention detected: ${mentionedAgent.name}, overriding routing`);
+      effectiveAgentId = mentionedAgent.id;
+      effectiveAgentName = mentionedAgent.name;
+
+      // Update thread with mentioned agent
+      await db
+        .update(inboxThreads)
+        .set({
+          agentId: effectiveAgentId,
+          agentName: effectiveAgentName,
+          updatedAt: new Date()
+        })
+        .where(eq(inboxThreads.id, threadId));
+
+      // Emit routing event for frontend
+      emitAgentRouted(threadId, {
+        selectedAgent: effectiveAgentId,
+        agentName: effectiveAgentName,
+        confidence: 1.0,
+        reasoning: `Manually assigned via @${mentionedAgent.name}`,
+        previousAgent: agentId || undefined
+      });
+
+      // Strip @mention from the message for cleaner AI processing
+      processedMessage = stripMention(userMessage);
+    }
+
+    // Only auto-route if no @mention and agent is generic
+    const shouldRoute = !mentionedAgent && (effectiveAgentId === 'omni' || effectiveAgentId === 'assistant');
+
+    if (shouldRoute) {
+      logger.info(`[INBOX_AI] Routing enabled for agent ${effectiveAgentId}, classifying intent...`);
+
+      // Get recent conversation context for better routing
+      const recentMessages = await db
+        .select()
+        .from(inboxMessages)
+        .where(eq(inboxMessages.threadId, threadId))
+        .orderBy(desc(inboxMessages.createdAt))
+        .limit(5);
+
+      const conversationContext = recentMessages
+        .reverse()
+        .map(msg => `${msg.role}: ${msg.content.substring(0, 200)}`);
+
+      // Classify intent and get best agent
+      const routingResult = await routingService.classifyIntent(
+        userMessage,
+        effectiveAgentId,
+        conversationContext
+      );
+
+      logger.info(`[INBOX_AI] Routing result: ${routingResult.selectedAgent} (confidence: ${routingResult.confidence})`);
+
+      // If agent changed, update thread and notify frontend
+      if (routingResult.wasRouted && routingResult.selectedAgent !== effectiveAgentId) {
+        const newAgent = getAgentById(routingResult.selectedAgent);
+        if (newAgent) {
+          effectiveAgentId = routingResult.selectedAgent;
+          effectiveAgentName = newAgent.name;
+
+          // Update thread with new agent
+          await db
+            .update(inboxThreads)
+            .set({
+              agentId: effectiveAgentId,
+              agentName: effectiveAgentName,
+              updatedAt: new Date()
+            })
+            .where(eq(inboxThreads.id, threadId));
+
+          logger.info(`[INBOX_AI] Thread ${threadId} routed to ${effectiveAgentName}`);
+
+          // Emit agent:routed event to frontend
+          emitAgentRouted(threadId, {
+            selectedAgent: effectiveAgentId,
+            agentName: effectiveAgentName,
+            confidence: routingResult.confidence,
+            reasoning: routingResult.reasoning,
+            previousAgent: routingResult.previousAgent
+          });
+        }
+      }
+    }
+
+    logger.info(`[INBOX_AI] Generating response using agent ${effectiveAgentId}`);
 
     // 1. Emit typing indicator
     emitInboxTyping({
@@ -649,7 +752,7 @@ async function generateAgentResponse(
     const messages = [
       { role: 'system' as const, content: systemPrompt },
       ...conversationHistory,
-      { role: 'user' as const, content: userMessage },
+      { role: 'user' as const, content: processedMessage },
     ];
 
     logger.info(`[INBOX_AI] Calling AI service with ${messages.length} messages (agent: ${effectiveAgentId})`);

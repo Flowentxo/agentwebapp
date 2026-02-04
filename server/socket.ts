@@ -4,11 +4,11 @@ import jwt from 'jsonwebtoken'
 import { logger } from './utils/logger'
 import { aiAgentService } from './services/AIAgentService'
 import { voiceSessionPersistenceService, type VoiceSessionContext } from './services/VoiceSessionPersistenceService'
+import { JWT_SECRET } from './utils/jwt'
 
 export let io: SocketIOServer
 
-// JWT Secret for socket authentication
-const JWT_SECRET = process.env.JWT_SECRET || 'sintra-jwt-secret-2024'
+// JWT_SECRET is now imported from ./utils/jwt for consistency across the app
 
 // Extended Socket type with user data
 interface AuthenticatedSocket extends Socket {
@@ -332,15 +332,56 @@ export function initializeSocketIO(server: HttpServer) {
       socket.to(`thread:${data.threadId}`).emit('typing:stop', data)
     })
 
-    // Handle message sending (acknowledged by callback)
+    // Handle message sending - Routes to REST API which triggers AI response with Omni-Orchestrator
     socket.on('message:send', async (payload: { threadId: string; content: string }, callback) => {
       try {
-        // This would typically save to DB and trigger AI response
-        // For now, acknowledge receipt
-        logger.info(`[INBOX] Message received for thread ${payload.threadId}`)
-        callback({ success: true, messageId: `msg-${Date.now()}` })
-      } catch (error) {
-        callback({ success: false, error: 'Failed to send message' })
+        const { threadId, content } = payload;
+        const userId = socket.userId;
+        const token = socket.handshake.auth?.token;
+
+        if (!userId) {
+          logger.warn('[INBOX] message:send rejected - not authenticated');
+          return callback({ success: false, error: 'Not authenticated' });
+        }
+
+        if (!content || !content.trim()) {
+          return callback({ success: false, error: 'Message content required' });
+        }
+
+        logger.info(`[INBOX] Processing message for thread ${threadId} from user ${userId}`);
+
+        // Call the REST API which handles:
+        // 1. Saving the message to DB
+        // 2. Omni-Orchestrator routing (if agent is 'omni' or 'assistant')
+        // 3. Generating AI response
+        // 4. Emitting socket events for real-time updates
+        const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
+        const response = await fetch(`${backendUrl}/api/inbox/threads/${threadId}/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ content: content.trim(), role: 'user' }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+        logger.info(`[INBOX] Message saved successfully: ${result.message?.id}`);
+
+        callback({
+          success: true,
+          messageId: result.message?.id || `msg-${Date.now()}`,
+          agentRouted: result.agentRouted || false
+        });
+
+      } catch (error: any) {
+        logger.error('[INBOX] message:send error:', error.message);
+        callback({ success: false, error: error.message || 'Failed to send message' });
       }
     })
 
@@ -1253,6 +1294,33 @@ export function emitInboxSystemEvent(threadId: string, event: {
 
   const inbox = io.of('/inbox');
   inbox.to(`thread:${threadId}`).emit('system:event', event);
+}
+
+/**
+ * Emit agent routing event (Omni-Orchestrator)
+ * Notifies the frontend when a message is routed to a different agent
+ */
+export function emitAgentRouted(threadId: string, routing: {
+  selectedAgent: string;
+  agentName: string;
+  confidence: number;
+  reasoning: string;
+  previousAgent?: string;
+}) {
+  if (!io) return;
+
+  const inbox = io.of('/inbox');
+  inbox.to(`thread:${threadId}`).emit('agent:routed', {
+    threadId,
+    agentId: routing.selectedAgent,
+    agentName: routing.agentName,
+    confidence: routing.confidence,
+    reasoning: routing.reasoning,
+    previousAgent: routing.previousAgent,
+    timestamp: new Date().toISOString()
+  });
+
+  logger.info(`[SOCKET] Emitted agent:routed for thread ${threadId}: ${routing.selectedAgent}`);
 }
 
 /**

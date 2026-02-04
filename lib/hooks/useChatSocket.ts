@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { getValidToken } from '@/lib/auth/get-token';
 import type {
   ChatMessage,
   SocketConnectionState,
@@ -18,12 +19,24 @@ import type {
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
 
+// Agent routing event from Omni-Orchestrator
+export interface AgentRoutedEvent {
+  threadId: string;
+  agentId: string;
+  agentName: string;
+  confidence: number;
+  reasoning: string;
+  previousAgent?: string;
+  timestamp: string;
+}
+
 interface UseChatSocketOptions {
   threadId: string;
   onMessage?: (message: ChatMessage) => void;
   onMessageStream?: (chunk: { messageId: string; content: string }) => void;
   onMessageComplete?: (messageId: string) => void;
   onTyping?: (indicator: TypingIndicator) => void;
+  onAgentRouted?: (event: AgentRoutedEvent) => void;
   onError?: (error: Error) => void;
 }
 
@@ -31,6 +44,7 @@ interface UseChatSocketReturn {
   connectionState: SocketConnectionState;
   messages: ChatMessage[];
   typingIndicator: TypingIndicator | null;
+  currentAgent: { id: string; name: string } | null;
   sendMessage: (content: string) => void;
   sendApproval: (payload: ApprovalActionPayload) => void;
   isConnected: boolean;
@@ -42,21 +56,30 @@ export function useChatSocket({
   onMessageStream,
   onMessageComplete,
   onTyping,
+  onAgentRouted,
   onError,
 }: UseChatSocketOptions): UseChatSocketReturn {
   const socketRef = useRef<Socket | null>(null);
   const [connectionState, setConnectionState] = useState<SocketConnectionState>('disconnected');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typingIndicator, setTypingIndicator] = useState<TypingIndicator | null>(null);
+  const [currentAgent, setCurrentAgent] = useState<{ id: string; name: string } | null>(null);
 
   // Initialize socket connection
   useEffect(() => {
     if (!threadId) return;
 
+    const token = getValidToken();
+    if (!token) {
+      console.warn('[CHAT_SOCKET] No auth token available, skipping connection');
+      setConnectionState('disconnected');
+      return;
+    }
+
     setConnectionState('connecting');
 
-    const socket = io(SOCKET_URL, {
-      path: '/socket.io',
+    const socket = io(`${SOCKET_URL}/inbox`, {
+      auth: { token },
       transports: ['websocket', 'polling'],
       query: { threadId },
       reconnection: true,
@@ -132,6 +155,15 @@ export function useChatSocket({
       }
     });
 
+    // Agent routing events (Omni-Orchestrator)
+    socket.on('agent:routed', (event: AgentRoutedEvent) => {
+      console.log('[CHAT_SOCKET] Agent routed:', event.agentId, event.agentName);
+      if (event.threadId === threadId) {
+        setCurrentAgent({ id: event.agentId, name: event.agentName });
+        onAgentRouted?.(event);
+      }
+    });
+
     // Load initial messages
     socket.on('thread:history', (history: ChatMessage[]) => {
       console.log('[CHAT_SOCKET] Received history:', history.length, 'messages');
@@ -151,7 +183,7 @@ export function useChatSocket({
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [threadId, onMessage, onMessageStream, onMessageComplete, onTyping, onError]);
+  }, [threadId, onMessage, onMessageStream, onMessageComplete, onTyping, onAgentRouted, onError]);
 
   // Send a message
   const sendMessage = useCallback(
@@ -210,6 +242,7 @@ export function useChatSocket({
     connectionState,
     messages,
     typingIndicator,
+    currentAgent,
     sendMessage,
     sendApproval,
     isConnected: connectionState === 'connected',

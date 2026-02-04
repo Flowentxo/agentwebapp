@@ -121,31 +121,38 @@ export function ActivePipelinesWidget({ index = 0, isLoading = false }: ActivePi
       try {
         setLoading(true);
 
-        // Fetch workflows and executions
-        const [workflowsRes, executionsRes] = await Promise.all([
-          fetch('/api/workflows?limit=100'),
+        // Fetch pipelines and executions
+        const [pipelinesRes, executionsRes] = await Promise.all([
+          fetch('/api/pipelines?limit=100'),
           fetch('/api/workflows/executions/recent?limit=5'),
         ]);
 
-        if (workflowsRes.ok) {
-          const workflows = await workflowsRes.json();
-          // Count truly published (deployed) workflows as active
-          const active = workflows.filter((w: any) => w.isPublished === true).length;
-          const paused = workflows.filter((w: any) => !w.isPublished).length;
+        if (pipelinesRes.ok) {
+          const data = await pipelinesRes.json();
+          // Safe-Guard: API returns { pipelines: [...], meta: {...} }, extract array
+          const pipelines = Array.isArray(data) ? data : (data?.pipelines ?? []);
 
-          setStats(prev => ({
-            ...prev,
-            total: workflows.length,
-            active,
-            paused,
-          }));
+          if (Array.isArray(pipelines)) {
+            // Count truly published (deployed) pipelines as active
+            const active = pipelines.filter((w: any) => w.isPublished === true).length;
+            const paused = pipelines.filter((w: any) => !w.isPublished).length;
+
+            setStats(prev => ({
+              ...prev,
+              total: pipelines.length,
+              active,
+              paused,
+            }));
+          }
         }
 
         if (executionsRes.ok) {
-          const executions = await executionsRes.json();
+          const execData = await executionsRes.json();
+          // Safe-Guard: Ensure executions is an array
+          const executions = Array.isArray(execData) ? execData : (execData?.executions ?? []);
           setStats(prev => ({
             ...prev,
-            recentExecutions: executions.slice(0, 5),
+            recentExecutions: Array.isArray(executions) ? executions.slice(0, 5) : [],
           }));
         }
 
