@@ -211,7 +211,7 @@ interface InfoBadgeProps {
   color?: string;
 }
 
-function InfoBadge({ text, color = '#6366F1' }: InfoBadgeProps) {
+function InfoBadge({ text, color = '#8B5CF6' }: InfoBadgeProps) {
   return (
     <span
       className="text-[9px] font-medium px-1.5 py-0.5 rounded truncate max-w-[120px] inline-block"
@@ -311,7 +311,7 @@ function CustomNodeInner({ data, selected, id }: NodeProps<PipelineNodeData>) {
     // Default icon from data or fallback
     const iconName = data.icon || 'Box';
     const DefaultIcon = iconMap[iconName] || Box;
-    const defaultColor = data.color || '#6366F1';
+    const defaultColor = data.color || '#8B5CF6';
 
     return {
       Icon: DefaultIcon,
@@ -384,37 +384,39 @@ function CustomNodeInner({ data, selected, id }: NodeProps<PipelineNodeData>) {
   return (
     <div
       className={`
-        relative min-w-[200px] max-w-[240px] rounded-xl overflow-hidden
-        bg-card border-2 transition-all duration-200 shadow-lg
+        relative min-w-[200px] max-w-[240px] rounded-xl overflow-hidden transition-all duration-200
         ${selected
-          ? 'border-primary shadow-xl shadow-primary/20 scale-[1.02]'
-          : 'border-border hover:border-primary/30 hover:shadow-xl'
+          ? 'ring-2 ring-violet-500/30 shadow-[0_0_20px_rgba(139,92,246,0.15)]'
+          : 'hover:border-white/15'
         }
-        ${!validation.isValid ? 'ring-2 ring-red-500/50 ring-offset-2 ring-offset-background' : ''}
+        ${!validation.isValid ? 'ring-2 ring-red-500/40' : ''}
       `}
+      style={{ backgroundColor: '#111111', border: '1px solid rgba(255, 255, 255, 0.1)' }}
     >
-      {/* Run Node Button (top-right corner) */}
-      <button
-        onClick={handleRunNode}
-        disabled={isExecutingNode || !pipelineId}
-        className={`
-          absolute -top-2 -right-2 z-20
-          flex items-center justify-center w-6 h-6 rounded-full
-          shadow-lg transition-all duration-200
-          ${isExecutingNode
-            ? 'bg-indigo-500 cursor-wait'
-            : 'bg-green-500 hover:bg-green-400 hover:scale-110 cursor-pointer'
-          }
-          ${!pipelineId ? 'opacity-50 cursor-not-allowed' : ''}
-        `}
-        title={isExecutingNode ? 'Executing...' : 'Run this node only'}
-      >
-        {isExecutingNode ? (
-          <Loader2 className="w-3 h-3 text-white animate-spin" />
-        ) : (
-          <Play className="w-3 h-3 text-white fill-white" />
-        )}
-      </button>
+      {/* Run Node Button (top-right corner) - hidden in cockpit read-only mode */}
+      {!data.isActiveInCockpit && (
+        <button
+          onClick={handleRunNode}
+          disabled={isExecutingNode || !pipelineId}
+          className={`
+            absolute -top-2 -right-2 z-20
+            flex items-center justify-center w-6 h-6 rounded-full
+            shadow-lg transition-all duration-200
+            ${isExecutingNode
+              ? 'bg-violet-500 cursor-wait'
+              : 'bg-green-500 hover:bg-green-400 hover:scale-110 cursor-pointer'
+            }
+            ${!pipelineId ? 'opacity-50 cursor-not-allowed' : ''}
+          `}
+          title={isExecutingNode ? 'Executing...' : 'Run this node only'}
+        >
+          {isExecutingNode ? (
+            <Loader2 className="w-3 h-3 text-white animate-spin" />
+          ) : (
+            <Play className="w-3 h-3 text-white fill-white" />
+          )}
+        </button>
+      )}
 
       {/* Validation Warning */}
       {!validation.isValid && (
@@ -430,40 +432,30 @@ function CustomNodeInner({ data, selected, id }: NodeProps<PipelineNodeData>) {
         <Handle
           type="target"
           position={Position.Left}
-          className="!w-3.5 !h-3.5 !bg-muted !border-2 !border-border hover:!bg-primary hover:!border-primary transition-colors !-left-[7px]"
+          className="!w-3.5 !h-3.5 !bg-[#1A1A1A] !border-[1.5px] !border-white/20 hover:!bg-violet-500 hover:!border-violet-500 transition-colors !-left-[7px]"
         />
       )}
 
-      {/* Header - with gradient for agents */}
+      {/* Header */}
       <div
-        className={`
-          flex items-center gap-2.5 px-3 py-2.5
-          ${data.type === 'agent' && agentConfig ? `bg-gradient-to-r ${agentConfig.gradient}` : ''}
-        `}
-        style={data.type !== 'agent' ? { backgroundColor: bgColor } : {}}
+        className="flex items-center gap-2.5 px-3 py-2.5"
+        style={{ backgroundColor: data.type === 'agent' && agentConfig ? agentConfig.bgColor : bgColor }}
       >
         <div
-          className={`
-            flex items-center justify-center w-8 h-8 rounded-lg
-            ${data.type === 'agent' ? 'bg-card/20' : ''}
-          `}
-          style={data.type !== 'agent' ? { backgroundColor: `${color}30` } : {}}
+          className="flex items-center justify-center w-8 h-8 rounded-lg"
+          style={{ backgroundColor: `${color}30` }}
         >
           <Icon
             className="w-4.5 h-4.5"
-            style={{ color: data.type === 'agent' ? 'white' : color }}
+            style={{ color }}
           />
         </div>
         <div className="flex-1 min-w-0">
-          <p
-            className={`text-sm font-semibold truncate ${data.type === 'agent' ? 'text-white' : 'text-foreground'}`}
-          >
+          <p className="text-sm font-semibold truncate text-white">
             {data.label}
           </p>
           {displayInfo.subtitle && (
-            <p
-              className={`text-[10px] truncate ${data.type === 'agent' ? 'text-white/70' : 'text-muted-foreground'}`}
-            >
+            <p className="text-[10px] truncate text-white/50">
               {displayInfo.subtitle}
             </p>
           )}
@@ -478,7 +470,7 @@ function CustomNodeInner({ data, selected, id }: NodeProps<PipelineNodeData>) {
 
       {/* Info Row - Method Badge & Info Badge */}
       {(displayInfo.method || displayInfo.badge) && (
-        <div className="px-3 py-2 border-t border-border flex items-center gap-2 flex-wrap">
+        <div className="px-3 py-2 border-t border-white/[0.06] flex items-center gap-2 flex-wrap">
           {displayInfo.method && <MethodBadge method={displayInfo.method} />}
           {displayInfo.badge && <InfoBadge text={displayInfo.badge} color={color} />}
         </div>
@@ -486,13 +478,13 @@ function CustomNodeInner({ data, selected, id }: NodeProps<PipelineNodeData>) {
 
       {/* Description */}
       {data.description && (
-        <div className="px-3 py-2 border-t border-border">
-          <p className="text-[11px] text-muted-foreground line-clamp-2">{data.description}</p>
+        <div className="px-3 py-2 border-t border-white/[0.06]">
+          <p className="text-[11px] text-white/40 line-clamp-2">{data.description}</p>
         </div>
       )}
 
       {/* Footer - Type Badge */}
-      <div className="px-3 py-2 border-t border-border flex items-center justify-between">
+      <div className="px-3 py-2 border-t border-white/[0.06] flex items-center justify-between">
         <span
           className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
           style={{ backgroundColor: `${color}20`, color }}
@@ -502,14 +494,14 @@ function CustomNodeInner({ data, selected, id }: NodeProps<PipelineNodeData>) {
 
         {/* Agent-specific indicator */}
         {data.type === 'agent' && agentConfig && (
-          <span className="text-[9px] text-muted-foreground/60 font-medium">
+          <span className="text-[9px] text-white/30 font-medium">
             {agentConfig.name}
           </span>
         )}
 
-        {/* Click hint when selected */}
-        {selected && (
-          <span className="text-[9px] text-primary font-medium">
+        {/* Click hint when selected (hidden in cockpit read-only mode) */}
+        {selected && !data.isActiveInCockpit && (
+          <span className="text-[9px] text-violet-400 font-medium">
             Editing...
           </span>
         )}
@@ -527,7 +519,7 @@ function CustomNodeInner({ data, selected, id }: NodeProps<PipelineNodeData>) {
         <Handle
           type="source"
           position={Position.Right}
-          className="!w-3.5 !h-3.5 !bg-muted !border-2 !border-border hover:!bg-primary hover:!border-primary transition-colors !-right-[7px]"
+          className="!w-3.5 !h-3.5 !bg-[#1A1A1A] !border-[1.5px] !border-white/20 hover:!bg-violet-500 hover:!border-violet-500 transition-colors !-right-[7px]"
         />
       )}
 

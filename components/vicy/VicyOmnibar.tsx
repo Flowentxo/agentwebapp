@@ -67,7 +67,7 @@ export function VicyOmnibar({
         <button
           onClick={handleSubmit}
           disabled={!input.trim() || isSubmitting}
-          className="flex items-center justify-center w-8 h-8 rounded-lg bg-white text-black disabled:opacity-20 disabled:cursor-not-allowed hover:bg-zinc-200 transition-all duration-150"
+          className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-500 text-white disabled:opacity-20 disabled:cursor-not-allowed hover:bg-violet-400 transition-all duration-150"
         >
           {isSubmitting ? (
             <Loader2 className="w-4 h-4 animate-spin" />

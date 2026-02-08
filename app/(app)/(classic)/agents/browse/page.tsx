@@ -51,7 +51,7 @@ export default function AgentsBrowsePage() {
         title="AI Agents"
         subtitle={`Wähle aus ${agentPersonas.length} spezialisierten AI-Agents für deine Aufgaben`}
         actions={
-          <Button variant="gradient" onClick={() => router.push('/agents/studio')}>
+          <Button variant="gradient" onClick={() => router.push('/studio')}>
             Agent erstellen
           </Button>
         }

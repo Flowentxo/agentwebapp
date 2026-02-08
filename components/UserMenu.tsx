@@ -10,7 +10,7 @@ export default function UserMenu() {
   const [open, setOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const { theme, setTheme } = useTheme()
-  const { user } = useSession()
+  const { user, clearSession } = useSession()
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -24,7 +24,8 @@ export default function UserMenu() {
       })
 
       if (response.ok) {
-        // Redirect to login page
+        // Clear session state and redirect to login page
+        clearSession()
         router.push('/login')
       } else {
         console.error('Logout failed:', await response.text())

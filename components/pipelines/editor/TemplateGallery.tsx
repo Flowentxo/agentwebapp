@@ -199,7 +199,7 @@ function ConfirmDialog({ isOpen, template, onConfirm, onCancel }: ConfirmDialogP
           <button
             onClick={onConfirm}
             className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg
-              bg-indigo-500 text-white hover:bg-indigo-600
+              bg-violet-500 text-white hover:bg-violet-600
               transition-colors flex items-center justify-center gap-2"
           >
             <Check className="w-4 h-4" />
@@ -261,7 +261,7 @@ function TemplateCard({ template, onSelect }: TemplateCardProps) {
   return (
     <div
       className="group relative p-4 rounded-xl bg-card/5 border border-white/10
-        hover:border-indigo-500/50 hover:bg-card/10 transition-all duration-200 cursor-pointer"
+        hover:border-violet-500/50 hover:bg-card/10 transition-all duration-200 cursor-pointer"
       onClick={() => onSelect(template)}
     >
       {/* Featured Badge */}
@@ -280,7 +280,7 @@ function TemplateCard({ template, onSelect }: TemplateCardProps) {
           <Icon className="w-5 h-5" style={{ color: template.color }} />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-white truncate group-hover:text-indigo-400 transition-colors">
+          <h3 className="text-sm font-semibold text-white truncate group-hover:text-violet-400 transition-colors">
             {template.name}
           </h3>
           <div className="flex items-center gap-2 mt-0.5">
@@ -360,7 +360,7 @@ function TemplateCard({ template, onSelect }: TemplateCardProps) {
         </div>
         <button
           className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg
-            bg-indigo-500/20 text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white
+            bg-violet-500/20 text-violet-400 group-hover:bg-violet-500 group-hover:text-white
             transition-all duration-200"
         >
           Preview
@@ -516,7 +516,7 @@ function DetailView({ template, onBack, onConfirm, configValues, onConfigChange 
           {/* Left Column: Preview */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-white/70 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-indigo-400" />
+              <Sparkles className="w-4 h-4 text-violet-400" />
               Template Preview
             </h4>
 
@@ -594,7 +594,7 @@ function DetailView({ template, onBack, onConfirm, configValues, onConfigChange 
                 {template.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="text-[10px] px-2 py-1 rounded-full bg-indigo-500/20 text-indigo-400"
+                    className="text-[10px] px-2 py-1 rounded-full bg-violet-500/20 text-violet-400"
                   >
                     {tag}
                   </span>
@@ -628,7 +628,7 @@ function DetailView({ template, onBack, onConfirm, configValues, onConfigChange 
           {/* Right Column: Configuration */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-white/70 flex items-center gap-2">
-              <Settings className="w-4 h-4 text-indigo-400" />
+              <Settings className="w-4 h-4 text-violet-400" />
               Configuration
             </h4>
 
@@ -671,20 +671,20 @@ function DetailView({ template, onBack, onConfirm, configValues, onConfigChange 
                               className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                                 hasValue && req.required
                                   ? 'bg-green-500/20'
-                                  : 'bg-indigo-500/20'
+                                  : 'bg-violet-500/20'
                               }`}
                             >
                               {hasValue && req.required ? (
                                 <Check className="w-4 h-4 text-green-400" />
                               ) : (
-                                <ReqIcon className="w-4 h-4 text-indigo-400" />
+                                <ReqIcon className="w-4 h-4 text-violet-400" />
                               )}
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-medium text-white">{req.label}</span>
                                 {req.provider && (
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400">
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400">
                                     {req.provider}
                                   </span>
                                 )}
@@ -708,8 +708,8 @@ function DetailView({ template, onBack, onConfirm, configValues, onConfigChange 
                             onChange={(e) => onConfigChange(req.id, e.target.value)}
                             placeholder={req.placeholder || `Enter ${req.label.toLowerCase()}...`}
                             className="w-full px-3 py-2 text-sm rounded-lg bg-black/30 border border-white/10
-                              text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/50
-                              focus:ring-1 focus:ring-indigo-500/50 transition-all"
+                              text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50
+                              focus:ring-1 focus:ring-violet-500/50 transition-all"
                           />
                         </div>
                       );
@@ -759,8 +759,8 @@ function DetailView({ template, onBack, onConfirm, configValues, onConfigChange 
           onClick={onConfirm}
           disabled={requirements.length > 0 && requirements.some((r) => r.required) && !allRequiredFilled}
           className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg
-            bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed
-            transition-all duration-200 shadow-lg shadow-indigo-500/25"
+            bg-violet-500 text-white hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed
+            transition-all duration-200 shadow-lg shadow-violet-500/25"
         >
           <Check className="w-4 h-4" />
           Load Template
@@ -794,7 +794,7 @@ function CategoryButton({ category, label, icon, color, isActive, count, onClick
       className={`
         w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all
         ${isActive
-          ? 'bg-indigo-500/20 border border-indigo-500/30 text-white'
+          ? 'bg-violet-500/20 border border-violet-500/30 text-white'
           : 'hover:bg-card/5 text-white/60 hover:text-white border border-transparent'
         }
       `}
@@ -810,7 +810,7 @@ function CategoryButton({ category, label, icon, color, isActive, count, onClick
       </div>
       <span
         className={`text-xs px-2 py-0.5 rounded-full ${
-          isActive ? 'bg-indigo-500/30 text-indigo-300' : 'bg-card/5 text-white/40'
+          isActive ? 'bg-violet-500/30 text-violet-300' : 'bg-card/5 text-white/40'
         }`}
       >
         {count}
@@ -959,8 +959,8 @@ export function TemplateGallery({ isOpen, onClose }: TemplateGalleryProps) {
           <div className="w-64 flex-shrink-0 bg-[#0A0A0D] border-r border-white/10 p-4 flex flex-col">
             {/* Header */}
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-indigo-400" />
+              <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-violet-400" />
               </div>
               <div>
                 <h2 className="text-lg font-bold text-white">Templates</h2>
@@ -980,8 +980,8 @@ export function TemplateGallery({ isOpen, onClose }: TemplateGalleryProps) {
                 }}
                 placeholder="Search templates..."
                 className="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg bg-card/5 border border-white/10
-                  text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/50
-                  focus:ring-1 focus:ring-indigo-500/50 transition-all"
+                  text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50
+                  focus:ring-1 focus:ring-violet-500/50 transition-all"
               />
             </div>
 

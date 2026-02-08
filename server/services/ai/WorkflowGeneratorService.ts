@@ -117,13 +117,18 @@ export class WorkflowGeneratorService {
     try {
       const messages = this.buildMessages(request);
 
+      // GPT-4o and GPT-5 models require max_completion_tokens instead of max_tokens
+      const maxTokensKey = DEFAULT_MODEL.includes('gpt-5') || DEFAULT_MODEL.includes('gpt-4o')
+        ? 'max_completion_tokens'
+        : 'max_tokens';
+
       const response = await this.openai.chat.completions.create({
         model: DEFAULT_MODEL,
         messages,
         temperature: TEMPERATURE,
-        max_tokens: MAX_TOKENS,
+        [maxTokensKey]: MAX_TOKENS,
         response_format: { type: 'text' },
-      });
+      } as any);
 
       const content = response.choices[0]?.message?.content || '';
       const tokensUsed = response.usage?.total_tokens || 0;
@@ -147,13 +152,18 @@ export class WorkflowGeneratorService {
     try {
       const messages = this.buildMessages(request);
 
+      // GPT-4o and GPT-5 models require max_completion_tokens instead of max_tokens
+      const maxTokensKey = DEFAULT_MODEL.includes('gpt-5') || DEFAULT_MODEL.includes('gpt-4o')
+        ? 'max_completion_tokens'
+        : 'max_tokens';
+
       const stream = await this.openai.chat.completions.create({
         model: DEFAULT_MODEL,
         messages,
         temperature: TEMPERATURE,
-        max_tokens: MAX_TOKENS,
+        [maxTokensKey]: MAX_TOKENS,
         stream: true,
-      });
+      } as any);
 
       let fullContent = '';
       let inCodeBlock = false;
@@ -226,12 +236,17 @@ export class WorkflowGeneratorService {
     ];
 
     try {
+      // GPT-4o and GPT-5 models require max_completion_tokens instead of max_tokens
+      const maxTokensKey = DEFAULT_MODEL.includes('gpt-5') || DEFAULT_MODEL.includes('gpt-4o')
+        ? 'max_completion_tokens'
+        : 'max_tokens';
+
       const response = await this.openai.chat.completions.create({
         model: DEFAULT_MODEL,
         messages,
         temperature: TEMPERATURE,
-        max_tokens: MAX_TOKENS,
-      });
+        [maxTokensKey]: MAX_TOKENS,
+      } as any);
 
       const content = response.choices[0]?.message?.content || '';
 

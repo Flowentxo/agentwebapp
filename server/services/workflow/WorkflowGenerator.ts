@@ -10,6 +10,7 @@
 import OpenAI from 'openai';
 import { Node, Edge } from 'reactflow';
 import { randomUUID } from 'crypto';
+import { OPENAI_MODEL } from '@/lib/ai/config';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -110,16 +111,21 @@ export async function generateFromPrompt(userPrompt: string): Promise<Generation
 
     console.log('[WorkflowGenerator] Generating workflow for prompt:', userPrompt);
 
+    // Use configured model and determine correct token parameter
+    const model = process.env.OPENAI_MODEL || OPENAI_MODEL;
+    const maxTokensKey = model.includes('gpt-5') || model.includes('gpt-4o')
+      ? 'max_completion_tokens'
+      : 'max_tokens';
+
     const response = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4-turbo-preview',
+      model,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: `Create a workflow for: ${userPrompt}` },
       ],
-      temperature: 0.7,
-      max_tokens: 4000,
+      [maxTokensKey]: 4000,
       response_format: { type: 'json_object' },
-    });
+    } as any);
 
     const content = response.choices[0]?.message?.content;
 

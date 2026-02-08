@@ -42,6 +42,13 @@
   background-size: 24px 24px;
 }
 
+/* Vicy theme: deep-black canvas */
+.vicy-theme .canvas-dot-pattern {
+  background-color: #050505;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
 /* 🛡️ GLOBAL RESET: Remove all unwanted outlines/borders/rings from containers */
 @layer base {
   /* Reset ALL container elements - no outlines, no rings, no borders by default */
@@ -2126,6 +2133,21 @@ input[type="range"]::-moz-range-track {
     radial-gradient(ellipse 600px 400px at 50% 0%, rgba(139, 92, 246, 0.03), transparent 60%);
 }
 
+/* Pipeline workspace subtle violet glow (matches inbox) */
+.pipeline-workspace-glow {
+  background:
+    radial-gradient(ellipse 600px 400px at 50% 0%, rgba(139, 92, 246, 0.03), transparent 60%);
+}
+
+/* Running pipeline shimmer effect for sidebar items */
+@keyframes pipeline-running-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+.pipeline-running-shimmer {
+  animation: pipeline-running-shimmer 2s ease-in-out infinite;
+}
+
 /* Sidebar status bar */
 .sidebar-status-bar {
   height: 24px;
@@ -2205,16 +2227,23 @@ input[type="range"]::-moz-range-track {
 /* Vicy omnibar input */
 .vicy-omnibar {
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: 16px;
   transition: all 0.2s ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 4px 24px rgba(0, 0, 0, 0.2);
 }
 
 .vicy-omnibar:focus-within {
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.15), 0 8px 32px rgba(0, 0, 0, 0.3);
+  border-color: rgba(139, 92, 246, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 1px rgba(139, 92, 246, 0.1),
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 0 40px rgba(139, 92, 246, 0.05);
 }
 
 /* Agent glow effect when identified */
@@ -2240,8 +2269,9 @@ input[type="range"]::-moz-range-track {
 }
 
 .vicy-icon-btn.active {
-  color: #FAFAFA;
-  background: rgba(255, 255, 255, 0.08);
+  color: #c4b5fd;
+  background: rgba(139, 92, 246, 0.12);
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.08);
 }
 
 /* Vicy recents panel slide animation */
@@ -2261,4 +2291,84 @@ input[type="range"]::-moz-range-track {
 
 .vicy-panel-exit {
   animation: vicy-slide-out 0.15s ease-in forwards;
+}
+
+/* ========================================
+   VICY THEME - Light Background Overrides
+   Ensures all pages render correctly inside
+   the dark Vicy shell without per-page edits
+   ======================================== */
+
+.vicy-theme main {
+  color: var(--vicy-text-primary);
+}
+
+/* Override common light backgrounds that bleed through */
+.vicy-theme .bg-gray-100 {
+  background-color: transparent !important;
+}
+
+.vicy-theme .bg-gray-50 {
+  background-color: transparent !important;
+}
+
+.vicy-theme .bg-white {
+  background-color: var(--vicy-surface) !important;
+}
+
+.vicy-theme .bg-slate-50 {
+  background-color: transparent !important;
+}
+
+.vicy-theme .bg-slate-100 {
+  background-color: transparent !important;
+}
+
+/* Override text colors that are invisible on dark bg */
+.vicy-theme .text-gray-900 {
+  color: var(--vicy-text-primary) !important;
+}
+
+.vicy-theme .text-gray-800 {
+  color: var(--vicy-text-primary) !important;
+}
+
+.vicy-theme .text-gray-700 {
+  color: rgba(250, 250, 250, 0.85) !important;
+}
+
+.vicy-theme .text-gray-600 {
+  color: var(--vicy-text-secondary) !important;
+}
+
+.vicy-theme .text-gray-500 {
+  color: var(--vicy-text-secondary) !important;
+}
+
+/* Override light-mode borders */
+.vicy-theme .border-gray-200 {
+  border-color: var(--vicy-border) !important;
+}
+
+.vicy-theme .border-gray-300 {
+  border-color: var(--vicy-border) !important;
+}
+
+.vicy-theme .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--vicy-border) !important;
+}
+
+/* White cards get dark surface treatment */
+.vicy-theme .bg-white.rounded-lg,
+.vicy-theme .bg-white.rounded-xl,
+.vicy-theme .bg-white.rounded-2xl {
+  background-color: var(--vicy-surface) !important;
+  border-color: var(--vicy-border) !important;
+}
+
+/* Shadow overrides — remove light-mode box shadows */
+.vicy-theme .shadow-sm,
+.vicy-theme .shadow-md,
+.vicy-theme .shadow-lg {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
 }

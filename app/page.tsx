@@ -6,7 +6,7 @@ export default function Home() {
   const session = cookieStore.get('sintra.sid')
 
   if (session) {
-    redirect("/dashboard")
+    redirect("/v4")
   } else {
     redirect("/login")
   }

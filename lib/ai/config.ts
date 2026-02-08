@@ -15,7 +15,7 @@
  * Primary model for all AI operations
  * Change this single value to switch the entire system
  */
-export const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+export const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-5-mini';
 
 /**
  * Embedding model for RAG and vector operations
@@ -25,7 +25,7 @@ export const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL || 'text-embedding-3-
 /**
  * Fallback model if primary is unavailable
  */
-export const FALLBACK_MODEL = 'gpt-4o-mini';
+export const FALLBACK_MODEL = 'gpt-5-mini';
 
 // ============================================================================
 // GENERATION PARAMETERS

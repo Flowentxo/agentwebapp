@@ -244,7 +244,7 @@ export async function middleware(req: NextRequest) {
 
   // Redirect to dashboard if already logged in and accessing login/register
   if ((pathname === "/login" || pathname === "/register") && isAuthenticated) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+    return NextResponse.redirect(new URL("/v4", req.url));
   }
 
   // =========================================================================

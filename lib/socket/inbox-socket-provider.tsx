@@ -98,10 +98,13 @@ interface InboxSocketProviderProps {
 
 export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
   const [socket, setSocket] = useState<Socket | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const queryClientRef = useRef(queryClient);  // Ref to avoid dependency changes
+  queryClientRef.current = queryClient;  // Keep ref updated
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 10;
   const baseReconnectDelay = 1000; // 1 second
@@ -123,7 +126,7 @@ export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
     const handleAuthLogout = () => {
       console.log('[InboxSocket] auth:logout detected, disconnecting');
       setAuthToken(null);
-      socket?.disconnect();
+      socketRef.current?.disconnect();
     };
 
     // Listen for generic auth-state-change event (fired after token storage)
@@ -152,7 +155,7 @@ export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
       window.removeEventListener('auth:logout', handleAuthLogout);
       window.removeEventListener('auth-state-change', handleAuthStateChange);
     };
-  }, [getToken, socket]);
+  }, [getToken]);
 
   // Initialize socket connection
   useEffect(() => {
@@ -242,25 +245,25 @@ export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
       }
     });
 
-    // Auto-invalidate queries on thread updates
+    // Auto-invalidate queries on thread updates (use ref to avoid dependency)
     newSocket.on('thread:update', (thread: ThreadUpdate) => {
       console.log('[InboxSocket] Thread update:', thread.id);
-      queryClient.invalidateQueries({ queryKey: ['threads'] });
-      queryClient.invalidateQueries({ queryKey: ['thread', thread.id] });
+      queryClientRef.current.invalidateQueries({ queryKey: ['threads'] });
+      queryClientRef.current.invalidateQueries({ queryKey: ['thread', thread.id] });
     });
 
     // Auto-invalidate queries on new messages
     newSocket.on('message:new', (message: InboxMessage) => {
       console.log('[InboxSocket] New message in thread:', message.threadId);
-      queryClient.invalidateQueries({ queryKey: ['threads'] });
-      queryClient.invalidateQueries({ queryKey: ['thread', message.threadId] });
-      queryClient.invalidateQueries({ queryKey: ['messages', message.threadId] });
+      queryClientRef.current.invalidateQueries({ queryKey: ['threads'] });
+      queryClientRef.current.invalidateQueries({ queryKey: ['thread', message.threadId] });
+      queryClientRef.current.invalidateQueries({ queryKey: ['messages', message.threadId] });
     });
 
     // Auto-invalidate queries on approval updates
     newSocket.on('approval:update', (approval: ApprovalUpdate) => {
       console.log('[InboxSocket] Approval update:', approval.approvalId);
-      queryClient.invalidateQueries({ queryKey: ['threads'] });
+      queryClientRef.current.invalidateQueries({ queryKey: ['threads'] });
     });
 
     // Handle agent routing events - update store with routing feedback
@@ -274,19 +277,24 @@ export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
         previousAgent: data.previousAgent,
       });
       // Also refresh thread data since agent changed
-      queryClient.invalidateQueries({ queryKey: ['threads'] });
-      queryClient.invalidateQueries({ queryKey: ['thread', data.threadId] });
+      queryClientRef.current.invalidateQueries({ queryKey: ['threads'] });
+      queryClientRef.current.invalidateQueries({ queryKey: ['thread', data.threadId] });
     });
 
+    socketRef.current = newSocket;
     setSocket(newSocket);
 
     return () => {
+      // Only cleanup on actual logout (authToken becomes null)
+      // Don't cleanup on queryClient or getToken changes
       console.log('[InboxSocket] Cleaning up connection');
       newSocket.disconnect();
+      socketRef.current = null;
       setSocket(null);
       setIsConnected(false);
     };
-  }, [authToken, getToken, queryClient]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authToken]);  // Only reconnect on actual auth token changes, not queryClient
 
   // Actions
   const joinThread = useCallback((threadId: string) => {

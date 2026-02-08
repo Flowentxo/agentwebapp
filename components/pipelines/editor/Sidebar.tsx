@@ -14,6 +14,7 @@ import {
   Send,
   Bot,
   Sparkles,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -175,7 +176,6 @@ function DraggableItem({ item }: DraggableItemProps) {
   const Icon = item.icon;
 
   const onDragStart = (event: DragEvent<HTMLDivElement>) => {
-    // Store the node data in the drag event
     event.dataTransfer.setData('application/reactflow', JSON.stringify(item));
     event.dataTransfer.effectAllowed = 'move';
   };
@@ -185,18 +185,18 @@ function DraggableItem({ item }: DraggableItemProps) {
       draggable
       onDragStart={onDragStart}
       className="group flex items-center gap-3 p-3 rounded-xl cursor-grab active:cursor-grabbing
-        bg-card/5 hover:bg-card/10 border border-white/10 hover:border-white/20
-        transition-all duration-200 hover:shadow-lg hover:shadow-black/20"
+        hover:bg-white/[0.04] border border-white/[0.06] hover:border-white/10
+        transition-all duration-200"
     >
       <div
         className="flex items-center justify-center w-9 h-9 rounded-lg"
-        style={{ backgroundColor: `${item.color}20` }}
+        style={{ backgroundColor: `${item.color}15` }}
       >
         <Icon className="w-5 h-5" style={{ color: item.color }} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-white truncate">{item.label}</p>
-        <p className="text-xs text-white/50 truncate">{item.description}</p>
+        <p className="text-xs text-white/40 truncate">{item.description}</p>
       </div>
     </div>
   );
@@ -206,23 +206,45 @@ function DraggableItem({ item }: DraggableItemProps) {
 // SIDEBAR COMPONENT
 // ============================================
 
-export function PipelineSidebar() {
+interface PipelineSidebarProps {
+  onClose?: () => void;
+}
+
+export function PipelineSidebar({ onClose }: PipelineSidebarProps) {
   return (
-    <aside className="w-64 h-full flex flex-col bg-[#0F0F12]/95 backdrop-blur-xl border-r border-white/10 overflow-hidden">
+    <aside
+      className="w-64 h-full flex flex-col overflow-hidden"
+      style={{
+        backgroundColor: 'rgba(17, 17, 17, 0.95)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderRight: '1px solid rgba(255, 255, 255, 0.06)',
+      }}
+    >
       {/* Header */}
-      <div className="flex-shrink-0 p-4 border-b border-white/10">
-        <h2 className="text-sm font-semibold text-white">Components</h2>
-        <p className="text-xs text-white/50 mt-1">Drag nodes to the canvas</p>
+      <div className="flex-shrink-0 p-4 border-b border-white/[0.06] flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-white">Components</h2>
+          <p className="text-xs text-white/40 mt-1">Drag to canvas</p>
+        </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-white/5 text-white/40 hover:text-white/60 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
-      {/* Search (optional, can expand later) */}
+      {/* Search */}
       <div className="flex-shrink-0 p-3">
         <input
           type="text"
           placeholder="Search nodes..."
-          className="w-full px-3 py-2 text-sm rounded-lg bg-card/5 border border-white/10
-            text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/50
-            focus:ring-1 focus:ring-indigo-500/50 transition-all"
+          className="w-full px-3 py-2 text-sm rounded-lg bg-white/[0.03] border border-white/[0.06]
+            text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50
+            focus:ring-1 focus:ring-violet-500/50 transition-all"
         />
       </div>
 
@@ -230,10 +252,10 @@ export function PipelineSidebar() {
       <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10">
         {nodeCategories.map((category) => (
           <div key={category.title}>
-            <h3 className="px-1 mb-2 text-xs font-semibold text-white/40 uppercase tracking-wider">
+            <h3 className="px-1 mb-2 text-xs font-semibold text-white/30 uppercase tracking-wider">
               {category.title}
             </h3>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {category.items.map((item) => (
                 <DraggableItem key={item.id} item={item} />
               ))}
@@ -243,8 +265,8 @@ export function PipelineSidebar() {
       </div>
 
       {/* Footer Hint */}
-      <div className="flex-shrink-0 p-4 border-t border-white/10">
-        <p className="text-xs text-white/30 text-center">
+      <div className="flex-shrink-0 p-4 border-t border-white/[0.06]">
+        <p className="text-xs text-white/20 text-center">
           Connect nodes by dragging from handles
         </p>
       </div>

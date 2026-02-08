@@ -232,7 +232,11 @@ export async function generatePipelineFromPrompt(
     }
 
     // Call OpenAI directly with our custom system prompt
-    const model = 'gpt-4-turbo-preview';
+    // Use configured model and determine correct token parameter
+    const model = OPENAI_MODEL;
+    const maxTokensKey = model.includes('gpt-5') || model.includes('gpt-4o')
+      ? 'max_completion_tokens'
+      : 'max_tokens';
 
     const response = await openai.chat.completions.create({
       model,
@@ -240,10 +244,9 @@ export async function generatePipelineFromPrompt(
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userPrompt },
       ],
-      temperature: 0.7,
-      max_tokens: 4000, // Need more tokens for complex pipelines
+      [maxTokensKey]: 4000, // Need more tokens for complex pipelines
       response_format: { type: 'json_object' }, // Ensure JSON output
-    });
+    } as any);
 
     const tokensInput = response.usage?.prompt_tokens || 0;
     const tokensOutput = response.usage?.completion_tokens || 0;

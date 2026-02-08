@@ -101,9 +101,9 @@ const eventColors: Record<SystemEventType, { icon: string; bg: string; border: s
     border: 'border-cyan-500/20',
   },
   agent_left: {
-    icon: 'text-muted-foreground',
-    bg: 'bg-muted',
-    border: 'border-border',
+    icon: 'text-white/40',
+    bg: 'bg-white/[0.04]',
+    border: 'border-white/[0.06]',
   },
   context_shared: {
     icon: 'text-purple-400',
@@ -214,10 +214,10 @@ export function SystemMessage({ message, eventType: propEventType }: SystemMessa
         )}
       >
         <Icon className={cn('w-3.5 h-3.5', colors.icon)} />
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-white/50">
           {message.content}
         </span>
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-[10px] text-white/50">
           {formatTime(new Date(message.timestamp))}
         </span>
       </div>
@@ -251,11 +251,11 @@ export function DayDivider({ date }: DayDividerProps) {
 
   return (
     <div className="flex items-center gap-4 my-6">
-      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-      <span className="text-xs text-muted-foreground font-medium px-3 py-1 bg-card rounded-full border-2 border-border shadow-sm">
+      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+      <span className="text-xs text-white/50 font-medium px-3 py-1 bg-[#111] rounded-full border border-white/[0.08]">
         {label}
       </span>
-      <div className="flex-1 h-px bg-gradient-to-l from-transparent via-slate-200 to-transparent" />
+      <div className="flex-1 h-px bg-gradient-to-l from-transparent via-white/[0.06] to-transparent" />
     </div>
   );
 }

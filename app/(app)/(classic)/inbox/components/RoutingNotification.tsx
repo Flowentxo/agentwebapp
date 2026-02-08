@@ -58,7 +58,7 @@ export function RoutingNotification({
     <div
       className={cn(
         'flex items-center gap-3 px-4 py-2.5 mx-4 my-2 rounded-xl border transition-all duration-300',
-        'bg-gray-50 dark:bg-zinc-900/50 border-gray-200 dark:border-zinc-800',
+        'bg-white/[0.03] border-white/[0.06]',
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
       )}
     >
@@ -75,8 +75,8 @@ export function RoutingNotification({
         <div className="flex items-center gap-1.5 text-xs">
           {previousAgent && (
             <>
-              <span className="text-gray-400 dark:text-zinc-500">{previousAgent}</span>
-              <ArrowRight className="w-3 h-3 text-gray-300 dark:text-zinc-600" />
+              <span className="text-white/40">{previousAgent}</span>
+              <ArrowRight className="w-3 h-3 text-white/20" />
             </>
           )}
           <span className="font-medium" style={{ color: agentColor }}>
@@ -86,7 +86,7 @@ export function RoutingNotification({
             {confidenceLabel}
           </span>
         </div>
-        <p className="text-[11px] text-gray-500 dark:text-zinc-500 truncate mt-0.5">
+        <p className="text-[11px] text-white/40 truncate mt-0.5">
           {reasoning}
         </p>
       </div>

@@ -125,10 +125,10 @@ export function StickyComposer({
   };
 
   return (
-    <div className="flex-shrink-0 border-t-2 border-border bg-card/95 backdrop-blur-sm p-4 relative">
+    <div className="flex-shrink-0 border-t border-white/[0.06] bg-[#0a0a0a]/95 backdrop-blur-sm p-4 relative">
       {/* @-Mention Dropdown */}
       {showMentions && filteredAgents.length > 0 && (
-        <div className="absolute bottom-full left-4 right-4 mb-2 max-h-48 overflow-y-auto bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl shadow-lg z-50 animate-mention-dropdown">
+        <div className="absolute bottom-full left-4 right-4 mb-2 max-h-48 overflow-y-auto bg-[#111] border border-white/[0.08] rounded-xl shadow-lg backdrop-blur-xl z-50 animate-mention-dropdown">
           {filteredAgents.map((agent, index) => (
             <button
               key={agent.id}
@@ -139,8 +139,8 @@ export function StickyComposer({
               className={cn(
                 'w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors',
                 index === selectedMentionIndex
-                  ? 'bg-gray-100 dark:bg-zinc-800'
-                  : 'hover:bg-gray-50 dark:hover:bg-zinc-800/50'
+                  ? 'bg-violet-500/[0.08]'
+                  : 'hover:bg-white/[0.04]'
               )}
             >
               <div
@@ -150,8 +150,8 @@ export function StickyComposer({
                 {agent.name.charAt(0)}
               </div>
               <div className="flex-1 min-w-0">
-                <span className="font-medium text-gray-900 dark:text-white">{agent.name}</span>
-                <span className="ml-1.5 text-xs text-gray-400 dark:text-zinc-500">{agent.role}</span>
+                <span className="font-medium text-white">{agent.name}</span>
+                <span className="ml-1.5 text-xs text-white/40">{agent.role}</span>
               </div>
             </button>
           ))}
@@ -160,8 +160,8 @@ export function StickyComposer({
 
       <div
         className={cn(
-          'flex items-end gap-3 p-3 bg-muted/50 rounded-2xl border-2 border-border',
-          'focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/20',
+          'flex items-end gap-3 p-3 bg-white/[0.03] rounded-2xl border border-white/[0.08]',
+          'focus-within:border-violet-500/30 focus-within:ring-1 focus-within:ring-violet-500/10',
           'transition-all duration-200',
           disabled && 'opacity-50'
         )}
@@ -169,7 +169,7 @@ export function StickyComposer({
         {/* Attachment Button (optional) */}
         {showAttachments && (
           <button
-            className="flex-shrink-0 p-2 text-muted-foreground hover:text-muted-foreground transition-colors rounded-lg hover:bg-slate-200"
+            className="flex-shrink-0 p-2 text-white/40 hover:text-white/60 transition-colors rounded-lg hover:bg-white/[0.06]"
             title="Attach file"
             disabled={disabled}
           >
@@ -188,9 +188,9 @@ export function StickyComposer({
           minRows={1}
           maxRows={5}
           className={cn(
-            'flex-1 resize-none bg-transparent text-sm text-foreground',
-            'placeholder-slate-400 focus:outline-none',
-            'scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent'
+            'flex-1 resize-none bg-transparent text-sm text-white',
+            'placeholder-white/30 focus:outline-none',
+            'scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent'
           )}
         />
 
@@ -199,7 +199,7 @@ export function StickyComposer({
           <span
             className={cn(
               'flex-shrink-0 text-xs',
-              message.length >= maxLength ? 'text-red-500' : 'text-muted-foreground'
+              message.length >= maxLength ? 'text-red-500' : 'text-white/40'
             )}
           >
             {message.length}/{maxLength}
@@ -213,8 +213,8 @@ export function StickyComposer({
           className={cn(
             'flex-shrink-0 p-2.5 rounded-xl transition-all duration-200',
             canSend
-              ? 'bg-primary hover:bg-primary/90 text-white shadow-sm'
-              : 'bg-slate-200 text-muted-foreground cursor-not-allowed'
+              ? 'bg-violet-500 hover:bg-violet-400 text-white shadow-sm'
+              : 'bg-white/[0.06] text-white/20 cursor-not-allowed'
           )}
           title={canSend ? 'Send message' : 'Type a message to send'}
         >
@@ -227,12 +227,12 @@ export function StickyComposer({
       </div>
 
       {/* Hint */}
-      <div className="flex items-center justify-center gap-4 mt-2 text-xs text-muted-foreground">
+      <div className="flex items-center justify-center gap-4 mt-2 text-xs text-white/30">
         <span>
-          <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded">Enter</kbd> to send
+          <kbd className="px-1.5 py-0.5 bg-white/[0.04] border border-white/[0.06] rounded">Enter</kbd> to send
         </span>
         <span>
-          <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded">@</kbd> to mention agent
+          <kbd className="px-1.5 py-0.5 bg-white/[0.04] border border-white/[0.06] rounded">@</kbd> to mention agent
         </span>
       </div>
     </div>

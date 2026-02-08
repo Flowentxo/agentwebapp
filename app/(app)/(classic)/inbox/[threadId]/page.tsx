@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * Flowent Inbox v3 - Thread Chat Page
- * Grok-style chat interface using the new ChatInterface component
+ * Flowent Inbox - Thread Chat Page
+ * Uses VicyChatInterface with routing feedback, artifact panel, @mention composer
  */
 
 import { useParams } from 'next/navigation';
-import { ChatInterface } from '../components/ChatInterface';
+import { VicyChatInterface } from '@/components/vicy/VicyChatInterface';
 
 export default function ThreadChatPage() {
   const params = useParams();
@@ -20,5 +20,5 @@ export default function ThreadChatPage() {
     );
   }
 
-  return <ChatInterface threadId={threadId} />;
+  return <VicyChatInterface threadId={threadId} />;
 }

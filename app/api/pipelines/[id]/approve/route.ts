@@ -14,6 +14,13 @@ import { resumePipelineExecution } from "@/server/lib/pipeline-queue";
 import { workflowExecutionEngineV2 } from "@/server/services/WorkflowExecutionEngineV2";
 import { emitWorkflowUpdate } from "@/server/socket";
 
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isValidUUID(str: string): boolean {
+  return UUID_REGEX.test(str);
+}
+
 async function getAuthenticatedUser(req: NextRequest) {
   const userId = req.headers.get("x-user-id");
   if (!userId) return null;
@@ -48,6 +55,11 @@ export async function GET(
     const db = getDb();
     const pipelineId = params.id;
 
+    // Validate pipeline ID is a valid UUID
+    if (!isValidUUID(pipelineId)) {
+      return NextResponse.json({ error: "Invalid pipeline ID" }, { status: 400 });
+    }
+
     // Get pending approvals - check for both 'suspended' (V2) and 'waiting_approval' (legacy)
     const pendingApprovals = await db.execute(sql`
       SELECT
@@ -57,7 +69,6 @@ export async function GET(
         we.input,
         we.output,
         we.logs,
-        we.current_step_index,
         w.name as pipeline_name,
         w.nodes,
         (
@@ -91,7 +102,6 @@ export async function GET(
           input: unknown;
           output: Record<string, unknown> | null;
           logs: unknown[];
-          current_step_index: number;
           pipeline_name: string;
           nodes: unknown[];
           approval_node: {
@@ -101,6 +111,12 @@ export async function GET(
             timestamp: string;
           } | null;
         };
+
+        // Calculate completed steps from logs array
+        const logsArray = Array.isArray(approval.logs) ? approval.logs : [];
+        const completedSteps = logsArray.filter(
+          (log: unknown) => (log as { status?: string }).status === 'completed'
+        ).length;
 
         // Try to get V2 engine approval request data
         const v2ApprovalRequest = await workflowExecutionEngineV2.getPendingApproval(
@@ -132,7 +148,7 @@ export async function GET(
             contextData: v2ApprovalRequest.contextData,
             context: {
               input: approval.input,
-              completedSteps: approval.current_step_index,
+              completedSteps: completedSteps,
             },
           };
         }
@@ -151,7 +167,7 @@ export async function GET(
           },
           context: {
             input: approval.input,
-            completedSteps: approval.current_step_index,
+            completedSteps: completedSteps,
           },
         };
       })
@@ -182,6 +198,12 @@ export async function POST(
 
     const db = getDb();
     const pipelineId = params.id;
+
+    // Validate pipeline ID is a valid UUID
+    if (!isValidUUID(pipelineId)) {
+      return NextResponse.json({ error: "Invalid pipeline ID" }, { status: 400 });
+    }
+
     const body = await req.json();
 
     const {

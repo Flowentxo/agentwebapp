@@ -251,7 +251,7 @@ export function ActivePipelinesWidget({ index = 0, isLoading = false }: ActivePi
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => router.push('/agents/studio')}
+              onClick={() => router.push('/studio')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 text-xs font-medium text-primary hover:bg-primary/20 transition-all"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -320,7 +320,7 @@ export function ActivePipelinesWidget({ index = 0, isLoading = false }: ActivePi
                       ${statusConfig.bgColor} ${statusConfig.borderColor}
                       hover:bg-muted/50 cursor-pointer
                     `}
-                    onClick={() => router.push(`/agents/studio?execution=${execution.id}`)}
+                    onClick={() => router.push(`/studio?execution=${execution.id}`)}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`p-1.5 rounded-lg ${statusConfig.bgColor}`}>
@@ -363,7 +363,7 @@ export function ActivePipelinesWidget({ index = 0, isLoading = false }: ActivePi
       {/* Footer */}
       <div className="p-4 border-t border-gray-200 dark:border-white/[0.06]">
         <button
-          onClick={() => router.push('/agents/studio')}
+          onClick={() => router.push('/studio')}
           className="w-full py-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border border-gray-200 dark:border-white/[0.06] text-sm font-medium text-zinc-600 dark:text-muted-foreground hover:text-zinc-900 dark:hover:text-foreground transition-all duration-200 flex items-center justify-center gap-2"
         >
           <Zap className="w-4 h-4" />

@@ -108,8 +108,8 @@ function InputField({ label, value, onChange, placeholder, type = 'text', hint }
           placeholder={placeholder}
           rows={3}
           className="w-full px-3 py-2 text-sm rounded-lg bg-card/5 border border-white/10
-            text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/50
-            focus:ring-1 focus:ring-indigo-500/50 transition-all resize-none"
+            text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50
+            focus:ring-1 focus:ring-violet-500/50 transition-all resize-none"
         />
       ) : (
         <input
@@ -118,8 +118,8 @@ function InputField({ label, value, onChange, placeholder, type = 'text', hint }
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           className="w-full px-3 py-2 text-sm rounded-lg bg-card/5 border border-white/10
-            text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/50
-            focus:ring-1 focus:ring-indigo-500/50 transition-all"
+            text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50
+            focus:ring-1 focus:ring-violet-500/50 transition-all"
         />
       )}
       {hint && <p className="text-xs text-white/30">{hint}</p>}
@@ -143,8 +143,8 @@ function SelectField({ label, value, onChange, options, hint }: SelectFieldProps
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full px-3 py-2 text-sm rounded-lg bg-card/5 border border-white/10
-          text-white focus:outline-none focus:border-indigo-500/50
-          focus:ring-1 focus:ring-indigo-500/50 transition-all"
+          text-white focus:outline-none focus:border-violet-500/50
+          focus:ring-1 focus:ring-violet-500/50 transition-all"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value} className="bg-[#1A1A1F]">
@@ -876,7 +876,7 @@ function DataReferenceSection({ nodeId, nodes, edges }: DataReferenceSectionProp
       <div className="space-y-2">
         <label className="text-xs font-medium text-white/60">This Node's ID</label>
         <div className="flex items-center gap-2">
-          <code className="flex-1 px-3 py-2 text-xs font-mono bg-card/5 border border-white/10 rounded-lg text-indigo-400 truncate">
+          <code className="flex-1 px-3 py-2 text-xs font-mono bg-card/5 border border-white/10 rounded-lg text-violet-400 truncate">
             {nodeId}
           </code>
           <button
@@ -893,7 +893,7 @@ function DataReferenceSection({ nodeId, nodes, edges }: DataReferenceSectionProp
         </div>
         <p className="text-[10px] text-white/40">
           Other nodes can reference this node's output using:{' '}
-          <code className="text-indigo-300">{`{{${nodeId}}}`}</code>
+          <code className="text-violet-300">{`{{${nodeId}}}`}</code>
         </p>
       </div>
 
@@ -908,7 +908,7 @@ function DataReferenceSection({ nodeId, nodes, edges }: DataReferenceSectionProp
             {predecessorNodes.map((node) => (
               <div
                 key={node.id}
-                className="flex items-center gap-2 p-2 rounded-lg bg-card/5 border border-white/10 hover:border-indigo-500/30 transition-colors group"
+                className="flex items-center gap-2 p-2 rounded-lg bg-card/5 border border-white/10 hover:border-violet-500/30 transition-colors group"
               >
                 <div
                   className="w-2 h-2 rounded-full flex-shrink-0"
@@ -936,7 +936,7 @@ function DataReferenceSection({ nodeId, nodes, edges }: DataReferenceSectionProp
           </div>
           <p className="text-[10px] text-white/40">
             Click to copy. Use paths like{' '}
-            <code className="text-indigo-300">{`{{nodeId.data.field}}`}</code>
+            <code className="text-violet-300">{`{{nodeId.data.field}}`}</code>
           </p>
         </div>
       )}
@@ -1004,7 +1004,7 @@ function TabButton({ id, label, icon: Icon, active, onClick, hasData }: TabButto
         flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium
         transition-all duration-200 relative
         ${active
-          ? 'text-white bg-card/10 border-b-2 border-indigo-500'
+          ? 'text-white bg-card/10 border-b-2 border-violet-500'
           : 'text-white/50 hover:text-white/80 hover:bg-card/5 border-b-2 border-transparent'
         }
       `}
@@ -1074,7 +1074,7 @@ function JsonTreeViewer({ data, name, defaultExpanded = true }: JsonTreeViewerPr
             )}
           </button>
         )}
-        {name && <span className="text-indigo-400">{name}</span>}
+        {name && <span className="text-violet-400">{name}</span>}
         {name && <span className="text-white/30">: </span>}
         <span className="text-white/50">{isArray ? '[' : '{'}</span>
         {!expanded && !isEmpty && <span className="text-white/30">...</span>}
@@ -1145,10 +1145,10 @@ function MetricsView({ nodeId, nodeType, output, nodeStatus }: MetricsViewProps)
   if (nodeStatus === 'running' && !output) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-        <div className="w-16 h-16 rounded-full bg-indigo-500/10 flex items-center justify-center mb-4 animate-pulse">
-          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-16 h-16 rounded-full bg-violet-500/10 flex items-center justify-center mb-4 animate-pulse">
+          <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
         </div>
-        <h3 className="text-sm font-medium text-indigo-400 mb-1">Collecting Metrics...</h3>
+        <h3 className="text-sm font-medium text-violet-400 mb-1">Collecting Metrics...</h3>
         <p className="text-xs text-white/40">
           Waiting for node execution to complete.
         </p>
@@ -1236,8 +1236,8 @@ function MetricsView({ nodeId, nodeType, output, nodeStatus }: MetricsViewProps)
               <p className="text-lg font-bold text-white">{tokensUsed.prompt || 0}</p>
             </div>
             {/* Completion Tokens */}
-            <div className="p-2.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
-              <p className="text-[10px] font-medium text-indigo-400 uppercase mb-1">Completion</p>
+            <div className="p-2.5 rounded-lg bg-violet-500/10 border border-violet-500/20">
+              <p className="text-[10px] font-medium text-violet-400 uppercase mb-1">Completion</p>
               <p className="text-lg font-bold text-white">{tokensUsed.completion || 0}</p>
             </div>
           </div>
@@ -1375,10 +1375,10 @@ function OutputView({ nodeId, nodeType, output, nodeStatus }: OutputViewProps) {
   if (nodeStatus === 'running' && !output) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-        <div className="w-16 h-16 rounded-full bg-indigo-500/10 flex items-center justify-center mb-4 animate-pulse">
-          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-16 h-16 rounded-full bg-violet-500/10 flex items-center justify-center mb-4 animate-pulse">
+          <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
         </div>
-        <h3 className="text-sm font-medium text-indigo-400 mb-1">Executing...</h3>
+        <h3 className="text-sm font-medium text-violet-400 mb-1">Executing...</h3>
         <p className="text-xs text-white/40">
           Waiting for node to complete.
         </p>
@@ -1631,7 +1631,7 @@ function GenericOutputView({ output, onCopyJson, copiedJson }: GenericOutputView
                 onClick={() => setViewMode('tree')}
                 className={`px-2 py-1 text-[10px] font-medium transition-colors ${
                   viewMode === 'tree'
-                    ? 'bg-indigo-500/20 text-indigo-400'
+                    ? 'bg-violet-500/20 text-violet-400'
                     : 'text-white/50 hover:text-white/80'
                 }`}
               >
@@ -1641,7 +1641,7 @@ function GenericOutputView({ output, onCopyJson, copiedJson }: GenericOutputView
                 onClick={() => setViewMode('raw')}
                 className={`px-2 py-1 text-[10px] font-medium transition-colors ${
                   viewMode === 'raw'
-                    ? 'bg-indigo-500/20 text-indigo-400'
+                    ? 'bg-violet-500/20 text-violet-400'
                     : 'text-white/50 hover:text-white/80'
                 }`}
               >
@@ -1960,7 +1960,7 @@ export function NodeInspector() {
         <button
           onClick={handleClose}
           className="w-full px-4 py-2 text-sm font-medium rounded-lg
-            bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30
+            bg-violet-500/20 text-violet-400 hover:bg-violet-500/30
             transition-colors"
         >
           {activeTab === 'config' ? (

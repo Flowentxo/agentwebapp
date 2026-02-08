@@ -127,8 +127,8 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          <p className="text-sm text-muted-foreground">Loading conversation...</p>
+          <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+          <p className="text-sm text-white/40">Loading conversation...</p>
         </div>
       </div>
     );
@@ -139,10 +139,10 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center px-4">
-          <p className="text-muted-foreground mb-2">Conversation not found</p>
+          <p className="text-white/40 mb-2">Conversation not found</p>
           <button
             onClick={handleBack}
-            className="text-sm text-primary hover:text-primary/80"
+            className="text-sm text-violet-400 hover:text-violet-300"
           >
             Go back to inbox
           </button>
@@ -156,10 +156,10 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center px-4">
-          <p className="text-red-600 mb-2">Failed to load messages</p>
+          <p className="text-red-400 mb-2">Failed to load messages</p>
           <button
             onClick={handleBack}
-            className="text-sm text-primary hover:text-primary/80"
+            className="text-sm text-violet-400 hover:text-violet-300"
           >
             Go back to inbox
           </button>
@@ -169,18 +169,18 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
   }
 
   return (
-    <div className="flex h-full bg-background">
+    <div className="flex h-full bg-[#0a0a0a]">
       {/* Main Chat Area */}
       <div className={cn(
         'flex flex-col flex-1 min-w-0 transition-all duration-300',
         isArtifactPanelOpen && 'lg:w-[60%]'
       )}>
         {/* Header */}
-        <header className="flex-shrink-0 flex items-center gap-4 px-4 py-3 border-b border-border bg-background/95 backdrop-blur-sm">
+        <header className="flex-shrink-0 flex items-center gap-4 px-4 py-3 border-b border-white/[0.06] bg-[#0a0a0a]/95 backdrop-blur-sm">
           {/* Back button (mobile) */}
           <button
             onClick={handleBack}
-            className="lg:hidden p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted"
+            className="lg:hidden p-2 -ml-2 text-white/40 hover:text-white transition-colors rounded-lg hover:bg-white/[0.06]"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -195,12 +195,12 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
 
           {/* Agent Info */}
           <div className="flex-1 min-w-0">
-            <h2 className="text-sm font-medium text-foreground truncate">
+            <h2 className="text-sm font-medium text-white truncate">
               {thread.subject || agentName}
             </h2>
-            <p className="text-xs text-muted-foreground truncate">
+            <p className="text-xs text-white/40 truncate">
               {isTyping ? (
-                <span className="text-primary">Typing...</span>
+                <span className="text-violet-400">Typing...</span>
               ) : (
                 `${messages.length} messages`
               )}
@@ -209,7 +209,7 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
 
           {/* Actions */}
           <button
-            className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted"
+            className="p-2 text-white/40 hover:text-white transition-colors rounded-lg hover:bg-white/[0.06]"
             title="More options"
           >
             <MoreHorizontal className="w-5 h-5" />
@@ -250,11 +250,11 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
         <button
           onClick={() => openArtifactById(latestArtifactId)}
           className="hidden lg:flex flex-col items-center justify-center w-10
-                     bg-zinc-50 dark:bg-zinc-900/50 border-l border-gray-200 dark:border-zinc-800
-                     hover:bg-gray-100 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer"
+                     bg-[#111] border-l border-white/[0.06]
+                     hover:bg-white/[0.04] transition-colors cursor-pointer"
         >
-          <FileText className="w-4 h-4 text-gray-400 dark:text-zinc-500 mb-2" />
-          <span className="text-[9px] text-gray-400 dark:text-zinc-500 writing-mode-vertical">Results</span>
+          <FileText className="w-4 h-4 text-white/30 mb-2" />
+          <span className="text-[9px] text-white/30 writing-mode-vertical">Results</span>
         </button>
       )}
 

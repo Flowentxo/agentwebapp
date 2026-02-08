@@ -234,13 +234,13 @@ export function ArtifactPanel({ isMobile = false }: ArtifactPanelProps) {
   // Mobile: Full screen overlay
   if (isMobile) {
     return (
-      <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
+      <div className="fixed inset-0 z-50 bg-[#0a0a0a] flex flex-col animate-in slide-in-from-bottom duration-300">
         {/* Mobile Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-black/30 border-b border-white/10">
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={closeArtifact}
-              className="p-2 -ml-2 rounded-lg text-white/60 hover:text-white hover:bg-card/5 transition-colors"
+              className="p-2 -ml-2 rounded-lg text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors"
             >
               <X size={20} />
             </button>
@@ -248,7 +248,7 @@ export function ArtifactPanel({ isMobile = false }: ArtifactPanelProps) {
               {isLoading ? (
                 <Loader2 size={18} className="flex-shrink-0 text-violet-400 animate-spin" />
               ) : (
-                <Icon size={18} className="flex-shrink-0 text-blue-400" />
+                <Icon size={18} className="flex-shrink-0 text-violet-400" />
               )}
               <h3 className="font-medium text-white truncate">
                 {artifact?.title || 'Loading...'}
@@ -260,7 +260,7 @@ export function ArtifactPanel({ isMobile = false }: ArtifactPanelProps) {
             {hasChanges && (
               <button
                 onClick={handleRevert}
-                className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-card/5 transition-colors"
+                className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors"
                 title="Revert changes"
               >
                 <RotateCcw size={18} />
@@ -271,7 +271,7 @@ export function ArtifactPanel({ isMobile = false }: ArtifactPanelProps) {
               disabled={!hasChanges || isSaving}
               className={`p-2 rounded-lg transition-colors ${
                 hasChanges
-                  ? 'text-blue-400 hover:bg-blue-500/10'
+                  ? 'text-violet-400 hover:bg-violet-500/10'
                   : 'text-white/30 cursor-not-allowed'
               }`}
               title="Save changes"
@@ -307,7 +307,7 @@ export function ArtifactPanel({ isMobile = false }: ArtifactPanelProps) {
   // Desktop: Slide-in panel
   return (
     <div
-      className={`flex flex-col bg-background dark:bg-[#111113] border-l border-border transition-all duration-300 ease-out ${
+      className={`flex flex-col bg-[#111] border-l border-white/[0.06] transition-all duration-300 ease-out ${
         isFullscreen
           ? 'fixed inset-0 z-50 border-l-0'
           : 'relative'
@@ -320,12 +320,12 @@ export function ArtifactPanel({ isMobile = false }: ArtifactPanelProps) {
       <div className="flex items-center justify-between px-4 py-3 bg-black/30 border-b border-white/10">
         <div className="flex items-center gap-3 min-w-0">
           <div
-            className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-blue-500/20"
+            className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-violet-500/20"
           >
             {isLoading ? (
               <Loader2 size={16} className="text-violet-400 animate-spin" />
             ) : (
-              <Icon size={16} className="text-blue-400" />
+              <Icon size={16} className="text-violet-400" />
             )}
           </div>
           <div className="min-w-0">
@@ -351,7 +351,7 @@ export function ArtifactPanel({ isMobile = false }: ArtifactPanelProps) {
           {hasChanges && (
             <button
               onClick={handleRevert}
-              className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-card/5 transition-colors"
+              className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.04] transition-colors"
               title="Revert changes"
             >
               <RotateCcw size={16} />
@@ -360,21 +360,21 @@ export function ArtifactPanel({ isMobile = false }: ArtifactPanelProps) {
           <button
             onClick={handleDownload}
             disabled={!artifact}
-            className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-card/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.04] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Download"
           >
             <Download size={16} />
           </button>
           <button
             onClick={() => setIsFullscreen(!isFullscreen)}
-            className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-card/5 transition-colors"
+            className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.04] transition-colors"
             title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
           >
             {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
           </button>
           <button
             onClick={closeArtifact}
-            className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-card/5 transition-colors"
+            className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.04] transition-colors"
             title="Close panel"
           >
             <X size={16} />
@@ -392,9 +392,9 @@ export function ArtifactPanel({ isMobile = false }: ArtifactPanelProps) {
       {/* Footer */}
       <div className="flex items-center justify-between px-4 py-2 bg-black/30 border-t border-white/10">
         <div className="text-xs text-white/40">
-          Press <kbd className="px-1.5 py-0.5 rounded bg-card/10 font-mono">Esc</kbd> to close
+          Press <kbd className="px-1.5 py-0.5 rounded bg-white/[0.06] font-mono">Esc</kbd> to close
           {' • '}
-          <kbd className="px-1.5 py-0.5 rounded bg-card/10 font-mono">Cmd+S</kbd> to save
+          <kbd className="px-1.5 py-0.5 rounded bg-white/[0.06] font-mono">Cmd+S</kbd> to save
         </div>
 
         <button
@@ -402,8 +402,8 @@ export function ArtifactPanel({ isMobile = false }: ArtifactPanelProps) {
           disabled={!hasChanges || isSaving || !artifact}
           className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
             hasChanges && artifact
-              ? 'bg-blue-600 hover:bg-blue-500 text-white'
-              : 'bg-card/5 text-white/30 cursor-not-allowed'
+              ? 'bg-violet-500 hover:bg-violet-400 text-white'
+              : 'bg-white/[0.04] text-white/30 cursor-not-allowed'
           }`}
         >
           {isSaving && <Loader2 size={14} className="animate-spin" />}

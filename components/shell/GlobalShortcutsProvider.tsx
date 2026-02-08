@@ -37,7 +37,7 @@ export function GlobalShortcutsProvider({ children }: { children: React.ReactNod
       key: 'n',
       meta: true,
       ctrl: true,
-      callback: () => router.push('/agents/studio'),
+      callback: () => router.push('/studio'),
       description: 'New Agent'
     },
     {

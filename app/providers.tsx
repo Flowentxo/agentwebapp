@@ -1,11 +1,23 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GlobalShortcutsProvider } from "@/components/shell/GlobalShortcutsProvider";
 import { ThemeProvider } from "@/lib/contexts/ThemeContext";
 import { ToastProvider } from "@/components/ui/toast";
 import { Toaster } from "sonner";
+import { useSession } from "@/store/session";
+
+// Component to initialize session on app start
+function SessionInitializer({ children }: { children: React.ReactNode }) {
+  const fetchSession = useSession((state) => state.fetchSession);
+
+  useEffect(() => {
+    fetchSession();
+  }, [fetchSession]);
+
+  return <>{children}</>;
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -26,11 +38,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark" storageKey="flowent-theme">
-        <ToastProvider>
-          <GlobalShortcutsProvider>
-            {children}
-          </GlobalShortcutsProvider>
-        </ToastProvider>
+        <SessionInitializer>
+          <ToastProvider>
+            <GlobalShortcutsProvider>
+              {children}
+            </GlobalShortcutsProvider>
+          </ToastProvider>
+        </SessionInitializer>
         <Toaster
           position="bottom-right"
           toastOptions={{

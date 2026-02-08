@@ -39,6 +39,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Loader2,
+  type LucideIcon,
 } from 'lucide-react';
 
 // =====================================================
@@ -138,18 +139,18 @@ function MetricCard({
   value: string | number;
   subValue?: string;
   trend?: { value: number; positive: boolean };
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   color?: 'primary' | 'success' | 'error' | 'warning';
 }) {
   const colorClasses = {
-    primary: 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400',
+    primary: 'bg-violet-500/10 border-violet-500/30 text-violet-400',
     success: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
     error: 'bg-red-500/10 border-red-500/30 text-red-400',
     warning: 'bg-amber-500/10 border-amber-500/30 text-amber-400',
   };
 
   return (
-    <div className="p-4 rounded-xl bg-card border border-white/10">
+    <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10">
       <div className="flex items-center justify-between mb-3">
         <div className={`p-2 rounded-lg ${colorClasses[color]}`}>
           <Icon size={18} />
@@ -171,8 +172,8 @@ function MetricCard({
       </div>
       <div>
         <p className="text-2xl font-bold text-white">{value}</p>
-        {subValue && <p className="text-xs text-muted-foreground mt-1">{subValue}</p>}
-        <p className="text-sm text-muted-foreground mt-1">{title}</p>
+        {subValue && <p className="text-xs text-white/40 mt-1">{subValue}</p>}
+        <p className="text-sm text-white/40 mt-1">{title}</p>
       </div>
     </div>
   );
@@ -183,8 +184,8 @@ function StatusBadge({ status }: { status: string }) {
     success: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', label: 'Success' },
     error: { bg: 'bg-red-500/10', text: 'text-red-400', label: 'Failed' },
     running: { bg: 'bg-blue-500/10', text: 'text-blue-400', label: 'Running' },
-    pending: { bg: 'bg-muted/500/10', text: 'text-muted-foreground', label: 'Pending' },
-  }[status] || { bg: 'bg-muted/500/10', text: 'text-muted-foreground', label: status };
+    pending: { bg: 'bg-white/[0.04]', text: 'text-white/40', label: 'Pending' },
+  }[status] || { bg: 'bg-white/[0.04]', text: 'text-white/40', label: status };
 
   return (
     <span
@@ -253,7 +254,7 @@ export default function PipelineAnalyticsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="flex items-center gap-3 text-muted-foreground">
+        <div className="flex items-center gap-3 text-white/40">
           <Loader2 className="animate-spin" size={24} />
           <span>Loading analytics...</span>
         </div>
@@ -269,7 +270,7 @@ export default function PipelineAnalyticsPage() {
           <p className="text-red-400">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700"
+            className="mt-4 px-4 py-2 bg-white/[0.04] text-white rounded-lg hover:bg-white/[0.06]"
           >
             Retry
           </button>
@@ -281,7 +282,7 @@ export default function PipelineAnalyticsPage() {
   if (!analytics) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">No analytics data available</p>
+        <p className="text-white/40">No analytics data available</p>
       </div>
     );
   }
@@ -294,7 +295,7 @@ export default function PipelineAnalyticsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold">Pipeline Analytics</h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-white/40 mt-1">
             Monitor your pipeline performance and costs
           </p>
         </div>
@@ -305,7 +306,7 @@ export default function PipelineAnalyticsPage() {
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              className="appearance-none bg-gray-800 border border-white/10 rounded-lg px-4 py-2 pr-8 text-sm focus:outline-none focus:border-indigo-500"
+              className="appearance-none bg-white/[0.04] border border-white/10 rounded-lg px-4 py-2 pr-8 text-sm focus:outline-none focus:border-violet-500"
             >
               {DATE_RANGES.map((range) => (
                 <option key={range.value} value={range.value}>
@@ -315,13 +316,13 @@ export default function PipelineAnalyticsPage() {
             </select>
             <ChevronDown
               size={16}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none"
             />
           </div>
 
           <button
             onClick={() => window.location.reload()}
-            className="p-2 bg-gray-800 border border-white/10 rounded-lg hover:bg-gray-700"
+            className="p-2 bg-white/[0.04] border border-white/10 rounded-lg hover:bg-white/[0.06]"
           >
             <RefreshCw size={18} />
           </button>
@@ -366,8 +367,8 @@ export default function PipelineAnalyticsPage() {
             onClick={() => setSelectedTab(tab)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
               selectedTab === tab
-                ? 'bg-indigo-500 text-white'
-                : 'text-muted-foreground hover:bg-gray-800'
+                ? 'bg-violet-500 text-white'
+                : 'text-white/40 hover:bg-white/[0.04]'
             }`}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -379,7 +380,7 @@ export default function PipelineAnalyticsPage() {
       {selectedTab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Cost Over Time Chart */}
-          <div className="p-6 rounded-xl bg-card border border-white/10">
+          <div className="p-6 rounded-xl bg-white/[0.02] border border-white/10">
             <h3 className="text-lg font-semibold mb-4">Cost Over Time</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -402,7 +403,7 @@ export default function PipelineAnalyticsPage() {
           </div>
 
           {/* Execution Duration Chart */}
-          <div className="p-6 rounded-xl bg-card border border-white/10">
+          <div className="p-6 rounded-xl bg-white/[0.02] border border-white/10">
             <h3 className="text-lg font-semibold mb-4">Execution Duration</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -431,23 +432,23 @@ export default function PipelineAnalyticsPage() {
           </div>
 
           {/* Top Pipelines */}
-          <div className="p-6 rounded-xl bg-card border border-white/10">
+          <div className="p-6 rounded-xl bg-white/[0.02] border border-white/10">
             <h3 className="text-lg font-semibold mb-4">Top Pipelines</h3>
             <div className="space-y-3">
               {topPipelines.map((pipeline, idx) => (
                 <div
                   key={pipeline.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-gray-800/50"
+                  className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03]"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-500/20 text-indigo-400 text-xs font-bold">
+                    <span className="w-6 h-6 flex items-center justify-center rounded-full bg-violet-500/20 text-violet-400 text-xs font-bold">
                       {idx + 1}
                     </span>
                     <div>
                       <p className="font-medium text-white truncate max-w-[200px]">
                         {pipeline.name}
                       </p>
-                      <p className="text-xs text-muted-foreground">{pipeline.runCount} runs</p>
+                      <p className="text-xs text-white/40">{pipeline.runCount} runs</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -465,13 +466,13 @@ export default function PipelineAnalyticsPage() {
                 </div>
               ))}
               {topPipelines.length === 0 && (
-                <p className="text-center text-muted-foreground py-4">No pipelines yet</p>
+                <p className="text-center text-white/40 py-4">No pipelines yet</p>
               )}
             </div>
           </div>
 
           {/* Success/Failure Distribution */}
-          <div className="p-6 rounded-xl bg-card border border-white/10">
+          <div className="p-6 rounded-xl bg-white/[0.02] border border-white/10">
             <h3 className="text-lg font-semibold mb-4">Execution Status</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -507,12 +508,12 @@ export default function PipelineAnalyticsPage() {
       )}
 
       {selectedTab === 'executions' && (
-        <div className="p-6 rounded-xl bg-card border border-white/10">
+        <div className="p-6 rounded-xl bg-white/[0.02] border border-white/10">
           <h3 className="text-lg font-semibold mb-4">Recent Executions</h3>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="text-left text-sm text-muted-foreground border-b border-white/10">
+                <tr className="text-left text-sm text-white/40 border-b border-white/10">
                   <th className="pb-3 pr-4">Pipeline</th>
                   <th className="pb-3 pr-4">Status</th>
                   <th className="pb-3 pr-4">Started</th>
@@ -525,23 +526,23 @@ export default function PipelineAnalyticsPage() {
                 {recentExecutions.map((exec) => (
                   <tr
                     key={exec.id}
-                    className="border-b border-white/5 hover:bg-gray-800/50"
+                    className="border-b border-white/5 hover:bg-white/[0.03]"
                   >
                     <td className="py-3 pr-4">
                       <p className="font-medium text-white truncate max-w-[200px]">
                         {exec.pipelineName}
                       </p>
-                      <p className="text-xs text-muted-foreground font-mono">
+                      <p className="text-xs text-white/40 font-mono">
                         {exec.id.slice(0, 8)}
                       </p>
                     </td>
                     <td className="py-3 pr-4">
                       <StatusBadge status={exec.status} />
                     </td>
-                    <td className="py-3 pr-4 text-sm text-muted-foreground">
+                    <td className="py-3 pr-4 text-sm text-white/40">
                       {formatDate(exec.startedAt)}
                     </td>
-                    <td className="py-3 pr-4 text-sm text-muted-foreground">
+                    <td className="py-3 pr-4 text-sm text-white/40">
                       {exec.durationMs ? formatDuration(exec.durationMs) : '-'}
                     </td>
                     <td className="py-3 pr-4 text-sm font-medium text-white">
@@ -553,14 +554,14 @@ export default function PipelineAnalyticsPage() {
                           {exec.errorMessage}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground">-</span>
+                        <span className="text-white/40">-</span>
                       )}
                     </td>
                   </tr>
                 ))}
                 {recentExecutions.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-muted-foreground">
+                    <td colSpan={6} className="py-8 text-center text-white/40">
                       No executions yet
                     </td>
                   </tr>
@@ -572,7 +573,7 @@ export default function PipelineAnalyticsPage() {
       )}
 
       {selectedTab === 'errors' && (
-        <div className="p-6 rounded-xl bg-card border border-white/10">
+        <div className="p-6 rounded-xl bg-white/[0.02] border border-white/10">
           <h3 className="text-lg font-semibold mb-4">Error Breakdown</h3>
           {nodeErrors.length > 0 ? (
             <div className="space-y-3">
@@ -588,21 +589,21 @@ export default function PipelineAnalyticsPage() {
                       </div>
                       <div>
                         <p className="font-medium text-white">{node.nodeName}</p>
-                        <p className="text-xs text-muted-foreground">{node.nodeType}</p>
+                        <p className="text-xs text-white/40">{node.nodeType}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-bold text-red-400">
                         {node.errorCount}
                       </p>
-                      <p className="text-xs text-muted-foreground">errors</p>
+                      <p className="text-xs text-white/40">errors</p>
                     </div>
                   </div>
-                  <div className="mt-3 p-2 rounded bg-gray-800/50">
+                  <div className="mt-3 p-2 rounded bg-white/[0.03]">
                     <p className="text-xs text-red-400 font-mono">
                       {node.lastError}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-white/40 mt-1">
                       Last: {formatDate(node.lastErrorAt)}
                     </p>
                   </div>
@@ -613,7 +614,7 @@ export default function PipelineAnalyticsPage() {
             <div className="text-center py-12">
               <CheckCircle2 size={48} className="text-emerald-400 mx-auto mb-4" />
               <p className="text-lg font-medium text-white">No errors found</p>
-              <p className="text-muted-foreground mt-1">
+              <p className="text-white/40 mt-1">
                 All your pipelines are running smoothly
               </p>
             </div>

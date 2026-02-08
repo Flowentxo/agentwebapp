@@ -211,6 +211,12 @@ interface PipelineState {
   // UI State - Dialogs
   templateDialogOpen: boolean;
 
+  // UI State - Control Mode Panels
+  showExecutionPanel: boolean;
+  showApprovalBar: boolean;
+  awaitingApprovalNodeId: string | null;
+  isPaused: boolean;
+
   // Connection Validation State (Phase 22: Node Connectivity)
   lastConnectionError: string | null;
   workflowValidation: WorkflowValidationResult | null;
@@ -284,6 +290,11 @@ interface PipelineState {
   // UI Actions - Dialogs
   setTemplateDialogOpen: (open: boolean) => void;
 
+  // UI Actions - Control Mode Panels
+  setShowExecutionPanel: (show: boolean) => void;
+  setShowApprovalBar: (show: boolean, nodeId?: string | null) => void;
+  setIsPaused: (paused: boolean) => void;
+
   // Auto-Layout Actions (Phase 22: Premium Features)
   autoLayout: (options?: LayoutOptions) => void;
   autoLayoutHorizontal: () => void;
@@ -335,6 +346,12 @@ export const usePipelineStore = create<PipelineState>()(
 
       // UI State - Dialogs
       templateDialogOpen: false,
+
+      // UI State - Control Mode Panels
+      showExecutionPanel: false,
+      showApprovalBar: false,
+      awaitingApprovalNodeId: null,
+      isPaused: false,
 
       // Connection Validation State (Phase 22: Node Connectivity)
       lastConnectionError: null,
@@ -839,6 +856,30 @@ export const usePipelineStore = create<PipelineState>()(
         set({ templateDialogOpen: open });
       },
 
+      /**
+       * Show or hide the live execution panel
+       */
+      setShowExecutionPanel: (show: boolean) => {
+        set({ showExecutionPanel: show });
+      },
+
+      /**
+       * Show or hide the approval bar and track the awaiting node
+       */
+      setShowApprovalBar: (show: boolean, nodeId?: string | null) => {
+        set({
+          showApprovalBar: show,
+          awaitingApprovalNodeId: nodeId ?? null,
+        });
+      },
+
+      /**
+       * Set pipeline paused state
+       */
+      setIsPaused: (paused: boolean) => {
+        set({ isPaused: paused });
+      },
+
       // ============================================
       // AUTO-LAYOUT ACTIONS (Phase 22: Premium Features)
       // ============================================
@@ -1039,6 +1080,30 @@ export const useTemplateDialog = () => {
 };
 
 // ============================================
+// CONTROL MODE UI SELECTORS
+// ============================================
+
+export const selectShowExecutionPanel = (state: PipelineState) => state.showExecutionPanel;
+export const selectShowApprovalBar = (state: PipelineState) => state.showApprovalBar;
+export const selectAwaitingApprovalNodeId = (state: PipelineState) => state.awaitingApprovalNodeId;
+export const selectIsPaused = (state: PipelineState) => state.isPaused;
+
+/**
+ * Hook for Control Mode UI state and actions
+ */
+export const useControlModeUI = () => {
+  return usePipelineStore((state) => ({
+    showExecutionPanel: state.showExecutionPanel,
+    showApprovalBar: state.showApprovalBar,
+    awaitingApprovalNodeId: state.awaitingApprovalNodeId,
+    isPaused: state.isPaused,
+    setShowExecutionPanel: state.setShowExecutionPanel,
+    setShowApprovalBar: state.setShowApprovalBar,
+    setIsPaused: state.setIsPaused,
+  }));
+};
+
+// ============================================
 // CONNECTION VALIDATION SELECTORS (Phase 22)
 // ============================================
 
@@ -1136,4 +1201,252 @@ export const useCurrentIterationStats = () => {
  */
 export const useIsLoopExecution = () => {
   return usePipelineStore((state) => !!state.loopGroupData);
+};
+
+// ============================================
+// COCKPIT STATE TYPES (Pipeline Cockpit-Upgrade)
+// ============================================
+
+export interface AutopilotConfig {
+  enabled: boolean;
+  scoreThreshold: number;
+  autoApproveAbove: number;
+  autoRejectBelow: number;
+}
+
+export interface ApprovalRequest {
+  id: string;
+  executionId: string;
+  nodeId: string;
+  nodeName: string;
+  nodeType?: string;
+  status: 'pending' | 'approved' | 'rejected' | 'expired';
+  requestedAt: string;
+  expiresAt?: string;
+  contextData?: {
+    leadScore?: number;
+    leadName?: string;
+    leadEmail?: string;
+    leadPhone?: string;
+    company?: string;
+    source?: string;
+    action?: string;
+    customFields?: Record<string, unknown>;
+  };
+}
+
+export interface CockpitExecutionStep {
+  id: string;
+  nodeId: string;
+  nodeName: string;
+  nodeType: string;
+  status: NodeExecutionStatus;
+  startedAt?: string;
+  completedAt?: string;
+  durationMs?: number;
+  output?: unknown;
+  error?: string;
+  tokensUsed?: number;
+  costUsd?: string;
+  retryAttempt?: number;
+  maxAttempts?: number;
+}
+
+// ============================================
+// COCKPIT STORE SLICE
+// ============================================
+
+interface CockpitState {
+  // Autopilot
+  autopilotEnabled: boolean;
+  autopilotConfig: AutopilotConfig;
+
+  // Dry-Run Mode
+  isDryRun: boolean;
+  dryRunLogs: CockpitExecutionStep[];
+
+  // Pending Approvals
+  pendingApprovals: ApprovalRequest[];
+  isLoadingApprovals: boolean;
+
+  // Active Node in Cockpit
+  cockpitActiveNodeId: string | null;
+}
+
+interface CockpitActions {
+  // Autopilot
+  setAutopilotConfig: (config: Partial<AutopilotConfig>) => void;
+  toggleAutopilot: () => void;
+
+  // Dry-Run
+  startDryRun: () => void;
+  stopDryRun: () => void;
+  addDryRunLog: (step: CockpitExecutionStep) => void;
+  clearDryRunLogs: () => void;
+
+  // Pending Approvals
+  loadPendingApprovals: (pipelineId: string) => Promise<void>;
+  addPendingApproval: (approval: ApprovalRequest) => void;
+  removePendingApproval: (approvalId: string) => void;
+  clearPendingApprovals: () => void;
+
+  // Active Node
+  setCockpitActiveNode: (nodeId: string | null) => void;
+}
+
+// Default Autopilot Config
+const DEFAULT_AUTOPILOT_CONFIG: AutopilotConfig = {
+  enabled: false,
+  scoreThreshold: 50,
+  autoApproveAbove: 70,
+  autoRejectBelow: 30,
+};
+
+// Create separate cockpit store for cleaner separation
+import { createStore, useStore } from 'zustand';
+
+const cockpitStore = createStore<CockpitState & CockpitActions>()((set, get) => ({
+  // Initial State
+  autopilotEnabled: false,
+  autopilotConfig: DEFAULT_AUTOPILOT_CONFIG,
+  isDryRun: false,
+  dryRunLogs: [],
+  pendingApprovals: [],
+  isLoadingApprovals: false,
+  cockpitActiveNodeId: null,
+
+  // Autopilot Actions
+  setAutopilotConfig: (config) => {
+    set((state) => ({
+      autopilotConfig: { ...state.autopilotConfig, ...config },
+      autopilotEnabled: config.enabled ?? state.autopilotEnabled,
+    }));
+  },
+
+  toggleAutopilot: () => {
+    set((state) => ({
+      autopilotEnabled: !state.autopilotEnabled,
+      autopilotConfig: {
+        ...state.autopilotConfig,
+        enabled: !state.autopilotEnabled,
+      },
+    }));
+  },
+
+  // Dry-Run Actions
+  startDryRun: () => {
+    set({ isDryRun: true, dryRunLogs: [] });
+  },
+
+  stopDryRun: () => {
+    set({ isDryRun: false });
+  },
+
+  addDryRunLog: (step) => {
+    set((state) => ({
+      dryRunLogs: [...state.dryRunLogs, step],
+    }));
+  },
+
+  clearDryRunLogs: () => {
+    set({ dryRunLogs: [] });
+  },
+
+  // Pending Approvals Actions
+  loadPendingApprovals: async (pipelineId) => {
+    set({ isLoadingApprovals: true });
+    try {
+      const response = await fetch(`/api/pipelines/${pipelineId}/approvals?status=pending`);
+      if (response.ok) {
+        const data = await response.json();
+        set({ pendingApprovals: data.approvals || [] });
+      }
+    } catch (error) {
+      console.error('[COCKPIT] Failed to load approvals:', error);
+    } finally {
+      set({ isLoadingApprovals: false });
+    }
+  },
+
+  addPendingApproval: (approval) => {
+    set((state) => ({
+      pendingApprovals: [...state.pendingApprovals, approval],
+    }));
+  },
+
+  removePendingApproval: (approvalId) => {
+    set((state) => ({
+      pendingApprovals: state.pendingApprovals.filter((a) => a.id !== approvalId),
+    }));
+  },
+
+  clearPendingApprovals: () => {
+    set({ pendingApprovals: [] });
+  },
+
+  // Active Node Actions
+  setCockpitActiveNode: (nodeId) => {
+    set({ cockpitActiveNodeId: nodeId });
+  },
+}));
+
+// ============================================
+// COCKPIT HOOKS
+// ============================================
+
+/**
+ * Hook for Cockpit state and actions
+ */
+export const useCockpitStore = <T>(selector: (state: CockpitState & CockpitActions) => T): T => {
+  return useStore(cockpitStore, selector);
+};
+
+/**
+ * Hook for Autopilot configuration
+ */
+export const useAutopilot = () => {
+  return useCockpitStore((state) => ({
+    enabled: state.autopilotEnabled,
+    config: state.autopilotConfig,
+    setConfig: state.setAutopilotConfig,
+    toggle: state.toggleAutopilot,
+  }));
+};
+
+/**
+ * Hook for Dry-Run mode
+ */
+export const useDryRun = () => {
+  return useCockpitStore((state) => ({
+    isDryRun: state.isDryRun,
+    logs: state.dryRunLogs,
+    start: state.startDryRun,
+    stop: state.stopDryRun,
+    addLog: state.addDryRunLog,
+    clearLogs: state.clearDryRunLogs,
+  }));
+};
+
+/**
+ * Hook for Pending Approvals
+ */
+export const usePendingApprovals = () => {
+  return useCockpitStore((state) => ({
+    approvals: state.pendingApprovals,
+    isLoading: state.isLoadingApprovals,
+    load: state.loadPendingApprovals,
+    add: state.addPendingApproval,
+    remove: state.removePendingApproval,
+    clear: state.clearPendingApprovals,
+  }));
+};
+
+/**
+ * Hook for Cockpit Active Node
+ */
+export const useCockpitActiveNode = () => {
+  return useCockpitStore((state) => ({
+    activeNodeId: state.cockpitActiveNodeId,
+    setActiveNode: state.setCockpitActiveNode,
+  }));
 };

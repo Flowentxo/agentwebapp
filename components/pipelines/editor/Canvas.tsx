@@ -44,8 +44,8 @@ const edgeTypes = {
 const defaultEdgeOptions = {
   type: 'smoothstep',
   style: {
-    stroke: '#6366F1',
-    strokeWidth: 2,
+    stroke: 'rgba(139, 92, 246, 0.4)',
+    strokeWidth: 1.5,
   },
 };
 
@@ -127,36 +127,33 @@ export function PipelineCanvas({ onDrop, onDragOver }: CanvasProps) {
         maxZoom={2}
         deleteKeyCode={['Backspace', 'Delete']}
         multiSelectionKeyCode={['Shift']}
-        panOnDrag={[1, 2]} // Middle and right click to pan
+        panOnDrag={[1, 2]}
         selectionOnDrag
         proOptions={{ hideAttribution: true }}
-        className="bg-background"
+        className="!bg-[#050505]"
       >
         {/* Background Grid */}
         <Background
           variant={BackgroundVariant.Dots}
-          gap={20}
+          gap={24}
           size={1}
-          color="hsl(214 32% 85%)"
-          className="bg-background"
+          color="rgba(255,255,255,0.05)"
+          className="!bg-[#050505]"
         />
 
         {/* Controls */}
         <Controls
-          className="!bg-card !border-border !rounded-xl !shadow-lg"
+          className="!bg-[#111] !border-[rgba(255,255,255,0.08)] !rounded-xl !shadow-none"
           showZoom
           showFitView
-          showInteractive
+          showInteractive={false}
         />
 
         {/* MiniMap */}
         <MiniMap
-          className="!bg-card !border-border !rounded-xl"
-          nodeColor={(node) => {
-            const data = node.data as PipelineNodeData;
-            return data.color || '#6366F1';
-          }}
-          maskColor="rgba(255, 255, 255, 0.8)"
+          className="!bg-[#111] !border-[rgba(255,255,255,0.08)] !rounded-xl"
+          nodeColor={() => '#8b5cf6'}
+          maskColor="rgba(0,0,0,0.8)"
           pannable
           zoomable
         />
@@ -165,28 +162,28 @@ export function PipelineCanvas({ onDrop, onDragOver }: CanvasProps) {
       {/* Custom Styles for React Flow */}
       <style jsx global>{`
         .react-flow__controls-button {
-          background: hsl(var(--card)) !important;
-          border: 1px solid hsl(var(--border)) !important;
-          color: hsl(var(--muted-foreground)) !important;
+          background: #111111 !important;
+          border: 1px solid rgba(255, 255, 255, 0.08) !important;
+          color: rgba(255, 255, 255, 0.5) !important;
         }
         .react-flow__controls-button:hover {
-          background: hsl(var(--muted)) !important;
-          color: hsl(var(--foreground)) !important;
+          background: #1a1a1a !important;
+          color: rgba(255, 255, 255, 0.8) !important;
         }
         .react-flow__controls-button svg {
           fill: currentColor !important;
         }
         .react-flow__edge-path {
-          stroke: hsl(var(--primary)) !important;
-          stroke-width: 2px !important;
+          stroke: rgba(139, 92, 246, 0.6) !important;
+          stroke-width: 1.5px !important;
         }
         .react-flow__edge.selected .react-flow__edge-path {
-          stroke: hsl(262 83% 68%) !important;
-          stroke-width: 3px !important;
+          stroke: #8b5cf6 !important;
+          stroke-width: 2px !important;
         }
         .react-flow__connection-line {
-          stroke: hsl(var(--primary)) !important;
-          stroke-width: 2px !important;
+          stroke: #8b5cf6 !important;
+          stroke-width: 1.5px !important;
           stroke-dasharray: 5 5;
         }
         .react-flow__minimap {

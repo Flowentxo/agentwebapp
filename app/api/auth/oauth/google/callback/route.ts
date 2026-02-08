@@ -158,7 +158,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Redirect with session cookie
-    const redirectUrl = stateData.next || '/dashboard';
+    const redirectUrl = stateData.next || '/v4';
     const response = NextResponse.redirect(new URL(redirectUrl, BASE_URL));
 
     response.cookies.set(AUTH_COOKIE, token, {

@@ -91,9 +91,15 @@ export class DexterService {
       console.log(`[Dexter] Iteration ${iterationCount}`);
 
       try {
+        // GPT-4o and GPT-5 models require max_completion_tokens instead of max_tokens
+        const model = DEXTER_OPENAI_CONFIG.model;
+        const maxTokensKey = model.includes('gpt-5') || model.includes('gpt-4o')
+          ? 'max_completion_tokens'
+          : 'max_tokens';
+
         // Create chat completion with function calling
         const response = await this.client.chat.completions.create({
-          model: DEXTER_OPENAI_CONFIG.model,
+          model,
           messages: [
             { role: 'system', content: DEXTER_SYSTEM_PROMPT },
             ...this.conversationHistory,
@@ -101,9 +107,9 @@ export class DexterService {
           tools: this.tools,
           tool_choice: 'auto',
           temperature: DEXTER_OPENAI_CONFIG.temperature,
-          max_tokens: DEXTER_OPENAI_CONFIG.maxTokens,
+          [maxTokensKey]: DEXTER_OPENAI_CONFIG.maxTokens,
           stream: false, // We'll implement streaming in the next iteration
-        });
+        } as any);
 
         const choice = response.choices[0];
         const message = choice.message;
@@ -198,12 +204,18 @@ export class DexterService {
    */
   async healthCheck(): Promise<{ status: 'healthy' | 'unhealthy'; details: any }> {
     try {
+      // GPT-4o and GPT-5 models require max_completion_tokens instead of max_tokens
+      const model = DEXTER_OPENAI_CONFIG.model;
+      const maxTokensKey = model.includes('gpt-5') || model.includes('gpt-4o')
+        ? 'max_completion_tokens'
+        : 'max_tokens';
+
       // Simple ping to OpenAI API
       const response = await this.client.chat.completions.create({
-        model: DEXTER_OPENAI_CONFIG.model,
+        model,
         messages: [{ role: 'user', content: 'ping' }],
-        max_tokens: 10,
-      });
+        [maxTokensKey]: 10,
+      } as any);
 
       return {
         status: 'healthy',

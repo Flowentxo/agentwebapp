@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   useThreads,
   useThreadMessages,
@@ -23,6 +23,7 @@ interface VicyChatInterfaceProps {
 
 export function VicyChatInterface({ threadId }: VicyChatInterfaceProps) {
   const router = useRouter();
+  const pathname = usePathname();
 
   const { isArtifactPanelOpen, openArtifactById, routingFeedback, clearRoutingFeedback } = useInboxStore();
 
@@ -63,7 +64,8 @@ export function VicyChatInterface({ threadId }: VicyChatInterfaceProps) {
   }, [sendMutation]);
 
   const handleBack = () => {
-    router.push('/v4');
+    if (pathname.startsWith('/inbox')) router.push('/inbox');
+    else router.push('/v4');
   };
 
   const threadHasArtifacts = useMemo(() => {

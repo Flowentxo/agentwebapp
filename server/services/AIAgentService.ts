@@ -361,11 +361,12 @@ export class AIAgentService {
         history = [systemMessage, ...history.slice(-20)];
       }
 
+      // GPT-4o and GPT-5 models require max_completion_tokens instead of max_tokens
       const response = await this.openai.chat.completions.create({
         model: 'gpt-4o',
         messages: history,
         temperature: config.temperature || 0.7,
-        max_tokens: 300, // Keep responses concise for voice
+        max_completion_tokens: 300, // Keep responses concise for voice
         presence_penalty: 0.6,
         frequency_penalty: 0.3,
       });
@@ -440,13 +441,14 @@ export class AIAgentService {
       }
 
       // First call with tools enabled
+      // GPT-4o requires max_completion_tokens instead of max_tokens
       const response = await this.openai.chat.completions.create({
         model: 'gpt-4o',
         messages: history,
         tools: ARTIFACT_TOOLS,
         tool_choice: 'auto',
         temperature: config.temperature || 0.7,
-        max_tokens: 1000, // Increased for artifacts
+        max_completion_tokens: 1000, // Increased for artifacts
         presence_penalty: 0.6,
         frequency_penalty: 0.3,
       });
@@ -520,11 +522,12 @@ export class AIAgentService {
           }
 
           // Follow-up call to get spoken response
+          // GPT-4o requires max_completion_tokens instead of max_tokens
           const followUp = await this.openai.chat.completions.create({
             model: 'gpt-4o',
             messages: history,
             temperature: config.temperature || 0.7,
-            max_tokens: 300,
+            max_completion_tokens: 300,
           });
 
           spokenText = followUp.choices[0]?.message?.content ||

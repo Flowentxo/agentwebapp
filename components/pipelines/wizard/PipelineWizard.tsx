@@ -45,6 +45,9 @@ import {
   Layers,
 } from 'lucide-react';
 import { MiniGraphPreview } from './MiniGraphPreview';
+import { usePipelineStore } from '@/components/pipelines/store/usePipelineStore';
+
+import { getValidToken } from '@/lib/auth/get-token';
 import type {
   PipelineTemplateListItem,
   TemplatesApiResponse,
@@ -246,11 +249,26 @@ export function PipelineWizard({ isOpen, onClose }: PipelineWizardProps) {
     setCurrentStepIndex(0);
 
     try {
+      // Get JWT token and extract user ID
+      const token = getValidToken();
+      let userId = 'demo-user';
+
+      if (token) {
+        try {
+          // Decode JWT payload (base64 decode the middle part)
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          userId = payload.userId || payload.sub || payload.id || 'demo-user';
+          console.log('[PipelineWizard] Using authenticated userId:', userId);
+        } catch (e) {
+          console.warn('[PipelineWizard] Failed to decode token, using demo-user');
+        }
+      }
+
       const response = await fetch('/api/pipelines/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': 'demo-user',
+          'x-user-id': userId,
         },
         body: JSON.stringify({ prompt: prompt.trim() }),
       });
@@ -263,9 +281,58 @@ export function PipelineWizard({ isOpen, onClose }: PipelineWizardProps) {
 
       setGenerationState('complete');
 
-      setTimeout(() => {
-        onClose();
-        router.push(`/agents/studio?id=${data.pipelineId}`);
+      // Use async IIFE inside setTimeout to save pipeline to database
+      setTimeout(async () => {
+        try {
+          // STEP 1: Save the generated pipeline to database
+          const saveResponse = await fetch('/api/pipelines', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-user-id': userId,
+            },
+            body: JSON.stringify({
+              name: data.pipeline.name || 'AI Generated Pipeline',
+              description: data.pipeline.description || '',
+              nodes: data.pipeline.nodes || [],
+              edges: data.pipeline.edges || [],
+              status: 'draft',
+            }),
+          });
+
+          const saveData = await saveResponse.json();
+
+          // Validate response - API returns { success, pipeline: { id, ... } }
+          if (!saveResponse.ok || !saveData.success || !saveData.pipeline?.id) {
+            console.error('[PipelineWizard] Invalid API response:', saveData);
+            throw new Error(saveData.error || 'Pipeline ID missing from response');
+          }
+
+          const savedPipelineId = saveData.pipeline.id;
+          const pipelineName = data.pipeline.name || 'AI Generated Pipeline';
+          console.log('[PipelineWizard] Pipeline saved to database:', savedPipelineId);
+
+          // STEP 2: Load into editor store WITH the database ID
+          const { loadPipeline } = usePipelineStore.getState();
+          loadPipeline(
+            savedPipelineId,
+            data.pipeline.nodes || [],
+            data.pipeline.edges || [],
+            pipelineName
+          );
+
+          // STEP 3: Notify sidebar to refetch from database
+          window.dispatchEvent(new Event('pipeline-created'));
+          console.log('[PipelineWizard] Dispatched pipeline-created event for sidebar refresh');
+
+          onClose();
+          // STEP 4: Navigate to studio with the saved pipeline ID
+          router.push(`/studio?id=${savedPipelineId}`);
+        } catch (error: any) {
+          console.error('[PipelineWizard] Failed to save pipeline:', error);
+          setGenerationState('error');
+          setGenerationError('Pipeline wurde generiert, konnte aber nicht gespeichert werden.');
+        }
       }, 1500);
     } catch (error: any) {
       console.error('Generation error:', error);
@@ -293,18 +360,18 @@ export function PipelineWizard({ isOpen, onClose }: PipelineWizardProps) {
       }
 
       onClose();
-      router.push(`/agents/studio?id=${data.data.workflowId}`);
+      router.push(`/studio?id=${data.data.workflowId}`);
     } catch (error: any) {
       console.error('Clone error:', error);
       // Fallback: Navigate to studio with template param
       onClose();
-      router.push(`/agents/studio?template=${template.id}`);
+      router.push(`/studio?template=${template.id}`);
     }
   };
 
   const handleStartFromScratch = () => {
     onClose();
-    router.push('/agents/studio');
+    router.push('/studio');
   };
 
   const getIcon = (iconName: string | null) => {

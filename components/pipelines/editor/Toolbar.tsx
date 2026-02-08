@@ -1,13 +1,10 @@
 'use client';
 
 /**
- * PIPELINE TOOLBAR
+ * PIPELINE TOOLBAR — Floating Pill
  *
- * IMPORTANT: This component should ONLY contain buttons that trigger store actions.
- * Modal/Dialog rendering is handled at the ROOT level (PipelineEditorPage).
- *
- * Template Gallery: Uses `setTemplateDialogOpen(true)` - rendered via Portal at root
- * AI Generator: Rendered here temporarily (should also be moved to root)
+ * Glassmorphism pill that floats over the canvas.
+ * Compact icon-only buttons; extra actions moved to More menu.
  */
 
 import { useState, useCallback } from 'react';
@@ -15,6 +12,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   Play,
+  Pause,
+  Square,
   Save,
   ChevronLeft,
   MoreHorizontal,
@@ -28,15 +27,13 @@ import {
   Eye,
   Loader2,
   Check,
-  Cloud,
-  CloudOff,
   RotateCcw,
   LayoutTemplate,
   Wand2,
+  Activity,
 } from 'lucide-react';
 import { usePipelineStore } from '../store/usePipelineStore';
 import { useExecutionSocket } from '../hooks/useExecutionSocket';
-// REMOVED: TemplateGallery import - now rendered at root level via Portal
 import { AIGeneratorModal } from './AIGeneratorModal';
 
 // ============================================
@@ -61,25 +58,23 @@ export function PipelineToolbar() {
     edges,
     viewport,
     lastSavedAt,
-    // Execution state
     isRunning: isExecuting,
     startExecution,
     resetExecution,
-    // Template Dialog - controlled via store
     setTemplateDialogOpen,
+    // Control Mode UI
+    showExecutionPanel,
+    isPaused,
+    setShowExecutionPanel,
+    setIsPaused,
   } = usePipelineStore();
 
   const [isRunning, setIsRunning] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  // REMOVED: const [showTemplates, setShowTemplates] = useState(false);
   const [showAIGenerator, setShowAIGenerator] = useState(false);
 
-  // Get user ID from headers (in real app, this would come from auth context)
-  const getUserId = () => {
-    // For demo purposes, return a consistent demo user ID
-    return 'demo-user';
-  };
+  const getUserId = () => 'demo-user';
 
   // Handle Run Pipeline
   const handleRun = async () => {
@@ -92,14 +87,12 @@ export function PipelineToolbar() {
       return;
     }
 
-    // Warn if there are unsaved changes
     if (isDirty) {
       toast.warning('You have unsaved changes', {
         description: 'Consider saving before running to ensure the latest version is executed.',
       });
     }
 
-    // Reset any previous execution state
     resetExecution();
     setIsRunning(true);
 
@@ -124,7 +117,6 @@ export function PipelineToolbar() {
         throw new Error(data.error || 'Execution failed');
       }
 
-      // Subscribe to real-time updates for this execution
       if (data.executionId) {
         subscribe(data.executionId);
         startExecution(data.executionId);
@@ -144,10 +136,109 @@ export function PipelineToolbar() {
     }
   };
 
-  // Handle Reset Execution (clear visual state)
+  // Handle Stop Pipeline
+  const handleStop = async () => {
+    const currentPipelineId = pipelineId || searchParams.get('id');
+    const currentExecutionId = usePipelineStore.getState().executionId;
+
+    if (!currentExecutionId) {
+      toast.error('No active execution to stop');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/pipelines/${currentPipelineId}/stop`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': getUserId(),
+        },
+        body: JSON.stringify({
+          executionId: currentExecutionId,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to stop execution');
+      }
+
+      resetExecution();
+      setIsRunning(false);
+      setIsPaused(false);
+      setShowExecutionPanel(false);
+      toast.success('Pipeline stopped', {
+        description: 'Execution has been terminated.',
+      });
+    } catch (error) {
+      console.error('[PIPELINE] Stop failed:', error);
+      toast.error('Failed to stop pipeline', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  };
+
+  // Handle Pause Pipeline
+  const handlePause = async () => {
+    const currentPipelineId = pipelineId || searchParams.get('id');
+    const currentExecutionId = usePipelineStore.getState().executionId;
+
+    if (!currentExecutionId) {
+      toast.error('No active execution to pause');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/pipelines/${currentPipelineId}/pause`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': getUserId(),
+        },
+        body: JSON.stringify({
+          executionId: currentExecutionId,
+          paused: !isPaused,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to pause execution');
+      }
+
+      const newPausedState = !isPaused;
+      setIsPaused(newPausedState);
+      toast.success(newPausedState ? 'Pipeline paused' : 'Pipeline resumed', {
+        description: newPausedState
+          ? 'Execution is paused. Click again to resume.'
+          : 'Execution will continue.',
+      });
+    } catch (error) {
+      console.error('[PIPELINE] Pause failed:', error);
+      toast.error('Failed to pause pipeline', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  };
+
+  // Toggle Live Execution Panel
+  const handleToggleExecutionPanel = () => {
+    setShowExecutionPanel(!showExecutionPanel);
+  };
+
+  // Auto-show execution panel when execution starts
+  const handleRunWithPanel = async () => {
+    setShowExecutionPanel(true);
+    await handleRun();
+  };
+
+  // Handle Reset Execution
   const handleResetExecution = () => {
     resetExecution();
+    setIsRunning(false);
+    setIsPaused(false);
     toast.info('Execution state cleared');
+    setShowMenu(false);
   };
 
   // Handle Save Pipeline
@@ -158,7 +249,6 @@ export function PipelineToolbar() {
       const currentPipelineId = pipelineId || searchParams.get('id');
 
       if (currentPipelineId) {
-        // UPDATE existing pipeline
         const response = await fetch(`/api/pipelines/${currentPipelineId}`, {
           method: 'PUT',
           headers: {
@@ -185,7 +275,6 @@ export function PipelineToolbar() {
         });
         console.log('[PIPELINE] Updated:', data.pipeline.id);
       } else {
-        // CREATE new pipeline
         const response = await fetch('/api/pipelines', {
           method: 'POST',
           headers: {
@@ -208,10 +297,8 @@ export function PipelineToolbar() {
         const data = await response.json();
         const newId = data.pipeline.id;
 
-        // Update store with new ID
         setPipelineId(newId);
 
-        // Update URL without reload
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.set('id', newId);
         window.history.replaceState({}, '', newUrl.toString());
@@ -239,9 +326,7 @@ export function PipelineToolbar() {
       );
       if (!confirmed) return;
     }
-    // Close the tab since it's opened in a new window
     window.close();
-    // Fallback: navigate to pipelines list
     router.push('/pipelines');
   };
 
@@ -286,7 +371,7 @@ export function PipelineToolbar() {
 
         if (data.nodes && data.edges) {
           usePipelineStore.getState().loadPipeline(
-            null, // New pipeline
+            null,
             data.nodes,
             data.edges,
             data.name || 'Imported Pipeline',
@@ -342,30 +427,45 @@ export function PipelineToolbar() {
     setShowMenu(false);
   };
 
-  // Format last saved time
+  // Save button tooltip
+  const getSaveTooltip = () => {
+    if (isSaving) return 'Saving...';
+    if (!isDirty && lastSavedAt) return `Saved ${formatLastSaved()}`;
+    return 'Save (Ctrl+S)';
+  };
+
   const formatLastSaved = () => {
     if (!lastSavedAt) return null;
     const diff = Date.now() - lastSavedAt.getTime();
-    if (diff < 60000) return 'Just now';
+    if (diff < 60000) return 'just now';
     if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
     return lastSavedAt.toLocaleTimeString();
   };
 
+  const hasExecutionState = Object.keys(usePipelineStore.getState().nodeStatus).length > 0;
+
   return (
-    <header className="h-14 flex items-center justify-between px-4 bg-[#0F0F12]/95 backdrop-blur-xl border-b border-white/10">
-      {/* Left Section: Back + Title */}
-      <div className="flex items-center gap-3">
+    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+      <div
+        className="flex items-center gap-1.5 px-3 py-2 rounded-2xl"
+        style={{
+          backgroundColor: 'rgba(17, 17, 17, 0.9)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+        }}
+      >
+        {/* Back */}
         <button
           onClick={handleBack}
-          className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-card/10 transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/5 transition-colors"
           title="Back to Pipelines"
         >
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="w-4 h-4" />
         </button>
 
-        <div className="h-6 w-px bg-card/10" />
-
-        {/* Editable Title */}
+        {/* Pipeline Name */}
         {isEditing ? (
           <input
             type="text"
@@ -374,107 +474,35 @@ export function PipelineToolbar() {
             onBlur={() => setIsEditing(false)}
             onKeyDown={(e) => e.key === 'Enter' && setIsEditing(false)}
             autoFocus
-            className="bg-transparent text-white font-medium text-sm px-2 py-1 border border-indigo-500 rounded focus:outline-none"
+            className="bg-transparent text-white font-medium text-sm px-2 py-1 border border-violet-500 rounded focus:outline-none max-w-[140px]"
           />
         ) : (
           <button
             onClick={() => setIsEditing(true)}
-            className="flex items-center gap-2 group"
+            className="flex items-center gap-1.5 group max-w-[140px]"
           >
-            <span className="text-sm font-medium text-white group-hover:text-indigo-400 transition-colors">
+            <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors truncate">
               {pipelineName}
             </span>
             {isDirty && (
-              <span className="w-2 h-2 rounded-full bg-amber-500" title="Unsaved changes" />
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" title="Unsaved changes" />
             )}
           </button>
         )}
 
-        {/* Save Status */}
-        <div className="flex items-center gap-1.5 text-xs text-white/40">
-          {isSaving ? (
-            <>
-              <Loader2 className="w-3 h-3 animate-spin" />
-              <span>Saving...</span>
-            </>
-          ) : lastSavedAt ? (
-            <>
-              <Cloud className="w-3 h-3 text-green-400" />
-              <span>{formatLastSaved()}</span>
-            </>
-          ) : (
-            <>
-              <CloudOff className="w-3 h-3" />
-              <span>Not saved</span>
-            </>
-          )}
-        </div>
-      </div>
+        {/* Divider */}
+        <div className="w-px h-5 bg-white/10" />
 
-      {/* Center Section: Undo/Redo (optional) */}
-      <div className="flex items-center gap-1">
-        <button
-          className="p-2 rounded-lg text-white/40 hover:text-white/60 hover:bg-card/5 transition-colors disabled:opacity-30"
-          title="Undo"
-          disabled
-        >
-          <Undo2 className="w-4 h-4" />
-        </button>
-        <button
-          className="p-2 rounded-lg text-white/40 hover:text-white/60 hover:bg-card/5 transition-colors disabled:opacity-30"
-          title="Redo"
-          disabled
-        >
-          <Redo2 className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Right Section: Actions */}
-      <div className="flex items-center gap-2">
-        {/* AI Generator Button */}
-        <button
-          onClick={() => setShowAIGenerator(true)}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
-            bg-gradient-to-r from-violet-500/20 to-purple-500/20
-            hover:from-violet-500/30 hover:to-purple-500/30
-            text-violet-300 hover:text-violet-200
-            border border-violet-500/30 hover:border-violet-500/50
-            transition-all"
-          title="Generate with AI"
-        >
-          <Wand2 className="w-4 h-4" />
-          <span className="hidden sm:inline">Magic</span>
-        </button>
-
-        {/* Templates Button - Opens dialog via store (rendered at root level) */}
-        <button
-          onClick={() => setTemplateDialogOpen(true)}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-white/60 hover:text-white hover:bg-card/10 transition-colors text-sm"
-          title="Browse Templates"
-        >
-          <LayoutTemplate className="w-4 h-4" />
-          <span className="hidden sm:inline">Templates</span>
-        </button>
-
-        {/* Preview Button */}
-        <button
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-white/60 hover:text-white hover:bg-card/10 transition-colors text-sm"
-          title="Preview"
-        >
-          <Eye className="w-4 h-4" />
-          <span className="hidden sm:inline">Preview</span>
-        </button>
-
-        {/* Save Button */}
+        {/* Save */}
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
+          className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors disabled:opacity-50
             ${isDirty
-              ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/25'
-              : 'bg-card/10 hover:bg-card/20 text-white'
-            }
-            disabled:opacity-50 disabled:cursor-not-allowed`}
+              ? 'text-violet-400 hover:bg-violet-500/20'
+              : 'text-white/40 hover:text-white/60 hover:bg-white/5'
+            }`}
+          title={getSaveTooltip()}
         >
           {isSaving ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -483,48 +511,82 @@ export function PipelineToolbar() {
           ) : (
             <Save className="w-4 h-4" />
           )}
-          <span className="hidden sm:inline">
-            {isSaving ? 'Saving...' : isDirty ? 'Save' : 'Saved'}
-          </span>
         </button>
 
-        {/* Reset Execution Button (only show after execution) */}
-        {!isExecuting && Object.keys(usePipelineStore.getState().nodeStatus).length > 0 && (
+        {/* Magic (AI Generator) */}
+        <button
+          onClick={() => setShowAIGenerator(true)}
+          className="w-8 h-8 flex items-center justify-center rounded-lg bg-violet-500/20 text-violet-400 hover:bg-violet-500/30 hover:text-violet-300 transition-colors"
+          title="Generate with AI"
+        >
+          <Wand2 className="w-4 h-4" />
+        </button>
+
+        {/* Execution Controls */}
+        {isExecuting ? (
+          <>
+            {/* Pause Button */}
+            <button
+              onClick={handlePause}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors
+                ${isPaused
+                  ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
+                  : 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+                }`}
+              title={isPaused ? 'Resume Execution' : 'Pause Execution'}
+            >
+              {isPaused ? (
+                <Play className="w-4 h-4" />
+              ) : (
+                <Pause className="w-4 h-4" />
+              )}
+            </button>
+
+            {/* Stop Button */}
+            <button
+              onClick={handleStop}
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-colors"
+              title="Stop Execution"
+            >
+              <Square className="w-4 h-4" />
+            </button>
+
+            {/* Live Logs Toggle */}
+            <button
+              onClick={handleToggleExecutionPanel}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors
+                ${showExecutionPanel
+                  ? 'bg-violet-500/20 text-violet-400'
+                  : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70'
+                }`}
+              title={showExecutionPanel ? 'Hide Live Logs' : 'Show Live Logs'}
+            >
+              <Activity className="w-4 h-4" />
+            </button>
+          </>
+        ) : (
+          /* Run Button */
           <button
-            onClick={handleResetExecution}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-white/60 hover:text-white hover:bg-card/10 transition-colors text-sm"
-            title="Clear execution state"
+            onClick={handleRunWithPanel}
+            disabled={isRunning || nodes.length === 0}
+            className="w-8 h-8 flex items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 hover:text-emerald-300 transition-colors disabled:opacity-40"
+            title={isRunning ? 'Starting...' : 'Run Pipeline'}
           >
-            <RotateCcw className="w-4 h-4" />
+            {isRunning ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Play className="w-4 h-4" />
+            )}
           </button>
         )}
-
-        {/* Run Button */}
-        <button
-          onClick={handleRun}
-          disabled={isRunning || isExecuting || nodes.length === 0}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors
-            disabled:opacity-50 disabled:cursor-not-allowed shadow-lg
-            ${isExecuting
-              ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-500/25'
-              : 'bg-green-600 hover:bg-green-500 shadow-green-500/25'
-            }`}
-        >
-          {isRunning || isExecuting ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Play className="w-4 h-4" />
-          )}
-          <span>{isExecuting ? 'Executing...' : isRunning ? 'Starting...' : 'Run'}</span>
-        </button>
 
         {/* More Menu */}
         <div className="relative">
           <button
             onClick={() => setShowMenu(!showMenu)}
-            className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-card/10 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-white/40 hover:text-white/60 hover:bg-white/5 transition-colors"
           >
-            <MoreHorizontal className="w-5 h-5" />
+            <MoreHorizontal className="w-4 h-4" />
           </button>
 
           {showMenu && (
@@ -533,43 +595,98 @@ export function PipelineToolbar() {
                 className="fixed inset-0 z-10"
                 onClick={() => setShowMenu(false)}
               />
-              <div className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-[#1A1A1F] border border-white/10 shadow-xl z-20 overflow-hidden">
+              <div
+                className="absolute right-0 top-full mt-2 w-48 rounded-xl overflow-hidden z-20"
+                style={{
+                  backgroundColor: 'rgba(17, 17, 17, 0.95)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+                }}
+              >
+                {/* Templates */}
                 <button
                   onClick={() => {
-                    // Duplicate logic - create a copy
-                    usePipelineStore.getState().setPipelineId(null);
-                    usePipelineStore.getState().setPipelineName(`${pipelineName} (Copy)`);
-                    usePipelineStore.getState().setDirty(true);
-                    toast.info('Pipeline duplicated - save to create a copy');
+                    setTemplateDialogOpen(true);
                     setShowMenu(false);
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white/80 hover:bg-card/10 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:bg-white/5 transition-colors"
                 >
-                  <Copy className="w-4 h-4" />
-                  Duplicate
+                  <LayoutTemplate className="w-4 h-4" />
+                  Templates
+                </button>
+                {/* Preview */}
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:bg-white/5 transition-colors"
+                >
+                  <Eye className="w-4 h-4" />
+                  Preview
+                </button>
+                {/* Undo / Redo */}
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/40 cursor-not-allowed"
+                  disabled
+                >
+                  <Undo2 className="w-4 h-4" />
+                  Undo
                 </button>
                 <button
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/40 cursor-not-allowed"
+                  disabled
+                >
+                  <Redo2 className="w-4 h-4" />
+                  Redo
+                </button>
+                <hr className="border-white/[0.06]" />
+                {/* Export / Import */}
+                <button
                   onClick={handleExport}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white/80 hover:bg-card/10 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:bg-white/5 transition-colors"
                 >
                   <Download className="w-4 h-4" />
                   Export JSON
                 </button>
                 <button
                   onClick={handleImport}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white/80 hover:bg-card/10 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:bg-white/5 transition-colors"
                 >
                   <Upload className="w-4 h-4" />
                   Import JSON
                 </button>
-                <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white/80 hover:bg-card/10 transition-colors">
+                {/* Duplicate */}
+                <button
+                  onClick={() => {
+                    usePipelineStore.getState().setPipelineId(null);
+                    usePipelineStore.getState().setPipelineName(`${pipelineName} (Copy)`);
+                    usePipelineStore.getState().setDirty(true);
+                    toast.info('Pipeline duplicated - save to create a copy');
+                    setShowMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:bg-white/5 transition-colors"
+                >
+                  <Copy className="w-4 h-4" />
+                  Duplicate
+                </button>
+                {/* Reset Execution */}
+                {!isExecuting && hasExecutionState && (
+                  <button
+                    onClick={handleResetExecution}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:bg-white/5 transition-colors"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Reset Execution
+                  </button>
+                )}
+                <hr className="border-white/[0.06]" />
+                {/* Settings */}
+                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:bg-white/5 transition-colors">
                   <Settings className="w-4 h-4" />
                   Settings
                 </button>
-                <hr className="border-white/10" />
+                {/* Delete */}
                 <button
                   onClick={handleDelete}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                   Delete Pipeline
@@ -580,15 +697,11 @@ export function PipelineToolbar() {
         </div>
       </div>
 
-      {/* REMOVED: Template Gallery Modal - Now rendered at ROOT level via Portal */}
-      {/* The TemplateGallery is controlled via usePipelineStore.templateDialogOpen */}
-      {/* and rendered in the parent PipelineEditorPage component */}
-
       {/* AI Generator Modal */}
       <AIGeneratorModal
         isOpen={showAIGenerator}
         onClose={() => setShowAIGenerator(false)}
       />
-    </header>
+    </div>
   );
 }

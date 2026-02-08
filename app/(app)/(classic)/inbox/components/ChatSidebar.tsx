@@ -163,7 +163,7 @@ export function ChatSidebar({
       <div className="flex-shrink-0 px-4 pt-4 pb-3">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-medium text-gray-600 dark:text-zinc-400">Chats</h2>
+            <h2 className="text-sm font-medium text-white/50">Chats</h2>
             {/* Real-time connection status */}
             <div
               className={cn(
@@ -183,8 +183,8 @@ export function ChatSidebar({
           </div>
           <button
             onClick={handleNewChatClick}
-            className="p-1.5 rounded-lg text-gray-600 dark:text-zinc-400 bg-gray-100 dark:bg-white/5
-              hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white transition-all"
+            className="p-1.5 rounded-lg text-white/40 bg-white/[0.04]
+              hover:bg-white/[0.08] hover:text-white/70 transition-all"
             title="New Chat"
           >
             <Plus className="w-4 h-4" />
@@ -193,14 +193,14 @@ export function ChatSidebar({
 
         {/* Search Input - Ultra minimal */}
         <div className="relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-zinc-600 group-focus-within:text-gray-600 dark:group-focus-within:text-white transition-colors" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20 group-focus-within:text-white/50 transition-colors" />
           <input
             ref={searchInputRef}
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search..."
-            className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-600 focus:outline-none focus:border-gray-300 dark:focus:border-white/20 transition-all"
+            className="w-full pl-9 pr-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-violet-500/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] focus:shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_0_0_1px_rgba(139,92,246,0.1)] transition-all"
           />
           {searchQuery && (
             <button
@@ -213,7 +213,7 @@ export function ChatSidebar({
         </div>
 
         {/* View Mode Toggle - Task Board Tabs */}
-        <div className="flex mt-3 gap-0.5 bg-gray-100/50 dark:bg-zinc-800/30 rounded-lg p-0.5">
+        <div className="flex mt-3 gap-0.5 bg-white/[0.03] rounded-lg p-0.5">
           {([
             { key: 'active' as const, label: 'Active' },
             { key: 'completed' as const, label: 'Completed' },
@@ -225,8 +225,8 @@ export function ChatSidebar({
               className={cn(
                 'flex-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all',
                 viewMode === tab.key
-                  ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-400 dark:text-zinc-600 hover:text-gray-600 dark:hover:text-zinc-400'
+                  ? 'bg-white/[0.08] text-white'
+                  : 'text-white/30 hover:text-white/50'
               )}
             >
               {tab.label}
@@ -236,7 +236,7 @@ export function ChatSidebar({
       </div>
 
       {/* Divider - Ultra minimal */}
-      <div className="h-px bg-gray-100 dark:bg-white/[0.03] mx-4" />
+      <div className="h-px bg-white/[0.04] mx-4" />
 
       {/* Conversations List */}
       <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
@@ -274,7 +274,7 @@ export function ChatSidebar({
             {Array.from(groupedThreads.entries()).map(([group, groupThreads]) => (
               <div key={group}>
                 {/* Date Group Header - Ultra minimal */}
-                <div className="px-4 py-1.5 text-[10px] font-medium text-gray-400 dark:text-zinc-600 uppercase tracking-wider">
+                <div className="px-4 py-1.5 text-[10px] font-medium text-white/25 uppercase tracking-wider">
                   {group}
                 </div>
 
@@ -309,7 +309,7 @@ export function ChatSidebar({
       </div>
 
       {/* Sidebar Footer - Notifications & Shortcuts */}
-      <div className="flex-shrink-0 border-t border-gray-200 dark:border-zinc-800 px-4 py-2">
+      <div className="flex-shrink-0 border-t border-white/[0.04] px-4 py-2">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           {/* Notification toggle */}
           <div className="flex items-center gap-1.5">
@@ -394,15 +394,15 @@ function ConversationItem({
   const statusColor =
     thread.status === 'active' ? 'bg-emerald-400' :
     thread.status === 'suspended' ? 'bg-amber-400' :
-    'bg-gray-300 dark:bg-zinc-600';
+    'bg-zinc-600';
 
   return (
     <div
       className={cn(
         'group relative mx-2 mb-0.5 rounded-xl transition-all cursor-pointer',
         isActive
-          ? 'bg-gray-100 dark:bg-white/[0.08] border-l-2 border-l-primary'
-          : 'hover:bg-gray-50 dark:hover:bg-white/[0.03] border-l-2 border-l-transparent'
+          ? 'bg-violet-500/[0.08] border-l-2 border-l-violet-500'
+          : 'hover:bg-white/[0.03] border-l-2 border-l-transparent'
       )}
     >
       <div className="flex items-center gap-2.5 px-3 py-2" onClick={onSelect}>
@@ -421,7 +421,7 @@ function ConversationItem({
             </div>
           )}
           {/* Status dot */}
-          <div className={cn('absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-white dark:ring-zinc-900', statusColor)} />
+          <div className={cn('absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-[#050505]', statusColor)} />
         </div>
 
         {/* Content */}
@@ -430,26 +430,26 @@ function ConversationItem({
             <h3
               className={cn(
                 'text-sm truncate',
-                hasUnread ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-600 dark:text-zinc-400'
+                hasUnread ? 'font-medium text-white' : 'text-white/50'
               )}
             >
               {thread.subject || 'New Conversation'}
             </h3>
-            <span className="text-[10px] text-gray-400 dark:text-zinc-600 flex-shrink-0">{formattedTime}</span>
+            <span className="text-[10px] text-white/25 flex-shrink-0">{formattedTime}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-medium truncate" style={{ color: agentColor }}>
               {thread.agentName || 'AI Assistant'}
             </span>
-            <span className="text-gray-300 dark:text-zinc-700">·</span>
-            <p className="text-xs text-gray-400 dark:text-zinc-600 truncate flex-1">
+            <span className="text-white/15">·</span>
+            <p className="text-xs text-white/30 truncate flex-1">
               {thread.preview || 'No messages yet'}
             </p>
           </div>
           {/* Workflow progress bar */}
           {thread.metadata?.workflowProgress && (
             <div className="mt-1 flex items-center gap-2">
-              <div className="flex-1 h-1 bg-gray-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+              <div className="flex-1 h-1 bg-white/[0.06] rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-500 progress-active"
                   style={{
@@ -458,7 +458,7 @@ function ConversationItem({
                   }}
                 />
               </div>
-              <span className="text-[9px] text-gray-400 dark:text-zinc-500">
+              <span className="text-[9px] text-white/30">
                 {thread.metadata.workflowProgress.current}/{thread.metadata.workflowProgress.total}
               </span>
             </div>
@@ -493,7 +493,7 @@ function ConversationItem({
             sideOffset={4}
             className={cn(
               'z-50 min-w-[120px] py-1',
-              'bg-card border-2 border-border rounded-xl shadow-lg',
+              'bg-[#111] border border-white/[0.08] rounded-xl shadow-lg backdrop-blur-xl',
               'animate-in fade-in-0 zoom-in-95',
               'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
             )}

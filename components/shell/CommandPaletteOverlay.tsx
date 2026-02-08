@@ -93,7 +93,7 @@ export function CommandPaletteOverlay({ isOpen, onClose }: CommandPaletteOverlay
       icon: <Sparkles className="h-5 w-5" />,
       shortcut: '⌘N',
       action: () => {
-        router.push('/agents/studio');
+        router.push('/studio');
         onClose();
       },
       keywords: ['create', 'new', 'agent', 'build', 'studio']

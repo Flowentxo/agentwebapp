@@ -12,7 +12,6 @@ import { useRef, useState, useEffect } from 'react';
 import { useInboxStore } from '@/lib/stores/useInboxStore';
 import { useInboxShortcuts } from '@/lib/hooks/useInboxShortcuts';
 import { useInboxNotifications } from '@/lib/hooks/useNotifications';
-import { InboxSocketProvider } from '@/lib/socket';
 import { ChatSidebar } from './components/ChatSidebar';
 import { Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -45,8 +44,7 @@ export default function InboxLayout({
   } = useInboxNotifications();
 
   return (
-    <InboxSocketProvider>
-    <div className="flex h-full w-full bg-white dark:bg-[#0a0a0a] overflow-hidden">
+    <div className="flex h-full w-full bg-[#0a0a0a] overflow-hidden">
       {/* Mobile Menu Toggle - only render after mount to prevent hydration mismatch */}
       {mounted && (
         <button
@@ -63,9 +61,9 @@ export default function InboxLayout({
         className={cn(
           'fixed lg:relative inset-y-0 left-0 z-40 w-72 flex-shrink-0',
           'transform transition-all duration-300 ease-in-out lg:transform-none',
-          'border-r border-gray-200 dark:border-zinc-800',
-          'bg-white dark:bg-[#0d0d0d]',
-          isMobileSidebarOpen ? 'translate-x-0 bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800' : '-translate-x-full lg:translate-x-0'
+          'border-r border-white/[0.05]',
+          'bg-[#050505]',
+          isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
         <ChatSidebar
@@ -87,11 +85,10 @@ export default function InboxLayout({
       )}
 
       {/* Right Pane: Chat Interface (Messages) - Pure white/black */}
-      <main className="flex-1 min-w-0 flex flex-col bg-white dark:bg-[#0a0a0a] dark:inbox-workspace-glow">
+      <main className="flex-1 min-w-0 flex flex-col bg-[#0a0a0a] inbox-workspace-glow">
         {children}
       </main>
 
     </div>
-    </InboxSocketProvider>
   );
 }

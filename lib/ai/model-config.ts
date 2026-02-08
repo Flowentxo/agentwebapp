@@ -39,6 +39,27 @@ export const AI_MODELS: Record<string, ModelConfig> = {
   // OPENAI MODELS
   // =========================================
 
+  'gpt-5-mini': {
+    id: 'gpt-5-mini',
+    name: 'GPT-5 Mini',
+    provider: 'openai',
+    description: 'GPT-5 Mini - Cost-optimized next-gen model with excellent reasoning.',
+    pricing: {
+      inputPerMillionTokens: 0.50,   // $0.50 per 1M tokens (estimated)
+      outputPerMillionTokens: 1.50,  // $1.50 per 1M tokens (estimated)
+      inputPerToken: 0.0000005,
+      outputPerToken: 0.0000015,
+    },
+    capabilities: {
+      maxTokens: 200000,
+      supportsVision: true,
+      supportsStreaming: true,
+      supportsFunctionCalling: true,
+    },
+    recommended: true,
+    deprecated: false,
+  },
+
   'gpt-5.1': {
     id: 'gpt-5.1',
     name: 'GPT-5.1',
@@ -56,7 +77,7 @@ export const AI_MODELS: Record<string, ModelConfig> = {
       supportsStreaming: true,
       supportsFunctionCalling: true,
     },
-    recommended: true,
+    recommended: false,
     deprecated: false,
   },
 
@@ -264,7 +285,7 @@ export function formatCost(cost: number): string {
  * Get default model based on environment or fallback
  */
 export function getDefaultModel(): string {
-  return process.env.OPENAI_MODEL || 'gpt-5.1';
+  return process.env.OPENAI_MODEL || 'gpt-5-mini';
 }
 
 /**

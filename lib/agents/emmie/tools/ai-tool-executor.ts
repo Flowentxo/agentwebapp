@@ -17,6 +17,12 @@ const openai = new OpenAI({
 
 const AI_MODEL = process.env.OPENAI_MODEL || 'gpt-4-turbo-preview';
 
+// Helper: GPT-4o and GPT-5 models require max_completion_tokens instead of max_tokens
+const getMaxTokensKey = (model: string) =>
+  model.includes('gpt-5') || model.includes('gpt-4o')
+    ? 'max_completion_tokens'
+    : 'max_tokens';
+
 // ============================================================
 // AI Tool Rate Limiting (more restrictive due to cost)
 // ============================================================
@@ -231,8 +237,8 @@ Antworte auf Deutsch und nutze Markdown-Formatierung.`;
       model: AI_MODEL,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.5,
-      max_tokens: 2000,
-    });
+      [getMaxTokensKey(AI_MODEL)]: 2000,
+    } as any);
 
     const aiSummary = completion.choices[0]?.message?.content || '';
 
@@ -332,9 +338,9 @@ Antworte NUR mit einem validen JSON-Array. Beispiel:
       model: AI_MODEL,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
-      max_tokens: 2000,
+      [getMaxTokensKey(AI_MODEL)]: 2000,
       response_format: { type: 'json_object' },
-    });
+    } as any);
 
     const response = completion.choices[0]?.message?.content || '{"items":[]}';
     let actionItems: any[] = [];
@@ -506,9 +512,9 @@ Sortiere nach Relevanz (höchste zuerst). Nur E-Mails mit Relevanz > 30 inkludie
       model: AI_MODEL,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
-      max_tokens: 1000,
+      [getMaxTokensKey(AI_MODEL)]: 1000,
       response_format: { type: 'json_object' },
-    });
+    } as any);
 
     const response = JSON.parse(completion.choices[0]?.message?.content || '{"matches":[]}');
     const matches = response.matches || [];
@@ -632,8 +638,8 @@ Erstelle eine passende Antwort. Beginne NICHT mit "Hallo" wenn es zu formell wä
       model: AI_MODEL,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      max_tokens: 1000,
-    });
+      [getMaxTokensKey(AI_MODEL)]: 1000,
+    } as any);
 
     const generatedReply = completion.choices[0]?.message?.content || '';
 
@@ -719,8 +725,8 @@ Beschreibe: Beziehungsart, Häufige Themen, Ton der Kommunikation.`;
         model: AI_MODEL,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.5,
-        max_tokens: 300,
-      });
+        [getMaxTokensKey(AI_MODEL)]: 300,
+      } as any);
 
       aiSummary = completion.choices[0]?.message?.content || '';
     } catch {
@@ -943,9 +949,9 @@ Antworte mit einem JSON-Objekt:
       model: AI_MODEL,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
-      max_tokens: 2000,
+      [getMaxTokensKey(AI_MODEL)]: 2000,
       response_format: { type: 'json_object' },
-    });
+    } as any);
 
     const translation = JSON.parse(completion.choices[0]?.message?.content || '{}');
 

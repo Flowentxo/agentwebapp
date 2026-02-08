@@ -181,7 +181,7 @@ export default function PipelineEditorPage() {
           className="flex flex-col items-center gap-4"
         >
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          <p className="text-sm text-muted-foreground">Lade Workflow...</p>
+          <p className="text-sm text-white/40">Lade Workflow...</p>
         </motion.div>
       </div>
     );
@@ -200,16 +200,16 @@ export default function PipelineEditorPage() {
             <AlertCircle className="w-8 h-8 text-red-500" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-foreground mb-1">
+            <h3 className="text-lg font-semibold text-white mb-1">
               Fehler beim Laden
             </h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-white/40">
               {error || 'Der Workflow konnte nicht geladen werden.'}
             </p>
           </div>
           <button
             onClick={handleBack}
-            className="flex items-center gap-2 px-4 py-2 bg-card hover:bg-muted text-foreground rounded-xl text-sm transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-white/[0.03] hover:bg-white/[0.06] text-white rounded-xl text-sm transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Zurück zur Übersicht
@@ -222,12 +222,12 @@ export default function PipelineEditorPage() {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header Bar */}
-      <header className="flex items-center justify-between px-4 py-3 bg-card/80 border-b border-border backdrop-blur-sm">
+      <header className="flex items-center justify-between px-4 py-3 bg-[#0a0a0a]/80 border-b border-white/[0.06] backdrop-blur-sm">
         {/* Left: Back & Title */}
         <div className="flex items-center gap-4">
           <button
             onClick={handleBack}
-            className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            className="p-2 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -240,7 +240,7 @@ export default function PipelineEditorPage() {
                   setWorkflow({ ...workflow, name: e.target.value });
                   setHasUnsavedChanges(true);
                 }}
-                className="bg-transparent text-lg font-semibold text-foreground outline-none border-b border-transparent focus:border-primary transition-colors"
+                className="bg-transparent text-lg font-semibold text-white outline-none border-b border-transparent focus:border-primary transition-colors"
                 placeholder="Workflow Name"
               />
               {hasUnsavedChanges && (
@@ -249,7 +249,7 @@ export default function PipelineEditorPage() {
                 </span>
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-xs text-white/40 mt-0.5">
               Version {workflow.version} • Zuletzt geändert:{' '}
               {new Date(workflow.updatedAt).toLocaleDateString('de-DE', {
                 day: '2-digit',
@@ -270,7 +270,7 @@ export default function PipelineEditorPage() {
               workflow.status === 'active'
                 ? 'bg-green-500/20 text-green-400'
                 : workflow.status === 'archived'
-                ? 'bg-muted text-muted-foreground'
+                ? 'bg-white/[0.06] text-white/40'
                 : 'bg-amber-500/20 text-amber-400'
             }`}
           >
@@ -282,23 +282,23 @@ export default function PipelineEditorPage() {
           </div>
 
           {/* Test Run */}
-          <button className="flex items-center gap-2 px-4 py-2 bg-card hover:bg-muted text-foreground rounded-xl text-sm font-medium transition-colors">
+          <button className="flex items-center gap-2 px-4 py-2 bg-white/[0.03] hover:bg-white/[0.06] text-white rounded-xl text-sm font-medium transition-colors">
             <Play className="w-4 h-4" />
             Testen
           </button>
 
           {/* Settings */}
-          <button className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+          <button className="p-2 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white transition-colors">
             <Settings className="w-5 h-5" />
           </button>
 
           {/* Share */}
-          <button className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+          <button className="p-2 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white transition-colors">
             <Share2 className="w-5 h-5" />
           </button>
 
           {/* More */}
-          <button className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+          <button className="p-2 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white transition-colors">
             <MoreHorizontal className="w-5 h-5" />
           </button>
         </div>
