@@ -14,7 +14,7 @@ import { OPENAI_MODEL } from '@/lib/ai/config';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || '',
 });
 
 // Available node types for the AI to use

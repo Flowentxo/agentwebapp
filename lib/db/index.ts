@@ -11,3 +11,12 @@ export * from './schema-connected-intelligence';
 
 // Observability Layer - Security Events & AI Request Traces
 export * from './schema-observability';
+
+// Deployments
+export * from './schema-deployments';
+
+// Admin Audit Logs
+export * from './schema-admin-audit';
+
+// Integrations v2 - Unified CRM/Customers/Tickets
+export * from './schema-integrations-v2';

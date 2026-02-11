@@ -533,3 +533,18 @@ export async function getSessionUser(req: Request) {
   const sessionData = await getSession();
   return sessionData ? sessionData.user : null;
 }
+
+/**
+ * Get session from a request object
+ * Returns { userId, email, ... } for convenience
+ */
+export async function getSessionFromRequest(_req: Request) {
+  const sessionData = await getSession();
+  if (!sessionData) return null;
+  return {
+    userId: sessionData.user.id,
+    email: sessionData.user.email,
+    displayName: sessionData.user.displayName,
+    sessionId: sessionData.sessionId,
+  };
+}

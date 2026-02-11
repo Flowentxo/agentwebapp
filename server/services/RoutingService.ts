@@ -15,7 +15,7 @@ import { logger } from '../utils/logger';
 import { agentPersonas, getAgentById } from '../../lib/agents/personas';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
+  apiKey: process.env.OPENAI_API_KEY || '',
 });
 
 export interface RoutingResult {

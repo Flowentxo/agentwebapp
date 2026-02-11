@@ -17,7 +17,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || '',
 });
 
 const STRATEGY_SYSTEM_PROMPT = `Du bist ein KI-Automatisierungsberater für kleine und mittlere Unternehmen.

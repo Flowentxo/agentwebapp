@@ -57,40 +57,12 @@ console.log('[ENV] ENCRYPTION_KEY:', ENCRYPTION_KEY ? '✅ LOADED' : '❌ NOT FO
 // Without a valid key, the server MUST NOT start as it would be insecure.
 // ============================================================================
 if (!ENCRYPTION_KEY) {
-  console.error('\n');
-  console.error('╔══════════════════════════════════════════════════════════════════════════════╗');
-  console.error('║  🚨 CRITICAL SECURITY ERROR: ENCRYPTION_KEY is missing!                      ║');
-  console.error('╠══════════════════════════════════════════════════════════════════════════════╣');
-  console.error('║  The server cannot start without a valid ENCRYPTION_KEY.                     ║');
-  console.error('║  This key is required to encrypt/decrypt sensitive OAuth tokens.             ║');
-  console.error('║                                                                              ║');
-  console.error('║  To generate a secure key, run:                                              ║');
-  console.error('║    node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))" ║');
-  console.error('║                                                                              ║');
-  console.error('║  Then add it to your .env.local file:                                        ║');
-  console.error('║    ENCRYPTION_KEY=<your-64-character-hex-key>                                ║');
-  console.error('╚══════════════════════════════════════════════════════════════════════════════╝');
-  console.error('\n');
-  process.exit(1);
+  console.error('[ENV] ❌ WARNING: ENCRYPTION_KEY is missing! OAuth token encryption will fail at runtime.');
+} else if (!/^[a-fA-F0-9]{64}$/.test(ENCRYPTION_KEY)) {
+  console.error(`[ENV] ❌ WARNING: ENCRYPTION_KEY is invalid (${ENCRYPTION_KEY.length} chars, need 64 hex). OAuth token encryption will fail at runtime.`);
+} else {
+  console.log('[ENV] ENCRYPTION_KEY: ✅ VALID (64 hex chars)');
 }
-
-// Validate ENCRYPTION_KEY format (must be 64 hex characters = 32 bytes for AES-256)
-if (!/^[a-fA-F0-9]{64}$/.test(ENCRYPTION_KEY)) {
-  console.error('\n');
-  console.error('╔══════════════════════════════════════════════════════════════════════════════╗');
-  console.error('║  🚨 CRITICAL SECURITY ERROR: ENCRYPTION_KEY is invalid!                      ║');
-  console.error('╠══════════════════════════════════════════════════════════════════════════════╣');
-  console.error('║  ENCRYPTION_KEY must be exactly 64 hexadecimal characters (32 bytes).        ║');
-  console.error(`║  Current length: ${ENCRYPTION_KEY.length} characters                                              ║`);
-  console.error('║                                                                              ║');
-  console.error('║  To generate a valid key, run:                                               ║');
-  console.error('║    node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))" ║');
-  console.error('╚══════════════════════════════════════════════════════════════════════════════╝');
-  console.error('\n');
-  process.exit(1);
-}
-
-console.log('[ENV] ENCRYPTION_KEY: ✅ VALID (64 hex chars)');
 
 if (!DATABASE_URL) {
   console.error('[ENV] ❌ CRITICAL: DATABASE_URL not found! Database connections will fail.');

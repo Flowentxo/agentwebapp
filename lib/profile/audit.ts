@@ -305,6 +305,9 @@ export async function cleanupOldAuditEntries(olderThanDays: number = 365): Promi
 // Exports
 // =====================================================
 
+// Alias for backwards compatibility
+export const recordAuditEvent = recordUserEvent;
+
 export const audit = {
   record: recordUserEvent,
   recordFromRequest: recordUserEventFromRequest,

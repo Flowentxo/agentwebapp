@@ -12,7 +12,7 @@ import type { ToolExecutionContext } from './tool-executor';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || '',
 });
 
 const AI_MODEL = process.env.OPENAI_MODEL || 'gpt-4-turbo-preview';

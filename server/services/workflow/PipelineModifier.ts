@@ -13,7 +13,7 @@ import { Node, Edge } from 'reactflow';
 import { OPENAI_MODEL } from '@/lib/ai/config';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || '',
 });
 
 // ─── Types ──────────────────────────────────────────────────────────

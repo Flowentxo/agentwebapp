@@ -10,7 +10,7 @@ import { logger } from '../utils/logger';
 import { AITelemetryService } from './AITelemetryService';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
+  apiKey: process.env.OPENAI_API_KEY || '',
 });
 
 interface ChatMessage {

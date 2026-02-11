@@ -101,10 +101,19 @@ function createPrismaClient(): PrismaClient {
   return extendedClient as unknown as PrismaClient;
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+// Lazy initialization to prevent build-time crashes when DATABASE_URL is missing
+function getPrismaClient(): PrismaClient {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient();
+  }
+  return globalForPrisma.prisma;
 }
+
+// Proxy that lazily initializes Prisma on first property access (not at import time)
+export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    return (getPrismaClient() as any)[prop];
+  },
+});
 
 export default prisma;

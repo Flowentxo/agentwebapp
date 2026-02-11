@@ -6,43 +6,28 @@
 import crypto from 'crypto';
 
 // ============================================================================
-// ENCRYPTION KEY VALIDATION - CRITICAL SECURITY FIX
+// ENCRYPTION KEY - Lazy Validation
 // ============================================================================
 // The ENCRYPTION_KEY is used to encrypt OAuth tokens stored in the database.
-// If this key changes between server restarts, all stored tokens become invalid
-// and users will need to re-authenticate with all OAuth providers.
-//
-// NEVER use a randomly generated key in production - it must be persistent!
+// Validated lazily (not at module import) to allow Next.js build without env vars.
 // Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 // ============================================================================
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
-
-if (!ENCRYPTION_KEY) {
-  const errorMessage = `
-╔══════════════════════════════════════════════════════════════════════════════╗
-║  CRITICAL SECURITY ERROR: ENCRYPTION_KEY environment variable is missing!   ║
-╠══════════════════════════════════════════════════════════════════════════════╣
-║  The ENCRYPTION_KEY is required to encrypt/decrypt OAuth tokens.             ║
-║  Without a persistent key, tokens become invalid on every server restart.    ║
-║                                                                              ║
-║  To generate a secure key, run:                                              ║
-║    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"  ║
-║                                                                              ║
-║  Then add it to your .env.local file:                                        ║
-║    ENCRYPTION_KEY=<your-64-character-hex-key>                                ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-`;
-  console.error(errorMessage);
-  throw new Error('ENCRYPTION_KEY environment variable is required. See console for details.');
-}
-
-// Validate key format (must be 64 hex characters = 32 bytes)
-if (!/^[a-fA-F0-9]{64}$/.test(ENCRYPTION_KEY)) {
-  throw new Error(
-    'ENCRYPTION_KEY must be exactly 64 hexadecimal characters (32 bytes). ' +
-    'Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
-  );
+function getEncryptionKey(): string {
+  const key = process.env.ENCRYPTION_KEY;
+  if (!key) {
+    throw new Error(
+      'ENCRYPTION_KEY environment variable is required to encrypt/decrypt OAuth tokens. ' +
+      'Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+    );
+  }
+  if (!/^[a-fA-F0-9]{64}$/.test(key)) {
+    throw new Error(
+      'ENCRYPTION_KEY must be exactly 64 hexadecimal characters (32 bytes). ' +
+      'Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+    );
+  }
+  return key;
 }
 
 const ALGORITHM = 'aes-256-gcm';
@@ -95,10 +80,11 @@ export function generateState(): string {
 export function encrypt(text: string): string {
   if (!text) return '';
 
+  const encryptionKey = getEncryptionKey();
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv(
     ALGORITHM,
-    Buffer.from(ENCRYPTION_KEY.slice(0, 64), 'hex'),
+    Buffer.from(encryptionKey, 'hex'),
     iv
   );
 
@@ -133,9 +119,10 @@ export function decrypt(text: string): string {
     const iv = Buffer.from(ivHex, 'hex');
     const authTag = Buffer.from(authTagHex, 'hex');
 
+    const encryptionKey = getEncryptionKey();
     const decipher = crypto.createDecipheriv(
       ALGORITHM,
-      Buffer.from(ENCRYPTION_KEY.slice(0, 64), 'hex'),
+      Buffer.from(encryptionKey, 'hex'),
       iv
     );
 
