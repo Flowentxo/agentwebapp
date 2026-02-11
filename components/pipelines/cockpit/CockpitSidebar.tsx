@@ -15,9 +15,11 @@ import { Settings, Activity, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 import { TriggerCockpit, TriggerType } from './TriggerCockpit';
-import { AutopilotToggle, AutopilotConfig, DEFAULT_AUTOPILOT_CONFIG } from './AutopilotToggle';
+import { AutopilotConfig } from './AutopilotToggle';
+import { GovernancePanel } from './GovernancePanel';
 import { ApprovalQueuePanel, ApprovalRequest } from './ApprovalQueuePanel';
 import { LiveStepTracker, ExecutionStep } from './LiveStepTracker';
+import { LivePulse } from './LivePulse';
 
 // ============================================
 // TYPES
@@ -128,8 +130,8 @@ export function CockpitSidebar({
             isRunning={isRunning}
           />
 
-          {/* Autopilot Toggle */}
-          <AutopilotToggle
+          {/* Governance Panel (replaces AutopilotToggle) */}
+          <GovernancePanel
             config={autopilotConfig}
             onChange={onAutopilotChange}
           />
@@ -155,7 +157,7 @@ export function CockpitSidebar({
           )}
         </AnimatePresence>
 
-        {/* Section: Live Execution (conditionally shown) */}
+        {/* Section: Live Pulse (replaces LiveStepTracker) */}
         <AnimatePresence>
           {hasExecutionSteps && (
             <motion.div
@@ -164,7 +166,7 @@ export function CockpitSidebar({
               exit={{ height: 0, opacity: 0 }}
               className="flex-1"
             >
-              <LiveStepTracker
+              <LivePulse
                 steps={executionSteps}
                 isRunning={isRunning}
                 isDryRun={isDryRun}

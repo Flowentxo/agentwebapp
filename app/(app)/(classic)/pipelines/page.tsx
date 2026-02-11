@@ -1,17 +1,19 @@
 'use client';
 
 /**
- * Pipelines Landing Page - AI-First Minimal Design
+ * Pipelines Landing Page - Consultant-to-Solution Design
  *
- * Centered VicyOmnibar for prompt-to-pipeline creation.
+ * Centered VicyOmnibar for business-problem-driven pipeline creation.
+ * Opens PipelineWizard with 3-step Discovery Engine (Persona → Pain Points → Strategy).
  * When no pipelines exist, shows subtle starter kit cards below.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { GitBranch, ArrowRight, RefreshCw } from 'lucide-react';
 import { VicyOmnibar } from '@/components/vicy/VicyOmnibar';
 import { PipelineWizard } from '@/components/pipelines/wizard/PipelineWizard';
 import { usePipelines, useHasHydrated } from '@/store/useDashboardStore';
+import { useSession } from '@/store/session';
 import { getStarterTemplates } from '@/lib/studio/template-library';
 import type { WorkflowTemplate } from '@/lib/studio/types';
 
@@ -60,16 +62,23 @@ function MinimalStarterCard({
 export default function PipelinesPage() {
   const hasHydrated = useHasHydrated();
   const pipelines = usePipelines();
+  const { user, isLoading: isSessionLoading, fetchSession } = useSession();
   const [showWizard, setShowWizard] = useState(false);
+  const [wizardPrompt, setWizardPrompt] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const starterTemplates = getStarterTemplates(3);
+
+  // Ensure session is loaded
+  useEffect(() => {
+    fetchSession();
+  }, [fetchSession]);
 
   const handleSubmit = useCallback(
     async (content: string) => {
       if (isSubmitting) return;
       setIsSubmitting(true);
-      // Open wizard for AI-powered pipeline creation
+      setWizardPrompt(content);
       setShowWizard(true);
       setIsSubmitting(false);
     },
@@ -107,21 +116,21 @@ export default function PipelinesPage() {
           className="text-center text-xl font-medium mb-8"
           style={{ color: 'var(--vicy-text-primary)' }}
         >
-          Create an automation
+          Was möchten Sie automatisieren?
         </h1>
 
         {/* Omnibar */}
         <VicyOmnibar
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
-          placeholder="Describe your automation pipeline..."
+          placeholder="Beschreiben Sie Ihr Business-Problem..."
         />
 
         {/* Starter Kits - only when no pipelines exist */}
         {pipelines.length === 0 && (
           <div className="mt-12 space-y-4">
             <p className="text-xs text-white/25 uppercase tracking-wider text-center">
-              Or start from a template
+              Oder starten Sie mit einer Vorlage
             </p>
             <div className="grid grid-cols-1 gap-3">
               {starterTemplates.map((template) => (
@@ -139,7 +148,9 @@ export default function PipelinesPage() {
       {/* Pipeline Wizard Modal */}
       <PipelineWizard
         isOpen={showWizard}
-        onClose={() => setShowWizard(false)}
+        onClose={() => { setShowWizard(false); setWizardPrompt(''); }}
+        initialPrompt={wizardPrompt}
+        userId={user.id}
       />
     </div>
   );

@@ -14,6 +14,7 @@ import GeneralSettingsTab from './tabs/GeneralSettingsTab';
 import SecuritySettingsTab from './tabs/SecuritySettingsTab';
 import WorkspaceSettingsTab from './tabs/WorkspaceSettingsTab';
 import AdvancedSettingsTab from './tabs/AdvancedSettingsTab';
+import IntegrationsSettingsTab from './tabs/IntegrationsSettingsTab';
 
 interface SettingsClientProps {
   initial: ProfileResponse;
@@ -24,7 +25,7 @@ export default function SettingsClient({ initial }: SettingsClientProps) {
 
   if (error && !data) {
     return (
-      <div className="w-full min-h-screen bg-background flex items-center justify-center p-6">
+      <div className="w-full min-h-screen bg-[var(--vicy-bg)] flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-red-500/10 border border-red-500/20 rounded-xl p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
@@ -50,10 +51,10 @@ export default function SettingsClient({ initial }: SettingsClientProps) {
 
   if (!data) {
     return (
-      <div className="w-full min-h-screen bg-background flex items-center justify-center">
+      <div className="w-full min-h-screen bg-[var(--vicy-bg)] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full border-2 border-border border-t-primary animate-spin" />
-          <p className="text-muted-foreground text-sm">Profil wird geladen...</p>
+          <div className="w-12 h-12 rounded-full border-2 border-[var(--vicy-border)] border-t-[var(--vicy-accent)] animate-spin" />
+          <p className="text-[var(--vicy-text-secondary)] text-sm">Profil wird geladen...</p>
         </div>
       </div>
     );
@@ -88,6 +89,8 @@ export default function SettingsClient({ initial }: SettingsClientProps) {
         return <WorkspaceSettingsTab />;
       case 'advanced':
         return <AdvancedSettingsTab />;
+      case 'integrations':
+        return <IntegrationsSettingsTab />;
       default:
         // Default to General if unknown tab
         return (

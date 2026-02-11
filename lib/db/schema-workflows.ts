@@ -137,7 +137,7 @@ export const workflows = pgTable('workflows', {
   // ============================================
 
   // Statistics
-  executionCount: jsonb('execution_count').$type<number>().notNull().default(0),
+  executionCount: integer('execution_count').notNull().default(0),
   lastExecutedAt: timestamp('last_executed_at'),
   productionExecutionCount: integer('production_execution_count').default(0), // Non-test executions
 

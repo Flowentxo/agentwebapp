@@ -31,6 +31,8 @@ import {
   Trash2,
   Power,
   PowerOff,
+  Archive,
+  RotateCcw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +42,7 @@ interface SidebarPipeline {
   name: string;
   description?: string;
   isActive: boolean;
+  isArchived: boolean;
   triggerType: 'manual' | 'schedule' | 'webhook';
   steps: unknown[];
   lastRunAt?: Date;
@@ -52,7 +55,7 @@ interface PipelineSidebarProps {
   onSelectPipeline?: () => void;
 }
 
-type FilterMode = 'all' | 'active' | 'inactive';
+type FilterMode = 'all' | 'active' | 'inactive' | 'archived';
 
 function formatDate(date: Date | undefined): string {
   if (!date) return 'Never';
@@ -109,7 +112,8 @@ export function PipelineSidebar({
           id: p.id,
           name: p.name,
           description: p.description || undefined,
-          isActive: p.status !== 'archived',
+          isActive: p.status === 'active',
+          isArchived: p.status === 'archived',
           triggerType: 'manual' as const,
           steps: p.nodes || [],
           lastRunAt: p.lastExecutedAt ? new Date(p.lastExecutedAt) : undefined,
@@ -150,10 +154,15 @@ export function PipelineSidebar({
     }
 
     // Status filter
-    if (statusFilter === 'active') {
-      result = result.filter((p) => p.isActive);
+    if (statusFilter === 'all') {
+      // Exclude archived from default view
+      result = result.filter((p) => !p.isArchived);
+    } else if (statusFilter === 'active') {
+      result = result.filter((p) => p.isActive && !p.isArchived);
     } else if (statusFilter === 'inactive') {
-      result = result.filter((p) => !p.isActive);
+      result = result.filter((p) => !p.isActive && !p.isArchived);
+    } else if (statusFilter === 'archived') {
+      result = result.filter((p) => p.isArchived);
     }
 
     // Sort: running first, then active, then by updatedAt desc
@@ -180,21 +189,38 @@ export function PipelineSidebar({
     router.push(`/pipelines/${id}/editor`);
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (confirm(`Delete "${name}"?`)) {
+  const handleArchive = async (id: string, name: string) => {
+    if (confirm(`"${name}" archivieren?`)) {
       try {
         await fetch(`/api/pipelines/${id}`, {
           method: 'DELETE',
           headers: { 'x-user-id': user.id },
         });
-        // Remove from local state immediately
-        setDbPipelines((prev) => prev.filter((p) => p.id !== id));
+        // Update local state: mark as archived
+        setDbPipelines((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, isArchived: true, isActive: false } : p))
+        );
         if (currentPipelineId === id) {
           router.push('/pipelines');
         }
       } catch (error) {
-        console.error('Failed to delete pipeline:', error);
+        console.error('Failed to archive pipeline:', error);
       }
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    try {
+      await fetch(`/api/pipelines/${id}/restore`, {
+        method: 'POST',
+        headers: { 'x-user-id': user.id },
+      });
+      // Update local state: unarchive
+      setDbPipelines((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, isArchived: false, isActive: false } : p))
+      );
+    } catch (error) {
+      console.error('Failed to restore pipeline:', error);
     }
   };
 
@@ -328,9 +354,10 @@ export function PipelineSidebar({
           }}
         >
           {([
-            { key: 'all' as const, label: 'All' },
-            { key: 'active' as const, label: 'Active' },
-            { key: 'inactive' as const, label: 'Inactive' },
+            { key: 'all' as const, label: 'Alle' },
+            { key: 'active' as const, label: 'Aktiv' },
+            { key: 'inactive' as const, label: 'Inaktiv' },
+            { key: 'archived' as const, label: 'Archiv' },
           ]).map((tab) => (
             <button
               key={tab.key}
@@ -428,7 +455,8 @@ export function PipelineSidebar({
                 onSelect={() => handleSelectPipeline(pipeline.id)}
                 onEdit={() => handleEdit(pipeline.id)}
                 onToggleActive={() => handleToggleActive(pipeline.id)}
-                onDelete={() => handleDelete(pipeline.id, pipeline.name)}
+                onArchive={() => handleArchive(pipeline.id, pipeline.name)}
+                onRestore={() => handleRestore(pipeline.id)}
               />
             ))}
           </div>
@@ -469,7 +497,8 @@ interface PipelineItemProps {
   onSelect: () => void;
   onEdit: () => void;
   onToggleActive: () => void;
-  onDelete: () => void;
+  onArchive: () => void;
+  onRestore: () => void;
 }
 
 function PipelineItem({
@@ -479,7 +508,8 @@ function PipelineItem({
   onSelect,
   onEdit,
   onToggleActive,
-  onDelete,
+  onArchive,
+  onRestore,
 }: PipelineItemProps) {
   // Status dot color
   const statusColor = isRunning
@@ -592,39 +622,55 @@ function PipelineItem({
                 cursor-pointer outline-none hover:bg-white/[0.06] transition-colors"
             >
               <Edit2 className="w-3.5 h-3.5" />
-              Edit
+              Bearbeiten
             </DropdownMenu.Item>
-            <DropdownMenu.Item
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleActive();
-              }}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs text-white/70
-                cursor-pointer outline-none hover:bg-white/[0.06] transition-colors"
-            >
-              {pipeline.isActive ? (
-                <>
-                  <PowerOff className="w-3.5 h-3.5" />
-                  Deactivate
-                </>
-              ) : (
-                <>
-                  <Power className="w-3.5 h-3.5" />
-                  Activate
-                </>
-              )}
-            </DropdownMenu.Item>
-            <DropdownMenu.Item
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs text-red-400
-                cursor-pointer outline-none hover:bg-red-500/10 transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Delete
-            </DropdownMenu.Item>
+            {!pipeline.isArchived && (
+              <DropdownMenu.Item
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleActive();
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs text-white/70
+                  cursor-pointer outline-none hover:bg-white/[0.06] transition-colors"
+              >
+                {pipeline.isActive ? (
+                  <>
+                    <PowerOff className="w-3.5 h-3.5" />
+                    Deaktivieren
+                  </>
+                ) : (
+                  <>
+                    <Power className="w-3.5 h-3.5" />
+                    Aktivieren
+                  </>
+                )}
+              </DropdownMenu.Item>
+            )}
+            {pipeline.isArchived ? (
+              <DropdownMenu.Item
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRestore();
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs text-emerald-400
+                  cursor-pointer outline-none hover:bg-emerald-500/10 transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Wiederherstellen
+              </DropdownMenu.Item>
+            ) : (
+              <DropdownMenu.Item
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onArchive();
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs text-red-400
+                  cursor-pointer outline-none hover:bg-red-500/10 transition-colors"
+              >
+                <Archive className="w-3.5 h-3.5" />
+                Archivieren
+              </DropdownMenu.Item>
+            )}
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>

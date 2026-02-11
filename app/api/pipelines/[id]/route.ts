@@ -226,7 +226,10 @@ export async function PUT(
 }
 
 /**
- * DELETE - Delete pipeline
+ * DELETE - Archive pipeline (soft-delete)
+ *
+ * Phase IV: Sets status to 'archived' instead of hard-deleting.
+ * Use POST /api/pipelines/[id]/restore to unarchive.
  */
 export async function DELETE(
   req: NextRequest,
@@ -263,14 +266,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Pipeline not found" }, { status: 404 });
     }
 
-    // Delete executions first (cascade should handle this, but being explicit)
+    // Soft-delete: set status to 'archived'
     await db
-      .delete(workflowExecutions)
-      .where(eq(workflowExecutions.workflowId, pipelineId));
-
-    // Delete pipeline
-    await db
-      .delete(workflows)
+      .update(workflows)
+      .set({ status: 'archived', updatedAt: new Date() })
       .where(
         and(
           eq(workflows.id, pipelineId),
@@ -280,12 +279,12 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: "Pipeline deleted"
+      message: "Pipeline archived"
     });
   } catch (error) {
     console.error("[PIPELINE_DELETE_ERROR]", error);
     return NextResponse.json(
-      { error: "Failed to delete pipeline" },
+      { error: "Failed to archive pipeline" },
       { status: 500 }
     );
   }

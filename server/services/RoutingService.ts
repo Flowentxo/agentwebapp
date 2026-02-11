@@ -10,12 +10,12 @@
  * - "Schreibe eine Follow-up E-Mail" → Emmie (Email)
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { logger } from '../utils/logger';
 import { agentPersonas, getAgentById } from '../../lib/agents/personas';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
 });
 
 export interface RoutingResult {
@@ -216,16 +216,17 @@ Antworte nur mit JSON.`;
 
       logger.info('[ROUTING] Classifying intent for message:', message.substring(0, 50));
 
-      const response = await anthropic.messages.create({
-        model: 'claude-3-5-haiku-20241022', // Fast model for routing
-        max_tokens: 200,
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini', // Fast model for routing
+        max_completion_tokens: 200,
         temperature: 0.1, // Low temperature for consistent classification
-        system: getRoutingSystemPrompt(),
-        messages: [{ role: 'user', content: userPrompt }]
+        messages: [
+          { role: 'system', content: getRoutingSystemPrompt() },
+          { role: 'user', content: userPrompt },
+        ],
       });
 
-      const textContent = response.content.find(c => c.type === 'text');
-      const responseText = textContent?.text || '';
+      const responseText = response.choices[0]?.message?.content || '';
 
       const result = parseRoutingResponse(responseText, currentAgentId);
 

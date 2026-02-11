@@ -19,13 +19,14 @@ import type { ChatMessage } from '@/types/inbox';
 
 interface VicyChatInterfaceProps {
   threadId: string;
+  onBack?: () => void;
 }
 
-export function VicyChatInterface({ threadId }: VicyChatInterfaceProps) {
+export function VicyChatInterface({ threadId, onBack: onBackProp }: VicyChatInterfaceProps) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const { isArtifactPanelOpen, openArtifactById, routingFeedback, clearRoutingFeedback } = useInboxStore();
+  const { isArtifactPanelOpen, openArtifactById, routingFeedback, clearRoutingFeedback, processingStages } = useInboxStore();
 
   const { data: threads, isLoading: isLoadingThreads } = useThreads();
   const thread = useMemo(() => {
@@ -49,7 +50,7 @@ export function VicyChatInterface({ threadId }: VicyChatInterfaceProps) {
       threadId: msg.threadId,
       role: msg.role as 'user' | 'agent' | 'system',
       content: msg.content,
-      createdAt: msg.createdAt,
+      createdAt: msg.createdAt || msg.timestamp || new Date().toISOString(),
       metadata: msg.metadata,
       artifactId: msg.artifactId,
     }));
@@ -64,6 +65,7 @@ export function VicyChatInterface({ threadId }: VicyChatInterfaceProps) {
   }, [sendMutation]);
 
   const handleBack = () => {
+    if (onBackProp) { onBackProp(); return; }
     if (pathname.startsWith('/inbox')) router.push('/inbox');
     else router.push('/v4');
   };
@@ -97,8 +99,9 @@ export function VicyChatInterface({ threadId }: VicyChatInterfaceProps) {
   const agentPersona = getAgentById(thread?.agentId || '');
   const agentColor = agentPersona?.color || '#8b5cf6';
 
-  // Routing feedback
+  // Routing feedback + processing stage
   const currentRoutingFeedback = routingFeedback[threadId];
+  const processingStage = processingStages[threadId];
   const routedAgentId = currentRoutingFeedback?.agentId || thread?.agentId;
   const routedAgent = routedAgentId ? getAgentById(routedAgentId) : agentPersona;
   const displayAgentName = routedAgent?.name || currentRoutingFeedback?.agentName || agentName;
@@ -212,6 +215,14 @@ export function VicyChatInterface({ threadId }: VicyChatInterfaceProps) {
             >
               dismiss
             </button>
+          </div>
+        )}
+
+        {/* Processing Stage Indicator */}
+        {processingStage && (
+          <div className="flex items-center gap-2.5 px-4 py-2 bg-white/[0.02] border-b border-white/[0.06]">
+            <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" style={{ color: displayAgentColor }} />
+            <span className="text-xs text-white/50 truncate">{processingStage.label}</span>
           </div>
         )}
 

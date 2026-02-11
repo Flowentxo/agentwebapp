@@ -72,6 +72,20 @@ RULES:
 8. Generate unique IDs for each node (use format: "node-1", "node-2", etc.)
 9. Use smoothstep edge type for all connections
 
+BUSINESS CONTEXT RULES:
+- When the prompt mentions a specific industry (Handwerk, Immobilien, E-Commerce, etc.), tailor node labels and descriptions to that industry's terminology
+- Use industry-specific language in labels (e.g., "Objektanfrage prüfen" for real estate, "Bestellbestätigung senden" for e-commerce)
+- When the prompt is in German, generate ALL labels and descriptions in German
+
+HUMAN APPROVAL INJECTION:
+For these action types, ALWAYS add a human-approval node directly before:
+1. Sending emails to customers or external contacts
+2. Posting to Slack or other messaging platforms
+3. Writing data to CRM systems (HubSpot, Salesforce, etc.)
+4. Database write operations that affect external-facing data
+5. External API calls that create, update, or delete data
+The approval node should have a descriptive label like "Freigabe: [Aktion]" and explain what is being approved.
+
 OUTPUT FORMAT:
 Return ONLY a valid JSON object with this structure:
 {
@@ -117,22 +131,34 @@ export async function generateFromPrompt(userPrompt: string): Promise<Generation
       ? 'max_completion_tokens'
       : 'max_tokens';
 
-    const response = await openai.chat.completions.create({
-      model,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: `Create a workflow for: ${userPrompt}` },
-      ],
-      [maxTokensKey]: 4000,
-      response_format: { type: 'json_object' },
-    } as any);
+    let response;
+    try {
+      response = await openai.chat.completions.create({
+        model,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: `Create a workflow for: ${userPrompt}` },
+        ],
+        [maxTokensKey]: 4000,
+        response_format: { type: 'json_object' },
+      } as any);
+    } catch (openaiError: any) {
+      console.error('[WorkflowGenerator] OpenAI API error:', openaiError.message, 'status:', openaiError.status);
+      return {
+        success: false,
+        error: `OpenAI API error: ${openaiError.message}`,
+      };
+    }
 
     const content = response.choices[0]?.message?.content;
 
     if (!content) {
+      const refusal = (response.choices[0]?.message as any)?.refusal;
+      const finishReason = response.choices[0]?.finish_reason;
+      console.error('[WorkflowGenerator] Empty response. finish_reason:', finishReason, 'refusal:', refusal, 'model:', model);
       return {
         success: false,
-        error: 'No response from AI',
+        error: `AI returned empty response (finish_reason: ${finishReason || 'unknown'}${refusal ? ', refusal: ' + refusal : ''})`,
       };
     }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { getValidToken } from '@/lib/auth/get-token';
@@ -89,7 +89,7 @@ interface InboxSocketContextValue {
 const InboxSocketContext = createContext<InboxSocketContextValue | null>(null);
 
 // ============================================================================
-// PROVIDER
+// PROVIDER - Hardened Singleton Architecture
 // ============================================================================
 
 interface InboxSocketProviderProps {
@@ -97,26 +97,32 @@ interface InboxSocketProviderProps {
 }
 
 export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
+  // Socket lives in ref for lifecycle management (no re-render on create)
+  // State is set ONLY on connect (one re-render) for consumers
   const [socket, setSocket] = useState<Socket | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const queryClient = useQueryClient();
-  const queryClientRef = useRef(queryClient);  // Ref to avoid dependency changes
-  queryClientRef.current = queryClient;  // Keep ref updated
-  const reconnectAttempts = useRef(0);
-  const maxReconnectAttempts = 10;
-  const baseReconnectDelay = 1000; // 1 second
-  const maxReconnectDelay = 30000; // 30 seconds
   const [authToken, setAuthToken] = useState<string | null>(null);
 
-  // Get token using centralized function
-  const getToken = useCallback(() => {
-    return getValidToken();
+  // Mount tracking for cleanup safety (React Strict Mode)
+  const isMountedRef = useRef(true);
+
+  // Stable ref for queryClient to avoid dependency churn
+  const queryClientRef = useRef(useQueryClient());
+  queryClientRef.current = useQueryClient();
+
+  // ========================================================================
+  // Mount tracking
+  // ========================================================================
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
   }, []);
 
-  // Listen for auth events to trigger reconnection
+  // ========================================================================
+  // Auth event listeners
+  // ========================================================================
   useEffect(() => {
     const handleAuthLogin = (event: CustomEvent<{ token: string }>) => {
       console.log('[InboxSocket] auth:login detected, updating token');
@@ -126,15 +132,18 @@ export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
     const handleAuthLogout = () => {
       console.log('[InboxSocket] auth:logout detected, disconnecting');
       setAuthToken(null);
-      socketRef.current?.disconnect();
+      if (socketRef.current) {
+        socketRef.current.removeAllListeners();
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      setSocket(null);
+      setIsConnected(false);
     };
 
-    // Listen for generic auth-state-change event (fired after token storage)
     const handleAuthStateChange = () => {
-      console.log('[InboxSocket] auth-state-change detected, checking localStorage');
       const freshToken = localStorage.getItem('accessToken');
-      console.log('[InboxSocket] Fresh token from localStorage:', freshToken ? `FOUND (${freshToken.substring(0, 8)}...)` : 'MISSING');
-      if (freshToken && freshToken.length > 10) {
+      if (freshToken && freshToken !== 'undefined' && freshToken.length > 10) {
         setAuthToken(freshToken);
       }
     };
@@ -144,8 +153,7 @@ export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
     window.addEventListener('auth-state-change', handleAuthStateChange);
 
     // Check for existing token on mount
-    const existingToken = getToken();
-    console.log('[InboxSocket] Initial token check:', existingToken ? `FOUND (${existingToken.substring(0, 8)}...)` : 'MISSING');
+    const existingToken = getValidToken();
     if (existingToken) {
       setAuthToken(existingToken);
     }
@@ -155,23 +163,22 @@ export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
       window.removeEventListener('auth:logout', handleAuthLogout);
       window.removeEventListener('auth-state-change', handleAuthStateChange);
     };
-  }, [getToken]);
+  }, []);
 
-  // Initialize socket connection
+  // ========================================================================
+  // Main connection effect - Singleton pattern
+  // ========================================================================
   useEffect(() => {
-    // Use authToken state or fallback to getToken()
-    const token = authToken || getToken();
+    const token = authToken || getValidToken();
 
     if (!token) {
-      console.log('[InboxSocket] No token found, starting cascading retries...');
       // Cascading retries: token might not be in localStorage yet after login
       const retryDelays = [500, 1500, 3000];
       const timers: ReturnType<typeof setTimeout>[] = [];
 
       retryDelays.forEach((delay, i) => {
         timers.push(setTimeout(() => {
-          const freshToken = getToken();
-          console.log(`[InboxSocket] Retry ${i + 1}/${retryDelays.length}: token`, freshToken ? 'FOUND' : 'STILL MISSING');
+          const freshToken = getValidToken();
           if (freshToken) {
             setAuthToken(freshToken);
           }
@@ -181,92 +188,89 @@ export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
       return () => timers.forEach(t => clearTimeout(t));
     }
 
-    console.log('[InboxSocket] Token available, initiating connection');
+    // SINGLETON: Don't recreate if socket exists and isn't disconnected
+    if (socketRef.current && !socketRef.current.disconnected) {
+      return;
+    }
 
-    setIsConnecting(true);
-    setError(null);
+    // Clean up any stale socket before creating new one
+    if (socketRef.current) {
+      socketRef.current.removeAllListeners();
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
 
     const socketUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
     console.log('[InboxSocket] Connecting to:', socketUrl);
 
     const newSocket = io(`${socketUrl}/inbox`, {
       auth: { token },
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionAttempts: maxReconnectAttempts,
-      reconnectionDelay: baseReconnectDelay,
-      reconnectionDelayMax: maxReconnectDelay,
-      // Enable exponential backoff with jitter
-      randomizationFactor: 0.25,
-      timeout: 20000, // 20 second connection timeout
+      query: { token },
+      transports: ['websocket'],
+      reconnectionAttempts: 5,
+      autoConnect: false,
     });
 
-    // Connection handlers
+    // Wire ALL handlers BEFORE calling .connect()
+
     newSocket.on('connect', () => {
       console.log('[InboxSocket] Connected:', newSocket.id);
+      if (!isMountedRef.current) return;
+      setSocket(newSocket);
       setIsConnected(true);
-      setIsConnecting(false);
       setError(null);
-      reconnectAttempts.current = 0;
     });
 
     newSocket.on('connect_error', (err) => {
       console.error('[InboxSocket] Connection error:', err.message);
-      setIsConnecting(false);
-      setError(err.message);
-      reconnectAttempts.current++;
+      const isAuthError = err.message.includes('Authentication') || err.message.includes('token');
 
-      // On auth-specific errors, try refreshing the token
-      const isAuthError = err.message === 'Authentication required' || err.message === 'Invalid or expired token';
       if (isAuthError) {
-        console.log('[InboxSocket] Auth error detected, attempting token refresh...');
-        const freshToken = getToken();
-        if (freshToken && freshToken !== token) {
-          console.log('[InboxSocket] Fresh token found, triggering reconnect');
-          newSocket.disconnect();
-          setAuthToken(freshToken);
-          return; // useEffect will re-run with new authToken
-        }
-      }
-
-      if (reconnectAttempts.current >= maxReconnectAttempts) {
-        console.log('[InboxSocket] Max reconnect attempts reached');
+        // Auth errors = hard stop. Don't retry with a bad token.
+        console.error('[InboxSocket] Auth failed permanently. Stopping.');
         newSocket.disconnect();
+        socketRef.current = null;
+        if (isMountedRef.current) {
+          setSocket(null);
+          setIsConnected(false);
+          setError(err.message);
+        }
+        return;
+      }
+      // Network errors: socket.io handles reconnection (up to 5 attempts)
+      if (isMountedRef.current) {
+        setError(err.message);
       }
     });
 
     newSocket.on('disconnect', (reason) => {
       console.log('[InboxSocket] Disconnected:', reason);
+      if (!isMountedRef.current) return;
       setIsConnected(false);
-
       if (reason === 'io server disconnect') {
-        // Server disconnected us, don't auto-reconnect
         setError('Disconnected by server');
       }
     });
 
-    // Auto-invalidate queries on thread updates (use ref to avoid dependency)
+    // Auto-invalidate queries on thread updates
     newSocket.on('thread:update', (thread: ThreadUpdate) => {
-      console.log('[InboxSocket] Thread update:', thread.id);
       queryClientRef.current.invalidateQueries({ queryKey: ['threads'] });
       queryClientRef.current.invalidateQueries({ queryKey: ['thread', thread.id] });
     });
 
     // Auto-invalidate queries on new messages
     newSocket.on('message:new', (message: InboxMessage) => {
-      console.log('[InboxSocket] New message in thread:', message.threadId);
       queryClientRef.current.invalidateQueries({ queryKey: ['threads'] });
       queryClientRef.current.invalidateQueries({ queryKey: ['thread', message.threadId] });
       queryClientRef.current.invalidateQueries({ queryKey: ['messages', message.threadId] });
     });
 
     // Auto-invalidate queries on approval updates
-    newSocket.on('approval:update', (approval: ApprovalUpdate) => {
-      console.log('[InboxSocket] Approval update:', approval.approvalId);
+    newSocket.on('approval:update', () => {
       queryClientRef.current.invalidateQueries({ queryKey: ['threads'] });
     });
 
-    // Handle agent routing events - update store with routing feedback
+    // Handle agent routing events
     newSocket.on('agent:routed', (data: AgentRoutedEvent) => {
       console.log('[InboxSocket] Agent routed:', data.agentName, '(confidence:', data.confidence + ')');
       useInboxStore.getState().setRoutingFeedback(data.threadId, {
@@ -276,94 +280,114 @@ export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
         reasoning: data.reasoning,
         previousAgent: data.previousAgent,
       });
-      // Also refresh thread data since agent changed
       queryClientRef.current.invalidateQueries({ queryKey: ['threads'] });
       queryClientRef.current.invalidateQueries({ queryKey: ['thread', data.threadId] });
     });
 
+    // Store ref BEFORE connecting
     socketRef.current = newSocket;
-    setSocket(newSocket);
+
+    // Manual connect - handlers are already wired
+    newSocket.connect();
 
     return () => {
-      // Only cleanup on actual logout (authToken becomes null)
-      // Don't cleanup on queryClient or getToken changes
-      console.log('[InboxSocket] Cleaning up connection');
-      newSocket.disconnect();
-      socketRef.current = null;
-      setSocket(null);
-      setIsConnected(false);
+      // Delayed cleanup: survive React Strict Mode double-mount
+      const socketToClean = newSocket;
+      setTimeout(() => {
+        // Only disconnect if component truly unmounted AND this is still our socket
+        if (!isMountedRef.current && socketRef.current === socketToClean) {
+          console.log('[InboxSocket] Unmount cleanup executing');
+          socketToClean.removeAllListeners();
+          socketToClean.disconnect();
+          socketRef.current = null;
+        }
+      }, 200);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authToken]);  // Only reconnect on actual auth token changes, not queryClient
+  }, [authToken]);
 
-  // Actions
+  // ========================================================================
+  // Actions - use socketRef directly (stable, no re-render deps)
+  // ========================================================================
+
   const joinThread = useCallback((threadId: string) => {
-    socket?.emit('thread:join', { threadId });
-  }, [socket]);
+    socketRef.current?.emit('thread:join', { threadId });
+  }, []);
 
   const leaveThread = useCallback((threadId: string) => {
-    socket?.emit('thread:leave', { threadId });
-  }, [socket]);
+    socketRef.current?.emit('thread:leave', { threadId });
+  }, []);
 
-  // Alias for joinThread - used for clarity in components
   const subscribeToThread = useCallback((threadId: string) => {
-    socket?.emit('thread:join', { threadId });
-  }, [socket]);
+    socketRef.current?.emit('thread:join', { threadId });
+  }, []);
 
-  // Alias for leaveThread - used for clarity in components
   const unsubscribeFromThread = useCallback((threadId: string) => {
-    socket?.emit('thread:leave', { threadId });
-  }, [socket]);
+    socketRef.current?.emit('thread:leave', { threadId });
+  }, []);
 
   const startTyping = useCallback((threadId: string, agentId: string, agentName: string) => {
-    socket?.emit('typing:start', { threadId, agentId, agentName, isTyping: true });
-  }, [socket]);
+    socketRef.current?.emit('typing:start', { threadId, agentId, agentName, isTyping: true });
+  }, []);
 
   const stopTyping = useCallback((threadId: string, agentId: string, agentName: string) => {
-    socket?.emit('typing:stop', { threadId, agentId, agentName, isTyping: false });
-  }, [socket]);
+    socketRef.current?.emit('typing:stop', { threadId, agentId, agentName, isTyping: false });
+  }, []);
 
-  // Event subscription helpers
+  // ========================================================================
+  // Event subscription helpers - re-bind only when connection state changes
+  // ========================================================================
+
   const onNewMessage = useCallback((callback: (message: InboxMessage) => void) => {
-    if (!socket) return () => {};
-    socket.on('message:new', callback);
-    return () => socket.off('message:new', callback);
-  }, [socket]);
+    const s = socketRef.current;
+    if (!s) return () => {};
+    s.on('message:new', callback);
+    return () => { s.off('message:new', callback); };
+  }, [isConnected]);
 
   const onThreadUpdate = useCallback((callback: (thread: ThreadUpdate) => void) => {
-    if (!socket) return () => {};
-    socket.on('thread:update', callback);
-    return () => socket.off('thread:update', callback);
-  }, [socket]);
+    const s = socketRef.current;
+    if (!s) return () => {};
+    s.on('thread:update', callback);
+    return () => { s.off('thread:update', callback); };
+  }, [isConnected]);
 
   const onApprovalUpdate = useCallback((callback: (approval: ApprovalUpdate) => void) => {
-    if (!socket) return () => {};
-    socket.on('approval:update', callback);
-    return () => socket.off('approval:update', callback);
-  }, [socket]);
+    const s = socketRef.current;
+    if (!s) return () => {};
+    s.on('approval:update', callback);
+    return () => { s.off('approval:update', callback); };
+  }, [isConnected]);
 
   const onTypingStart = useCallback((callback: (indicator: TypingIndicator) => void) => {
-    if (!socket) return () => {};
-    socket.on('typing:start', callback);
-    return () => socket.off('typing:start', callback);
-  }, [socket]);
+    const s = socketRef.current;
+    if (!s) return () => {};
+    s.on('typing:start', callback);
+    return () => { s.off('typing:start', callback); };
+  }, [isConnected]);
 
   const onTypingStop = useCallback((callback: (indicator: TypingIndicator) => void) => {
-    if (!socket) return () => {};
-    socket.on('typing:stop', callback);
-    return () => socket.off('typing:stop', callback);
-  }, [socket]);
+    const s = socketRef.current;
+    if (!s) return () => {};
+    s.on('typing:stop', callback);
+    return () => { s.off('typing:stop', callback); };
+  }, [isConnected]);
 
   const onAgentRouted = useCallback((callback: (data: AgentRoutedEvent) => void) => {
-    if (!socket) return () => {};
-    socket.on('agent:routed', callback);
-    return () => socket.off('agent:routed', callback);
-  }, [socket]);
+    const s = socketRef.current;
+    if (!s) return () => {};
+    s.on('agent:routed', callback);
+    return () => { s.off('agent:routed', callback); };
+  }, [isConnected]);
 
-  const value: InboxSocketContextValue = {
-    socket,
+  // ========================================================================
+  // Context value - memoized, updates only on connection state change
+  // ========================================================================
+
+  const value: InboxSocketContextValue = useMemo(() => ({
+    socket: socketRef.current,
     isConnected,
-    isConnecting,
+    isConnecting: !isConnected && !!authToken,
     error,
     joinThread,
     leaveThread,
@@ -377,7 +401,13 @@ export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
     onTypingStart,
     onTypingStop,
     onAgentRouted,
-  };
+  }), [
+    isConnected, authToken, error,
+    joinThread, leaveThread, subscribeToThread, unsubscribeFromThread,
+    startTyping, stopTyping,
+    onNewMessage, onThreadUpdate, onApprovalUpdate,
+    onTypingStart, onTypingStop, onAgentRouted,
+  ]);
 
   return (
     <InboxSocketContext.Provider value={value}>

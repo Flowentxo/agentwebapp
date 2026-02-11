@@ -238,10 +238,10 @@ export default function GeneralSettingsTab({
               onMouseLeave={() => setAvatarHover(false)}
               className={`relative w-24 h-24 rounded-2xl cursor-pointer overflow-hidden ring-2 transition-all duration-200 ${
                 isDragActive
-                  ? 'ring-primary scale-105'
+                  ? 'ring-[var(--vicy-accent)] scale-105'
                   : avatarHover
-                  ? 'ring-primary/50 scale-[1.02]'
-                  : 'ring-border'
+                  ? 'ring-[var(--vicy-accent-50)] scale-[1.02]'
+                  : 'ring-[var(--vicy-border)]'
               }`}
             >
               <input {...getInputProps()} />
@@ -278,18 +278,18 @@ export default function GeneralSettingsTab({
 
               {/* Upload Progress Indicator */}
               {avatarUploading && (
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted">
-                  <div className="h-full bg-primary animate-pulse" style={{ width: '100%' }} />
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-[var(--vicy-surface)]">
+                  <div className="h-full bg-[var(--vicy-accent)] animate-pulse" style={{ width: '100%' }} />
                 </div>
               )}
             </div>
 
             {/* Upload Instructions */}
             <div className="flex-1">
-              <p className="text-sm text-muted-foreground mb-2">
+              <p className="text-sm text-[var(--vicy-text-secondary)] mb-2">
                 Ziehe ein Bild hierher oder klicke auf den Avatar zum Hochladen.
               </p>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 text-xs text-[var(--vicy-text-secondary)]">
                 <Check className="w-3.5 h-3.5 text-green-600" />
                 <span>Automatische Größenanpassung</span>
               </div>
@@ -311,7 +311,7 @@ export default function GeneralSettingsTab({
           <div className="space-y-4">
             {/* Display Name */}
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              <label className="block text-xs font-medium text-[var(--vicy-text-secondary)] mb-1.5">
                 Anzeigename
               </label>
               <input
@@ -319,7 +319,7 @@ export default function GeneralSettingsTab({
                 value={formData.displayName}
                 onChange={(e) => handleInputChange('displayName', e.target.value)}
                 placeholder="Max Mustermann"
-                className="w-full px-3.5 py-2.5 rounded-lg bg-input border border-border text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+                className="w-full px-3.5 py-2.5 rounded-lg bg-[var(--vicy-glass-bg)] border border-[var(--vicy-border)] text-[var(--vicy-text-primary)] text-sm placeholder:text-[var(--vicy-text-tertiary)] focus:outline-none focus:border-[var(--vicy-accent-50)] focus:ring-1 focus:ring-[var(--vicy-accent-20)] transition-all"
               />
             </div>
 
@@ -327,13 +327,13 @@ export default function GeneralSettingsTab({
 
             {/* Email (Read-only) */}
             <div>
-              <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-1.5">
+              <label className="flex items-center gap-2 text-xs font-medium text-[var(--vicy-text-secondary)] mb-1.5">
                 E-Mail-Adresse
                 <div className="group relative">
-                  <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-popover border border-border rounded-lg text-xs text-popover-foreground whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                  <Info className="w-3.5 h-3.5 text-[var(--vicy-text-tertiary)] cursor-help" />
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-[var(--vicy-surface)] border border-[var(--vicy-border)] rounded-lg text-xs text-[var(--vicy-text-primary)] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
                     E-Mail-Änderung erfordert Verifizierung
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-popover" />
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[var(--vicy-surface)]" />
                   </div>
                 </div>
               </label>
@@ -342,11 +342,11 @@ export default function GeneralSettingsTab({
                   type="email"
                   value={profile.email}
                   disabled
-                  className="w-full px-3.5 py-2.5 pr-10 rounded-lg bg-muted/50 border border-border text-muted-foreground text-sm cursor-not-allowed"
+                  className="w-full px-3.5 py-2.5 pr-10 rounded-lg bg-[var(--vicy-glass-bg)] border border-[var(--vicy-border)] text-[var(--vicy-text-secondary)] text-sm cursor-not-allowed"
                 />
-                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--vicy-text-tertiary)]" />
               </div>
-              <p className="text-xs text-muted-foreground/70 mt-1.5">
+              <p className="text-xs text-[var(--vicy-text-tertiary)] mt-1.5">
                 Kontaktiere den Support für E-Mail-Änderungen.
               </p>
             </div>
@@ -355,7 +355,7 @@ export default function GeneralSettingsTab({
 
             {/* Position */}
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              <label className="block text-xs font-medium text-[var(--vicy-text-secondary)] mb-1.5">
                 Position / Rolle
               </label>
               <input
@@ -363,7 +363,7 @@ export default function GeneralSettingsTab({
                 value={formData.orgTitle}
                 onChange={(e) => handleInputChange('orgTitle', e.target.value)}
                 placeholder="z.B. Product Designer"
-                className="w-full px-3.5 py-2.5 rounded-lg bg-input border border-border text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+                className="w-full px-3.5 py-2.5 rounded-lg bg-[var(--vicy-glass-bg)] border border-[var(--vicy-border)] text-[var(--vicy-text-primary)] text-sm placeholder:text-[var(--vicy-text-tertiary)] focus:outline-none focus:border-[var(--vicy-accent-50)] focus:ring-1 focus:ring-[var(--vicy-accent-20)] transition-all"
               />
             </div>
 
@@ -371,7 +371,7 @@ export default function GeneralSettingsTab({
 
             {/* Location */}
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              <label className="block text-xs font-medium text-[var(--vicy-text-secondary)] mb-1.5">
                 Standort
               </label>
               <input
@@ -379,7 +379,7 @@ export default function GeneralSettingsTab({
                 value={formData.location}
                 onChange={(e) => handleInputChange('location', e.target.value)}
                 placeholder="z.B. Berlin, Deutschland"
-                className="w-full px-3.5 py-2.5 rounded-lg bg-input border border-border text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+                className="w-full px-3.5 py-2.5 rounded-lg bg-[var(--vicy-glass-bg)] border border-[var(--vicy-border)] text-[var(--vicy-text-primary)] text-sm placeholder:text-[var(--vicy-text-tertiary)] focus:outline-none focus:border-[var(--vicy-accent-50)] focus:ring-1 focus:ring-[var(--vicy-accent-20)] transition-all"
               />
             </div>
 
@@ -387,7 +387,7 @@ export default function GeneralSettingsTab({
 
             {/* Bio */}
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              <label className="block text-xs font-medium text-[var(--vicy-text-secondary)] mb-1.5">
                 Über mich
               </label>
               <textarea
@@ -396,10 +396,10 @@ export default function GeneralSettingsTab({
                 placeholder="Erzähle etwas über dich..."
                 rows={3}
                 maxLength={500}
-                className="w-full px-3.5 py-2.5 rounded-lg bg-input border border-border text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all resize-none"
+                className="w-full px-3.5 py-2.5 rounded-lg bg-[var(--vicy-glass-bg)] border border-[var(--vicy-border)] text-[var(--vicy-text-primary)] text-sm placeholder:text-[var(--vicy-text-tertiary)] focus:outline-none focus:border-[var(--vicy-accent-50)] focus:ring-1 focus:ring-[var(--vicy-accent-20)] transition-all resize-none"
               />
               <div className="flex justify-end mt-1">
-                <span className={`text-xs ${formData.bio.length > 450 ? 'text-amber-600' : 'text-muted-foreground/70'}`}>
+                <span className={`text-xs ${formData.bio.length > 450 ? 'text-amber-600' : 'text-[var(--vicy-text-secondary)]'}`}>
                   {formData.bio.length}/500
                 </span>
               </div>
@@ -431,19 +431,19 @@ export default function GeneralSettingsTab({
             : 'translate-y-full opacity-0 pointer-events-none'
         }`}
       >
-        <div className="bg-background/95 backdrop-blur-xl border-t border-border shadow-lg">
+        <div className="bg-[var(--vicy-surface-95)] backdrop-blur-xl border-t border-[var(--vicy-border)] shadow-lg">
           <div className="max-w-3xl mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                <span className="text-sm text-muted-foreground">Ungespeicherte Änderungen</span>
+                <span className="text-sm text-[var(--vicy-text-secondary)]">Ungespeicherte Änderungen</span>
               </div>
 
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleReset}
                   disabled={saving}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-muted-foreground text-sm font-medium hover:bg-muted/80 hover:text-foreground disabled:opacity-40 transition-all"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--vicy-surface-hover)] border border-[var(--vicy-border)] text-[var(--vicy-text-secondary)] text-sm font-medium hover:text-[var(--vicy-text-primary)] disabled:opacity-40 transition-all"
                 >
                   <RotateCcw className="w-4 h-4" />
                   Verwerfen
@@ -451,7 +451,7 @@ export default function GeneralSettingsTab({
                 <button
                   onClick={handleSave}
                   disabled={saving || loading}
-                  className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 disabled:opacity-40 transition-all shadow-lg shadow-primary/25"
+                  className="flex items-center gap-2 px-5 py-2 rounded-lg bg-[var(--vicy-accent)] text-white text-sm font-semibold hover:bg-[var(--vicy-accent-90)] disabled:opacity-40 transition-all shadow-lg shadow-[var(--vicy-accent-25-shadow)]"
                 >
                   {saving ? (
                     <>

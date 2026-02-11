@@ -218,8 +218,8 @@ export default function AuditTab({ userId }: AuditTabProps) {
   if (loading && entries.length === 0) {
     return (
       <div className="w-full px-6 py-12 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-        <span className="ml-3 text-muted-foreground">Lade Audit-Log...</span>
+        <Loader2 className="w-6 h-6 animate-spin text-[var(--vicy-accent)]" />
+        <span className="ml-3 text-[var(--vicy-text-secondary)]">Lade Audit-Log...</span>
       </div>
     );
   }
@@ -236,7 +236,7 @@ export default function AuditTab({ userId }: AuditTabProps) {
           <p className="text-sm text-red-500/80 mb-4">{error}</p>
           <button
             onClick={loadAuditLog}
-            className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+            className="flex items-center gap-2 text-sm text-[var(--vicy-accent)] hover:text-[var(--vicy-accent)]/80 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
             Erneut versuchen
@@ -258,20 +258,20 @@ export default function AuditTab({ userId }: AuditTabProps) {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-card border-2 border-border">
+        <div className="p-4 rounded-xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <User className="w-4 h-4 text-primary" />
+            <div className="p-2 rounded-xl bg-[var(--vicy-accent-glow)]">
+              <User className="w-4 h-4 text-[var(--vicy-accent)]" />
             </div>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[var(--vicy-accent-glow)] text-[var(--vicy-accent)]">
               {categoryCount.profile}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mb-1">Profil</p>
-          <p className="text-sm font-medium text-foreground">{categoryCount.profile} Ereignisse</p>
+          <p className="text-xs text-[var(--vicy-text-secondary)] mb-1">Profil</p>
+          <p className="text-sm font-medium text-[var(--vicy-text-primary)]">{categoryCount.profile} Ereignisse</p>
         </div>
 
-        <div className="p-4 rounded-xl bg-card border-2 border-border">
+        <div className="p-4 rounded-xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)]">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 rounded-xl bg-emerald-500/10">
               <Shield className="w-4 h-4 text-emerald-500" />
@@ -280,11 +280,11 @@ export default function AuditTab({ userId }: AuditTabProps) {
               {categoryCount.security}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mb-1">Sicherheit</p>
-          <p className="text-sm font-medium text-foreground">{categoryCount.security} Ereignisse</p>
+          <p className="text-xs text-[var(--vicy-text-secondary)] mb-1">Sicherheit</p>
+          <p className="text-sm font-medium text-[var(--vicy-text-primary)]">{categoryCount.security} Ereignisse</p>
         </div>
 
-        <div className="p-4 rounded-xl bg-card border-2 border-border">
+        <div className="p-4 rounded-xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)]">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 rounded-xl bg-violet-500/10">
               <Settings className="w-4 h-4 text-violet-500" />
@@ -293,11 +293,11 @@ export default function AuditTab({ userId }: AuditTabProps) {
               {categoryCount.settings}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mb-1">Einstellungen</p>
-          <p className="text-sm font-medium text-foreground">{categoryCount.settings} Ereignisse</p>
+          <p className="text-xs text-[var(--vicy-text-secondary)] mb-1">Einstellungen</p>
+          <p className="text-sm font-medium text-[var(--vicy-text-primary)]">{categoryCount.settings} Ereignisse</p>
         </div>
 
-        <div className="p-4 rounded-xl bg-card border-2 border-border">
+        <div className="p-4 rounded-xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)]">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 rounded-xl bg-amber-500/10">
               <Key className="w-4 h-4 text-amber-500" />
@@ -306,20 +306,20 @@ export default function AuditTab({ userId }: AuditTabProps) {
               {categoryCount.auth}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mb-1">Auth</p>
-          <p className="text-sm font-medium text-foreground">{categoryCount.auth} Ereignisse</p>
+          <p className="text-xs text-[var(--vicy-text-secondary)] mb-1">Auth</p>
+          <p className="text-sm font-medium text-[var(--vicy-text-primary)]">{categoryCount.auth} Ereignisse</p>
         </div>
       </div>
 
       {/* Filters & Actions */}
-      <div className="p-6 rounded-2xl bg-card border-2 border-border">
+      <div className="p-6 rounded-2xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)]">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-muted-foreground" />
+            <Filter className="w-4 h-4 text-[var(--vicy-text-secondary)]" />
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="px-3 py-1.5 rounded-xl bg-input border-2 border-border text-foreground text-sm focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10"
+              className="px-3 py-1.5 rounded-xl bg-[var(--vicy-glass-bg)] border-2 border-[var(--vicy-border)] text-[var(--vicy-text-primary)] text-sm focus:border-[var(--vicy-accent-50)]/40 focus:outline-none focus:ring-2 focus:ring-[var(--vicy-accent-20)]/10"
             >
               <option value="all">Alle Kategorien</option>
               <option value="profile">Profil</option>
@@ -333,7 +333,7 @@ export default function AuditTab({ userId }: AuditTabProps) {
             <button
               onClick={loadAuditLog}
               disabled={loading}
-              className="px-3 py-1.5 rounded-xl bg-muted text-foreground border-2 border-border text-sm hover:bg-muted/80 disabled:opacity-50 transition-colors flex items-center gap-2"
+              className="px-3 py-1.5 rounded-xl bg-[var(--vicy-glass-bg)] text-[var(--vicy-text-primary)] border-2 border-[var(--vicy-border)] text-sm hover:bg-[var(--vicy-surface-hover)] disabled:opacity-50 transition-colors flex items-center gap-2"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Aktualisieren
@@ -341,7 +341,7 @@ export default function AuditTab({ userId }: AuditTabProps) {
             <button
               onClick={handleExport}
               disabled={filteredEntries.length === 0}
-              className="px-3 py-1.5 rounded-xl bg-muted text-foreground border-2 border-border text-sm hover:bg-muted/80 disabled:opacity-50 transition-colors flex items-center gap-2"
+              className="px-3 py-1.5 rounded-xl bg-[var(--vicy-glass-bg)] text-[var(--vicy-text-primary)] border-2 border-[var(--vicy-border)] text-sm hover:bg-[var(--vicy-surface-hover)] disabled:opacity-50 transition-colors flex items-center gap-2"
             >
               <Download className="w-4 h-4" />
               Exportieren
@@ -358,9 +358,9 @@ export default function AuditTab({ userId }: AuditTabProps) {
             // Color configurations for Enterprise White
             const colorConfig = {
               profile: {
-                bg: 'bg-primary/10',
-                text: 'text-primary',
-                badge: 'bg-primary/10 text-primary',
+                bg: 'bg-[var(--vicy-accent-glow)]',
+                text: 'text-[var(--vicy-accent)]',
+                badge: 'bg-[var(--vicy-accent-glow)] text-[var(--vicy-accent)]',
               },
               security: {
                 bg: 'bg-emerald-500/10',
@@ -384,7 +384,7 @@ export default function AuditTab({ userId }: AuditTabProps) {
             return (
               <div
                 key={entry.id}
-                className="rounded-xl bg-muted/50 border-2 border-border hover:border-primary/30 transition-colors overflow-hidden"
+                className="rounded-xl bg-[var(--vicy-glass-bg)] border-2 border-[var(--vicy-border)] hover:border-[var(--vicy-accent)]/30 transition-colors overflow-hidden"
               >
                 <div
                   className="p-3 cursor-pointer"
@@ -397,19 +397,19 @@ export default function AuditTab({ userId }: AuditTabProps) {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-1">
-                        <h4 className="text-sm font-medium text-foreground">{entry.action}</h4>
+                        <h4 className="text-sm font-medium text-[var(--vicy-text-primary)]">{entry.action}</h4>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <span className={`text-xs px-1.5 py-0.5 rounded-full ${colors.badge}`}>
                             {entry.category}
                           </span>
                           {isExpanded ? (
-                            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                            <ChevronUp className="w-4 h-4 text-[var(--vicy-text-secondary)]" />
                           ) : (
-                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                            <ChevronDown className="w-4 h-4 text-[var(--vicy-text-secondary)]" />
                           )}
                         </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--vicy-text-secondary)]">
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           {formatRelativeTime(entry.timestamp)}
@@ -429,30 +429,30 @@ export default function AuditTab({ userId }: AuditTabProps) {
 
                 {/* Expanded Details */}
                 {isExpanded && (
-                  <div className="px-3 pb-3 border-t-2 border-border">
+                  <div className="px-3 pb-3 border-t-2 border-[var(--vicy-border)]">
                     <div className="pt-3 space-y-3">
                       <div>
-                        <p className="text-xs text-muted-foreground mb-1">Details</p>
-                        <pre className="text-xs text-foreground bg-input border-2 border-border rounded-xl p-2 overflow-x-auto">
+                        <p className="text-xs text-[var(--vicy-text-secondary)] mb-1">Details</p>
+                        <pre className="text-xs text-[var(--vicy-text-primary)] bg-[var(--vicy-glass-bg)] border-2 border-[var(--vicy-border)] rounded-xl p-2 overflow-x-auto">
                           {JSON.stringify(entry.details, null, 2)}
                         </pre>
                       </div>
 
                       <div>
-                        <p className="text-xs text-muted-foreground mb-1">User Agent</p>
-                        <p className="text-xs text-muted-foreground font-mono bg-input border-2 border-border rounded-xl p-2 break-all">
+                        <p className="text-xs text-[var(--vicy-text-secondary)] mb-1">User Agent</p>
+                        <p className="text-xs text-[var(--vicy-text-secondary)] font-mono bg-[var(--vicy-glass-bg)] border-2 border-[var(--vicy-border)] rounded-xl p-2 break-all">
                           {entry.userAgent}
                         </p>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">IP-Adresse</p>
-                          <p className="text-sm text-foreground font-mono">{entry.ip}</p>
+                          <p className="text-xs text-[var(--vicy-text-secondary)] mb-1">IP-Adresse</p>
+                          <p className="text-sm text-[var(--vicy-text-primary)] font-mono">{entry.ip}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">Zeitstempel</p>
-                          <p className="text-sm text-foreground">
+                          <p className="text-xs text-[var(--vicy-text-secondary)] mb-1">Zeitstempel</p>
+                          <p className="text-sm text-[var(--vicy-text-primary)]">
                             {entry.timestamp.toLocaleString('de-DE', {
                               day: '2-digit',
                               month: '2-digit',
@@ -472,16 +472,16 @@ export default function AuditTab({ userId }: AuditTabProps) {
 
           {filteredEntries.length === 0 && (
             <div className="py-12 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-muted flex items-center justify-center">
-                <FileText className="w-6 h-6 text-muted-foreground" />
+              <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-[var(--vicy-glass-bg)] flex items-center justify-center">
+                <FileText className="w-6 h-6 text-[var(--vicy-text-secondary)]" />
               </div>
-              <p className="text-sm text-muted-foreground">Keine Ereignisse gefunden</p>
+              <p className="text-sm text-[var(--vicy-text-secondary)]">Keine Ereignisse gefunden</p>
             </div>
           )}
         </div>
 
         {/* Pagination Info */}
-        <div className="mt-4 pt-4 border-t-2 border-border flex items-center justify-between text-xs text-muted-foreground">
+        <div className="mt-4 pt-4 border-t-2 border-[var(--vicy-border)] flex items-center justify-between text-xs text-[var(--vicy-text-secondary)]">
           <span>{filteredEntries.length} Ereignisse angezeigt</span>
           <span>Letzte {limit} Einträge</span>
         </div>

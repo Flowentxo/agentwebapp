@@ -46,19 +46,19 @@ function ThemeCard({
         'relative flex flex-col items-start gap-3 p-4 rounded-xl border-2 transition-all duration-200',
         'hover:scale-[1.02] active:scale-[0.98]',
         isActive
-          ? 'border-primary bg-primary/5 dark:bg-primary/10'
-          : 'border-border hover:border-primary/50 bg-card'
+          ? 'border-[var(--vicy-accent)] bg-[var(--vicy-accent-glow)] dark:bg-[var(--vicy-accent-glow)]'
+          : 'border-[var(--vicy-border)] hover:border-[var(--vicy-accent-50)] bg-[var(--vicy-surface)]'
       )}
     >
       {/* Active Indicator */}
       {isActive && (
-        <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+        <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-[var(--vicy-accent)] flex items-center justify-center">
           <Check className="w-3 h-3 text-white" />
         </div>
       )}
 
       {/* Preview Box */}
-      <div className="w-full aspect-[16/10] rounded-lg overflow-hidden border border-border/50">
+      <div className="w-full aspect-[16/10] rounded-lg overflow-hidden border border-[var(--vicy-border)]">
         <ThemePreview theme={theme} />
       </div>
 
@@ -67,14 +67,14 @@ function ThemeCard({
         <div
           className={cn(
             'w-8 h-8 rounded-lg flex items-center justify-center',
-            isActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+            isActive ? 'bg-[var(--vicy-accent)] text-white' : 'bg-[var(--vicy-glass-bg)] text-[var(--vicy-text-secondary)]'
           )}
         >
           <Icon className="w-4 h-4" />
         </div>
         <div className="text-left">
-          <p className="text-sm font-medium text-foreground">{label}</p>
-          <p className="text-xs text-muted-foreground">{description}</p>
+          <p className="text-sm font-medium text-[var(--vicy-text-primary)]">{label}</p>
+          <p className="text-xs text-[var(--vicy-text-secondary)]">{description}</p>
         </div>
       </div>
     </button>
@@ -88,9 +88,9 @@ function ThemePreview({ theme }: { theme: ThemeOption }) {
   // Light theme preview
   if (theme === 'light') {
     return (
-      <div className="w-full h-full bg-card flex">
+      <div className="w-full h-full bg-[var(--vicy-surface)] flex">
         {/* Sidebar */}
-        <div className="w-1/4 h-full bg-muted border-r border-border p-1.5">
+        <div className="w-1/4 h-full bg-[var(--vicy-glass-bg)] border-r border-[var(--vicy-border)] p-1.5">
           <div className="w-full h-2 bg-gray-300 rounded mb-1.5" />
           <div className="w-3/4 h-1.5 bg-gray-200 rounded mb-1" />
           <div className="w-2/3 h-1.5 bg-gray-200 rounded mb-1" />
@@ -99,8 +99,8 @@ function ThemePreview({ theme }: { theme: ThemeOption }) {
         {/* Main Content */}
         <div className="flex-1 p-2">
           <div className="w-full h-2 bg-gray-200 rounded mb-2" />
-          <div className="w-3/4 h-1.5 bg-muted rounded mb-1" />
-          <div className="w-full h-8 bg-muted/50 rounded border border-border mt-2" />
+          <div className="w-3/4 h-1.5 bg-[var(--vicy-glass-bg)] rounded mb-1" />
+          <div className="w-full h-8 bg-[var(--vicy-glass-bg)] rounded border border-[var(--vicy-border)] mt-2" />
         </div>
       </div>
     );
@@ -131,14 +131,14 @@ function ThemePreview({ theme }: { theme: ThemeOption }) {
   return (
     <div className="w-full h-full flex">
       {/* Light Half */}
-      <div className="w-1/2 h-full bg-card flex">
-        <div className="w-1/3 h-full bg-muted border-r border-border p-0.5">
+      <div className="w-1/2 h-full bg-[var(--vicy-surface)] flex">
+        <div className="w-1/3 h-full bg-[var(--vicy-glass-bg)] border-r border-[var(--vicy-border)] p-0.5">
           <div className="w-full h-1.5 bg-gray-300 rounded mb-1" />
           <div className="w-2/3 h-1 bg-gray-200 rounded" />
         </div>
         <div className="flex-1 p-1">
           <div className="w-full h-1.5 bg-gray-200 rounded mb-1" />
-          <div className="w-3/4 h-1 bg-muted rounded" />
+          <div className="w-3/4 h-1 bg-[var(--vicy-glass-bg)] rounded" />
         </div>
       </div>
       {/* Dark Half - Zinc Palette */}

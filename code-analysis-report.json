@@ -1,0 +1,51 @@
+{
+  "totalFiles": 19,
+  "totalLines": 2112,
+  "byExtension": {
+    ".js": {
+      "files": 6,
+      "lines": 1088
+    },
+    ".ts": {
+      "files": 13,
+      "lines": 1024
+    }
+  },
+  "complexityMetrics": {
+    "highComplexityFiles": [],
+    "veryLargeFiles": [],
+    "duplicateCodePatterns": []
+  },
+  "structureIssues": {
+    "deepNesting": [
+      {
+        "file": "code-analysis.js",
+        "nestingLevel": 6
+      },
+      {
+        "file": "next.config.js",
+        "nestingLevel": 6
+      },
+      {
+        "file": "tailwind.config.ts",
+        "nestingLevel": 6
+      }
+    ],
+    "longMethods": [],
+    "largeClasses": []
+  },
+  "qualityIssues": {
+    "anyUsage": [],
+    "consoleLogs": [
+      {
+        "file": "code-analysis.js",
+        "count": 27
+      },
+      {
+        "file": "start-prod.js",
+        "count": 6
+      }
+    ],
+    "missingTypes": []
+  }
+}

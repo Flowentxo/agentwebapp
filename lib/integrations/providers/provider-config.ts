@@ -1075,7 +1075,11 @@ export function isProviderConfigured(providerId: string): boolean {
  */
 export function getRedirectUri(providerId: string): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  return `${appUrl}/api/oauth/${providerId}/callback`;
+  // All Google-based providers share the same OAuth redirect URI
+  const normalizedId = ['gmail', 'google-calendar', 'google-drive', 'google-sheets', 'youtube'].includes(providerId)
+    ? 'google'
+    : providerId;
+  return `${appUrl}/api/oauth/${normalizedId}/callback`;
 }
 
 /**

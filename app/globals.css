@@ -2201,6 +2201,16 @@ input[type="range"]::-moz-range-track {
   --vicy-accent: #8b5cf6;
   --vicy-accent-glow: rgba(139, 92, 246, 0.15);
 
+  /* Opacity variants for Tailwind compatibility */
+  --vicy-surface-95: rgba(17, 17, 17, 0.95);
+  --vicy-surface-50: rgba(17, 17, 17, 0.50);
+  --vicy-accent-20: rgba(139, 92, 246, 0.20);
+  --vicy-accent-30: rgba(139, 92, 246, 0.30);
+  --vicy-accent-40: rgba(139, 92, 246, 0.40);
+  --vicy-accent-50: rgba(139, 92, 246, 0.50);
+  --vicy-accent-90: rgba(139, 92, 246, 0.90);
+  --vicy-accent-25-shadow: rgba(139, 92, 246, 0.25);
+
   color-scheme: dark;
   background-color: var(--vicy-bg);
   color: var(--vicy-text-primary);
@@ -2371,4 +2381,25 @@ input[type="range"]::-moz-range-track {
 .vicy-theme .shadow-md,
 .vicy-theme .shadow-lg {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* ============================================================
+   War Room - Swarm Visualization
+   ============================================================ */
+@keyframes swarm-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes swarm-orbit-glow {
+  0%, 100% { box-shadow: 0 0 12px rgba(124, 58, 237, 0.3); }
+  50% { box-shadow: 0 0 24px rgba(124, 58, 237, 0.6); }
+}
+
+.swarm-center-orb {
+  animation: swarm-orbit-glow 2s ease-in-out infinite;
+}
+
+.swarm-agent-pulse {
+  animation: swarm-pulse 2s ease-in-out infinite;
 }

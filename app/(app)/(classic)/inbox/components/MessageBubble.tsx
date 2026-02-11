@@ -60,12 +60,12 @@ function CodeBlock({ language, children }: { language?: string; children: string
     <div className="relative group/code my-3 rounded-xl overflow-hidden border border-white/[0.08]">
       {/* Header with language and copy button */}
       <div className="flex items-center justify-between px-3 py-1.5 bg-white/[0.04] border-b border-white/[0.06]">
-        <span className="text-[10px] font-mono text-white/40 uppercase font-medium">
+        <span className="text-[10px] font-mono text-white/50 uppercase font-medium">
           {language || 'code'}
         </span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1 px-2 py-0.5 text-[10px] text-white/40 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] rounded border border-white/[0.06] transition-all"
+          className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-white/50 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] rounded-md border border-white/[0.08] transition-all"
         >
           {copied ? (
             <>
@@ -224,8 +224,8 @@ export const MessageBubble = memo(function MessageBubble({
         <div className="flex-1 min-w-0 max-w-[85%]">
           {/* Header */}
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium text-white/40">{agentName}</span>
-            <span className="text-xs text-white/25">{timestamp}</span>
+            <span className="text-xs font-medium text-white/50">{agentName}</span>
+            <span className="text-xs text-white/40">{timestamp}</span>
           </div>
 
           {/* Content with text */}
@@ -320,10 +320,10 @@ export const MessageBubble = memo(function MessageBubble({
             isUser ? 'flex-row-reverse' : 'flex-row'
           )}
         >
-          <span className="text-xs font-medium text-white/40">
+          <span className="text-xs font-medium text-white/50">
             {isUser ? 'You' : agentName}
           </span>
-          <span className="text-xs text-white/25">{timestamp}</span>
+          <span className="text-xs text-white/40">{timestamp}</span>
         </div>
 
         {/* Bubble */}
@@ -382,14 +382,14 @@ export const MessageBubble = memo(function MessageBubble({
                   },
                   thead({ children }) {
                     return (
-                      <thead className="bg-white/[0.04] text-white">
+                      <thead className="bg-white/[0.06] text-white">
                         {children}
                       </thead>
                     );
                   },
                   th({ children }) {
                     return (
-                      <th className="px-3 py-2 text-left font-semibold text-white/50 border-b border-white/[0.08]">
+                      <th className="px-3 py-2 text-left font-semibold text-white/60 border-b border-white/[0.10]">
                         {children}
                       </th>
                     );
@@ -451,7 +451,7 @@ export const MessageBubble = memo(function MessageBubble({
                   // Blockquotes
                   blockquote({ children }) {
                     return (
-                      <blockquote className="border-l-[3px] border-violet-500/30 pl-3 my-2 text-white/50 italic">
+                      <blockquote className="border-l-[3px] border-violet-500/40 pl-3 my-2 text-white/60 italic">
                         {children}
                       </blockquote>
                     );
@@ -466,7 +466,7 @@ export const MessageBubble = memo(function MessageBubble({
                   },
                   // Emphasis/Italic
                   em({ children }) {
-                    return <em className="italic text-white/60">{children}</em>;
+                    return <em className="italic text-white/70">{children}</em>;
                   },
                 }}
               >
@@ -475,7 +475,7 @@ export const MessageBubble = memo(function MessageBubble({
 
               {/* Streaming cursor */}
               {isStreaming && (
-                <span className="inline-block w-2 h-4 bg-violet-400 ml-1 animate-pulse rounded-sm" />
+                <span className="inline-block w-1.5 h-5 bg-violet-400 ml-1.5 animate-pulse rounded-sm shadow-[0_0_8px_rgba(139,92,246,0.4)]" />
               )}
             </div>
           )}
@@ -495,13 +495,14 @@ export const MessageBubble = memo(function MessageBubble({
           )}
 
           {/* Copy button */}
-          {showActions && !isStreaming && (
+          {!isStreaming && (
             <button
               onClick={handleCopy}
               className={cn(
                 'absolute -bottom-3 p-1.5 rounded-md transition-all',
-                'bg-[#111] border border-white/[0.08] shadow-lg',
-                'hover:bg-white/[0.06]',
+                'bg-[#111] border border-white/[0.06] shadow-lg',
+                'opacity-0 group-hover:opacity-100 focus:opacity-100',
+                'hover:bg-white/[0.08] hover:border-white/[0.12]',
                 isUser ? '-left-2' : '-right-2'
               )}
               title="Copy message"

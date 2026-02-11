@@ -25,6 +25,7 @@ import {
   RefreshCw,
   Loader2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface SessionsTabProps {
   userId: string;
@@ -144,6 +145,7 @@ export default function SessionsTab({ userId }: SessionsTabProps) {
           });
         }
         setSessions(sessions.filter((s) => s.isCurrent));
+        toast.success('Alle anderen Sitzungen beendet');
       } else {
         const response = await fetch('/api/auth/sessions', {
           method: 'DELETE',
@@ -166,12 +168,14 @@ export default function SessionsTab({ userId }: SessionsTabProps) {
         }
 
         setSessions(sessions.filter((s) => s.id !== sessionToRevoke));
+        toast.success('Sitzung beendet');
       }
 
       setShowRevokeModal(false);
       setSessionToRevoke(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Fehler beim Beenden der Sitzung');
+      toast.error('Sitzung konnte nicht beendet werden');
     } finally {
       setRevoking(false);
     }
@@ -183,8 +187,8 @@ export default function SessionsTab({ userId }: SessionsTabProps) {
   if (isLoading && sessions.length === 0) {
     return (
       <div className="w-full px-6 py-12 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-        <span className="ml-3 text-muted-foreground">Lade Sitzungen...</span>
+        <Loader2 className="w-6 h-6 animate-spin text-[var(--vicy-accent)]" />
+        <span className="ml-3 text-[var(--vicy-text-secondary)]">Lade Sitzungen...</span>
       </div>
     );
   }
@@ -200,7 +204,7 @@ export default function SessionsTab({ userId }: SessionsTabProps) {
           </div>
           <button
             onClick={fetchSessions}
-            className="mt-4 flex items-center gap-2 text-sm text-primary hover:underline"
+            className="mt-4 flex items-center gap-2 text-sm text-[var(--vicy-accent)] hover:underline"
           >
             <RefreshCw className="w-4 h-4" />
             Erneut versuchen
@@ -215,45 +219,45 @@ export default function SessionsTab({ userId }: SessionsTabProps) {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Active Sessions */}
-        <div className="p-4 rounded-xl bg-card border-2 border-border">
+        <div className="p-4 rounded-xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Monitor className="w-4 h-4 text-primary" />
+            <div className="p-2 rounded-lg bg-[var(--vicy-accent-glow)]">
+              <Monitor className="w-4 h-4 text-[var(--vicy-accent)]" />
             </div>
-            <span className="text-xs font-medium px-2 py-0.5 rounded bg-primary/10 text-primary">
+            <span className="text-xs font-medium px-2 py-0.5 rounded bg-[var(--vicy-accent-glow)] text-[var(--vicy-accent)]">
               Aktiv
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mb-1">Aktive Sitzungen</p>
-          <p className="text-sm font-medium text-foreground">{sessions.length} Gesamt</p>
+          <p className="text-xs text-[var(--vicy-text-secondary)] mb-1">Aktive Sitzungen</p>
+          <p className="text-sm font-medium text-[var(--vicy-text-primary)]">{sessions.length} Gesamt</p>
         </div>
 
         {/* Last Activity */}
-        <div className="p-4 rounded-xl bg-card border-2 border-border">
+        <div className="p-4 rounded-xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)]">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 rounded-lg bg-emerald-500/10">
               <Clock className="w-4 h-4 text-emerald-500" />
             </div>
-            <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
+            <CheckCircle2 className="w-4 h-4 text-[var(--vicy-text-secondary)]" />
           </div>
-          <p className="text-xs text-muted-foreground mb-1">Letzte Aktivität</p>
-          <p className="text-sm font-medium text-foreground">
+          <p className="text-xs text-[var(--vicy-text-secondary)] mb-1">Letzte Aktivität</p>
+          <p className="text-sm font-medium text-[var(--vicy-text-primary)]">
             {sessions.length > 0 ? formatRelativeTime(sessions[0].lastActiveAt) : '-'}
           </p>
         </div>
 
         {/* Device Count */}
-        <div className="p-4 rounded-xl bg-card border-2 border-border">
+        <div className="p-4 rounded-xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-muted">
-              <Shield className="w-4 h-4 text-muted-foreground" />
+            <div className="p-2 rounded-lg bg-[var(--vicy-glass-bg)]">
+              <Shield className="w-4 h-4 text-[var(--vicy-text-secondary)]" />
             </div>
             <span className="text-xs font-medium px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/30">
               Sicher
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mb-1">Geräte</p>
-          <p className="text-sm font-medium text-foreground">{sessions.length} Verbunden</p>
+          <p className="text-xs text-[var(--vicy-text-secondary)] mb-1">Geräte</p>
+          <p className="text-sm font-medium text-[var(--vicy-text-primary)]">{sessions.length} Verbunden</p>
         </div>
       </div>
 
@@ -266,16 +270,16 @@ export default function SessionsTab({ userId }: SessionsTabProps) {
       )}
 
       {/* Sessions List */}
-      <div className="p-6 rounded-xl bg-card border-2 border-border">
+      <div className="p-6 rounded-xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)]">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          <h3 className="text-xs font-medium text-[var(--vicy-text-secondary)] uppercase tracking-wide">
             Aktive Sitzungen
           </h3>
           <div className="flex items-center gap-3">
             <button
               onClick={fetchSessions}
               disabled={isLoading}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
+              className="text-xs text-[var(--vicy-text-secondary)] hover:text-[var(--vicy-text-primary)] transition-colors flex items-center gap-1.5"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
               Aktualisieren
@@ -305,23 +309,23 @@ export default function SessionsTab({ userId }: SessionsTabProps) {
                 className={`p-4 rounded-xl border-2 transition-colors ${
                   session.isCurrent
                     ? 'bg-emerald-500/10/50 border-emerald-500/30'
-                    : 'bg-card border-border hover:border-primary/30'
+                    : 'bg-[var(--vicy-surface)] border-[var(--vicy-border)] hover:border-[var(--vicy-accent)]/30'
                 }`}
               >
                 <div className="flex items-start gap-4">
                   {/* Device Icon */}
-                  <div className={`p-2 rounded-lg ${session.isCurrent ? 'bg-emerald-500/20' : 'bg-muted'}`}>
+                  <div className={`p-2 rounded-lg ${session.isCurrent ? 'bg-emerald-500/20' : 'bg-[var(--vicy-glass-bg)]'}`}>
                     {session.isBot ? (
                       <Bot className="w-5 h-5 text-red-600" />
                     ) : (
-                      <DeviceIcon className={`w-5 h-5 ${session.isCurrent ? 'text-emerald-500' : 'text-muted-foreground'}`} />
+                      <DeviceIcon className={`w-5 h-5 ${session.isCurrent ? 'text-emerald-500' : 'text-[var(--vicy-text-secondary)]'}`} />
                     )}
                   </div>
 
                   {/* Session Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <p className="text-sm font-medium text-foreground">
+                      <p className="text-sm font-medium text-[var(--vicy-text-primary)]">
                         {session.deviceDescription}
                       </p>
                       {session.isCurrent && (
@@ -337,7 +341,7 @@ export default function SessionsTab({ userId }: SessionsTabProps) {
                         </span>
                       )}
                     </div>
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--vicy-text-secondary)]">
                       {session.ip && (
                         <div className="flex items-center gap-1">
                           <Globe className="w-3 h-3" />
@@ -357,7 +361,7 @@ export default function SessionsTab({ userId }: SessionsTabProps) {
                     className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-1.5 border-2 ${
                       session.isCurrent
                         ? 'bg-red-500/10 text-red-600 border-red-500/30 hover:bg-red-500/20'
-                        : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground'
+                        : 'bg-[var(--vicy-glass-bg)] text-[var(--vicy-text-secondary)] border-[var(--vicy-border)] hover:bg-[var(--vicy-surface-hover)] hover:text-[var(--vicy-text-primary)]'
                     }`}
                   >
                     <LogOut className="w-3.5 h-3.5" />
@@ -372,10 +376,10 @@ export default function SessionsTab({ userId }: SessionsTabProps) {
         {/* Empty State */}
         {sessions.length === 0 && (
           <div className="py-12 text-center">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-muted flex items-center justify-center">
-              <Monitor className="w-6 h-6 text-muted-foreground" />
+            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-[var(--vicy-glass-bg)] flex items-center justify-center">
+              <Monitor className="w-6 h-6 text-[var(--vicy-text-secondary)]" />
             </div>
-            <p className="text-sm text-muted-foreground">Keine aktiven Sitzungen</p>
+            <p className="text-sm text-[var(--vicy-text-secondary)]">Keine aktiven Sitzungen</p>
           </div>
         )}
       </div>
@@ -409,21 +413,21 @@ export default function SessionsTab({ userId }: SessionsTabProps) {
 
       {/* Revoke Confirmation Modal */}
       {showRevokeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="max-w-md w-full p-6 rounded-2xl bg-card border-2 border-border shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--vicy-bg)] backdrop-blur-sm">
+          <div className="max-w-md w-full p-6 rounded-2xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)] shadow-2xl">
             <div className="flex items-start gap-4 mb-6">
               <div className="p-2 rounded-xl bg-red-500/10 border border-red-500/30">
                 <AlertCircle className="w-5 h-5 text-red-600" />
               </div>
               <div className="flex-1">
-                <h3 className="text-sm font-medium text-foreground mb-1">
+                <h3 className="text-sm font-medium text-[var(--vicy-text-primary)] mb-1">
                   {sessionToRevoke === 'all-others'
                     ? 'Alle anderen Sitzungen beenden?'
                     : sessions.find((s) => s.id === sessionToRevoke)?.isCurrent
                     ? 'Aktuelle Sitzung beenden?'
                     : 'Sitzung beenden?'}
                 </h3>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-[var(--vicy-text-secondary)]">
                   {sessionToRevoke === 'all-others'
                     ? 'Alle anderen Geräte werden abgemeldet.'
                     : sessions.find((s) => s.id === sessionToRevoke)?.isCurrent
@@ -436,9 +440,9 @@ export default function SessionsTab({ userId }: SessionsTabProps) {
                   setShowRevokeModal(false);
                   setSessionToRevoke(null);
                 }}
-                className="p-1 rounded-xl hover:bg-muted transition-colors"
+                className="p-1 rounded-xl hover:bg-[var(--vicy-surface-hover)] transition-colors"
               >
-                <X className="w-4 h-4 text-muted-foreground" />
+                <X className="w-4 h-4 text-[var(--vicy-text-secondary)]" />
               </button>
             </div>
 
@@ -449,7 +453,7 @@ export default function SessionsTab({ userId }: SessionsTabProps) {
                   setSessionToRevoke(null);
                 }}
                 disabled={revoking}
-                className="flex-1 px-4 py-2 rounded-xl bg-muted text-foreground text-sm font-medium border-2 border-border hover:bg-muted/50 disabled:opacity-50 transition-colors"
+                className="flex-1 px-4 py-2 rounded-xl bg-[var(--vicy-glass-bg)] text-[var(--vicy-text-primary)] text-sm font-medium border-2 border-[var(--vicy-border)] hover:bg-[var(--vicy-glass-bg)] disabled:opacity-50 transition-colors"
               >
                 Abbrechen
               </button>

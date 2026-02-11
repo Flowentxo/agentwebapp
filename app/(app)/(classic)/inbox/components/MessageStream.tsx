@@ -14,12 +14,13 @@
 
 import { useEffect, useRef, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { format, parseISO, isToday, isYesterday, isSameDay } from 'date-fns';
+import { format, parseISO, isToday, isYesterday, isValid, isSameDay } from 'date-fns';
 import { MessageBubble } from './MessageBubble';
 import { WorkflowPipelineCard, type PipelineStep } from './chat/WorkflowPipelineCard';
 import { Bot, Loader2 } from 'lucide-react';
 import type { ChatMessage } from '@/types/inbox';
 import { getAgentById } from '@/lib/agents/personas';
+import { EmmieWelcomeScreen } from '@/components/inbox/emmie/EmmieWelcomeScreen';
 
 interface MessageStreamProps {
   messages: ChatMessage[];
@@ -28,13 +29,16 @@ interface MessageStreamProps {
   streamingContent?: string;
   agentName?: string;
   agentColor?: string;
+  agentId?: string;
   onLoadMore?: () => void;
   hasMoreMessages?: boolean;
+  onSuggestedPrompt?: (prompt: string) => void;
 }
 
 // Date separator helper
 function formatDateSeparator(date: Date | string): string {
   const d = typeof date === 'string' ? parseISO(date) : date;
+  if (!isValid(d)) return 'Today';
   if (isToday(d)) return 'Today';
   if (isYesterday(d)) return 'Yesterday';
   return format(d, 'MMMM d, yyyy');
@@ -47,9 +51,17 @@ function groupMessagesByDate(messages: ChatMessage[]) {
   let currentGroup: ChatMessage[] = [];
 
   messages.forEach((message) => {
-    const messageDate = message.createdAt
-      ? format(parseISO(message.createdAt), 'yyyy-MM-dd')
-      : 'unknown';
+    let messageDate = 'unknown';
+    if (message.createdAt) {
+      try {
+        const parsed = parseISO(message.createdAt);
+        if (isValid(parsed)) {
+          messageDate = format(parsed, 'yyyy-MM-dd');
+        }
+      } catch {
+        // fall through to 'unknown'
+      }
+    }
 
     if (messageDate !== currentDate) {
       if (currentGroup.length > 0) {
@@ -115,8 +127,10 @@ export function MessageStream({
   streamingContent,
   agentName = 'AI Assistant',
   agentColor = '#8b5cf6',
+  agentId,
   onLoadMore,
   hasMoreMessages = false,
+  onSuggestedPrompt,
 }: MessageStreamProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -179,6 +193,11 @@ export function MessageStream({
 
   // Empty state
   if (!isLoading && messages.length === 0) {
+    // Emmie-specific welcome screen
+    if (agentId === 'emmie' && onSuggestedPrompt) {
+      return <EmmieWelcomeScreen onSendPrompt={onSuggestedPrompt} agentColor={agentColor} />;
+    }
+
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
         <div
@@ -188,9 +207,22 @@ export function MessageStream({
           <Bot className="w-8 h-8" style={{ color: agentColor }} />
         </div>
         <h3 className="text-lg font-medium text-zinc-100 mb-2">{agentName}</h3>
-        <p className="text-sm text-zinc-500 max-w-md">
+        <p className="text-sm text-zinc-400 max-w-md mb-6">
           Start a conversation. Ask questions, get help with tasks, or just chat.
         </p>
+        {onSuggestedPrompt && (
+          <div className="flex flex-wrap justify-center gap-2 max-w-md">
+            {['What can you help me with?', 'Summarize my recent activity', 'Help me draft a message'].map((prompt) => (
+              <button
+                key={prompt}
+                onClick={() => onSuggestedPrompt(prompt)}
+                className="px-3 py-1.5 text-xs text-white/60 bg-white/[0.04] border border-white/[0.08] rounded-full hover:bg-white/[0.08] hover:text-white/80 transition-all"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -221,11 +253,11 @@ export function MessageStream({
         <div key={group.date}>
           {/* Date Separator */}
           <div className="flex items-center justify-center my-4 px-4">
-            <div className="h-px flex-1 bg-card/5" />
-            <span className="px-4 text-xs text-zinc-500 font-medium">
+            <div className="h-px flex-1 bg-white/[0.06]" />
+            <span className="px-4 text-xs text-zinc-400 font-medium">
               {formatDateSeparator(group.date)}
             </span>
-            <div className="h-px flex-1 bg-card/5" />
+            <div className="h-px flex-1 bg-white/[0.06]" />
           </div>
 
           {/* Messages */}

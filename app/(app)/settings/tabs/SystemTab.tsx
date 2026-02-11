@@ -34,6 +34,8 @@ import {
   Sparkles,
   MemoryStick,
 } from 'lucide-react';
+import { toast } from 'sonner';
+import ConfirmDialog from '@/components/settings/ConfirmDialog';
 
 // Types
 interface ServiceHealth {
@@ -85,6 +87,7 @@ export default function SystemTab() {
   const [activeTab, setActiveTab] = useState<'health' | 'metrics' | 'features' | 'data'>('health');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [confirmCleanup, setConfirmCleanup] = useState<string | null>(null);
 
   const fetchData = useCallback(async (showRefresh = false) => {
     if (showRefresh) setIsRefreshing(true);
@@ -132,8 +135,10 @@ export default function SystemTab() {
         body: JSON.stringify({ featureId: id, enabled }),
       });
       setFeatures((prev) => prev.map((f) => (f.id === id ? { ...f, enabled } : f)));
+      toast.success('Feature aktualisiert');
     } catch (error) {
       console.error('Failed to toggle feature:', error);
+      toast.error('Feature konnte nicht geändert werden');
     }
   };
 
@@ -153,21 +158,28 @@ export default function SystemTab() {
         a.download = data.filename;
         a.click();
         URL.revokeObjectURL(url);
+        toast.success('Daten exportiert');
       }
     } catch (error) {
       console.error('Export failed:', error);
+      toast.error('Export fehlgeschlagen');
     }
   };
 
-  const handleCleanup = async (operation: string) => {
-    if (!confirm(`Möchten Sie "${operation}" wirklich ausführen?`)) return;
+  const handleCleanup = (operation: string) => {
+    setConfirmCleanup(operation);
+  };
+
+  const executeCleanup = async (operation: string) => {
     try {
       await fetch(`/api/settings/system/data?operation=${operation}`, {
         method: 'DELETE',
       });
+      toast.success('Bereinigung abgeschlossen');
       fetchData(true);
     } catch (error) {
       console.error('Cleanup failed:', error);
+      toast.error('Bereinigung fehlgeschlagen');
     }
   };
 
@@ -185,7 +197,7 @@ export default function SystemTab() {
       case 'healthy': return 'text-green-400';
       case 'degraded': return 'text-yellow-400';
       case 'unhealthy': return 'text-red-400';
-      default: return 'text-zinc-500';
+      default: return 'text-[var(--vicy-text-secondary)]';
     }
   };
 
@@ -194,7 +206,7 @@ export default function SystemTab() {
       case 'healthy': return 'bg-green-500/10 border-green-500/20';
       case 'degraded': return 'bg-yellow-500/10 border-yellow-500/20';
       case 'unhealthy': return 'bg-red-500/10 border-red-500/20';
-      default: return 'bg-zinc-800/50 border-zinc-800';
+      default: return 'bg-[var(--vicy-surface)] border-[var(--vicy-border)]';
     }
   };
 
@@ -203,7 +215,7 @@ export default function SystemTab() {
       case 'healthy': return <CheckCircle2 className="h-4 w-4 text-green-400" />;
       case 'degraded': return <AlertTriangle className="h-4 w-4 text-yellow-400" />;
       case 'unhealthy': return <XCircle className="h-4 w-4 text-red-400" />;
-      default: return <Activity className="h-4 w-4 text-zinc-500" />;
+      default: return <Activity className="h-4 w-4 text-[var(--vicy-text-secondary)]" />;
     }
   };
 
@@ -218,7 +230,7 @@ export default function SystemTab() {
   if (isLoading) {
     return (
       <div className="w-full px-6 py-12 flex items-center justify-center h-96">
-        <RefreshCw className="h-8 w-8 text-indigo-400 animate-spin" />
+        <RefreshCw className="h-8 w-8 text-[var(--vicy-accent)] animate-spin" />
       </div>
     );
   }
@@ -226,7 +238,7 @@ export default function SystemTab() {
   return (
     <div className="w-full px-6 py-6 space-y-6">
       {/* Tab Navigation */}
-      <div className="flex items-center gap-1 p-1 bg-zinc-800/50 rounded-lg border border-zinc-800 w-fit">
+      <div className="flex items-center gap-1 p-1 bg-[var(--vicy-surface)] rounded-lg border border-[var(--vicy-border)] w-fit">
         {[
           { id: 'health', label: 'System Health', icon: Activity },
           { id: 'metrics', label: 'Metriken', icon: BarChart3 },
@@ -238,8 +250,8 @@ export default function SystemTab() {
             onClick={() => setActiveTab(tab.id as typeof activeTab)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeTab === tab.id
-                ? 'bg-indigo-500/10 text-indigo-400'
-                : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                ? 'bg-[var(--vicy-accent-glow)] text-[var(--vicy-accent)]'
+                : 'text-[var(--vicy-text-secondary)] hover:text-[var(--vicy-text-primary)] hover:bg-[var(--vicy-surface-hover)]'
             }`}
           >
             <tab.icon className="h-4 w-4" />
@@ -262,11 +274,11 @@ export default function SystemTab() {
                   <Activity className={`h-8 w-8 ${getStatusColor(health.overall)} ${isRefreshing ? 'animate-spin' : ''}`} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-white">
+                  <h3 className="text-xl font-semibold text-[var(--vicy-text-primary)]">
                     System {health.overall === 'healthy' ? 'Betriebsbereit' :
                             health.overall === 'degraded' ? 'Eingeschränkt' : 'Störung'}
                   </h3>
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-[var(--vicy-text-secondary)]">
                     {health.services.filter((s) => s.status === 'healthy').length}/{health.services.length} Dienste aktiv · Uptime: {formatUptime(health.uptime)}
                   </p>
                 </div>
@@ -274,7 +286,7 @@ export default function SystemTab() {
               <button
                 onClick={() => fetchData(true)}
                 disabled={isRefreshing}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-800 text-zinc-300 text-sm hover:bg-zinc-700 disabled:opacity-50 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--vicy-surface-hover)] text-[var(--vicy-text-secondary)] text-sm hover:bg-[var(--vicy-surface-hover)] disabled:opacity-50 transition-colors"
               >
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 {isRefreshing ? 'Aktualisiere...' : 'Aktualisieren'}
@@ -297,7 +309,7 @@ export default function SystemTab() {
                         <Icon className={`h-5 w-5 ${getStatusColor(service.status)}`} />
                       </div>
                       <div>
-                        <p className="font-medium text-white">{service.name}</p>
+                        <p className="font-medium text-[var(--vicy-text-primary)]">{service.name}</p>
                         <p className={`text-sm ${getStatusColor(service.status)}`}>
                           {service.message || service.status}
                         </p>
@@ -306,7 +318,7 @@ export default function SystemTab() {
                     <StatusIcon status={service.status} />
                   </div>
                   {service.latency !== undefined && (
-                    <div className="mt-3 flex items-center gap-2 text-xs text-zinc-500">
+                    <div className="mt-3 flex items-center gap-2 text-xs text-[var(--vicy-text-secondary)]">
                       <Clock className="h-3 w-3" />
                       {service.latency}ms Latenz
                     </div>
@@ -336,18 +348,18 @@ export default function SystemTab() {
           </div>
 
           {/* Resource Usage */}
-          <div className="p-6 rounded-lg bg-zinc-800/50 border border-zinc-800">
-            <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-4 flex items-center gap-2">
+          <div className="p-6 rounded-lg bg-[var(--vicy-surface)] border border-[var(--vicy-border)]">
+            <h4 className="text-xs font-medium text-[var(--vicy-text-secondary)] uppercase tracking-wide mb-4 flex items-center gap-2">
               <Cpu className="h-4 w-4" />
               Ressourcen-Nutzung
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-500">Speicher (Heap)</span>
-                  <span className="text-white font-mono">{performance.memory.used}MB / {performance.memory.total}MB</span>
+                  <span className="text-[var(--vicy-text-secondary)]">Speicher (Heap)</span>
+                  <span className="text-[var(--vicy-text-primary)] font-mono">{performance.memory.used}MB / {performance.memory.total}MB</span>
                 </div>
-                <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
+                <div className="h-2 bg-[var(--vicy-surface-hover)] rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all ${
                       performance.memory.percentage > 80 ? 'bg-red-500' :
@@ -359,14 +371,14 @@ export default function SystemTab() {
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-500">CPU ({performance.cpu.cores} Cores)</span>
-                  <span className="text-white font-mono">{performance.cpu.usage}%</span>
+                  <span className="text-[var(--vicy-text-secondary)]">CPU ({performance.cpu.cores} Cores)</span>
+                  <span className="text-[var(--vicy-text-primary)] font-mono">{performance.cpu.usage}%</span>
                 </div>
-                <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
+                <div className="h-2 bg-[var(--vicy-surface-hover)] rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all ${
                       performance.cpu.usage > 80 ? 'bg-red-500' :
-                      performance.cpu.usage > 60 ? 'bg-yellow-500' : 'bg-indigo-500'
+                      performance.cpu.usage > 60 ? 'bg-yellow-500' : 'bg-[var(--vicy-accent)]'
                     }`}
                     style={{ width: `${performance.cpu.usage}%` }}
                   />
@@ -377,44 +389,44 @@ export default function SystemTab() {
 
           {/* AI & Storage */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-6 rounded-lg bg-zinc-800/50 border border-zinc-800">
-              <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-4 flex items-center gap-2">
+            <div className="p-6 rounded-lg bg-[var(--vicy-surface)] border border-[var(--vicy-border)]">
+              <h4 className="text-xs font-medium text-[var(--vicy-text-secondary)] uppercase tracking-wide mb-4 flex items-center gap-2">
                 <Sparkles className="h-4 w-4" />
                 AI-Nutzung (30 Tage)
               </h4>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-500 text-sm">Tokens verbraucht</span>
-                  <span className="text-white font-mono text-lg">{usage.ai.totalTokens.toLocaleString()}</span>
+                  <span className="text-[var(--vicy-text-secondary)] text-sm">Tokens verbraucht</span>
+                  <span className="text-[var(--vicy-text-primary)] font-mono text-lg">{usage.ai.totalTokens.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-500 text-sm">AI-Anfragen</span>
-                  <span className="text-white font-mono">{usage.ai.totalRequests.toLocaleString()}</span>
+                  <span className="text-[var(--vicy-text-secondary)] text-sm">AI-Anfragen</span>
+                  <span className="text-[var(--vicy-text-primary)] font-mono">{usage.ai.totalRequests.toLocaleString()}</span>
                 </div>
-                <div className="pt-3 border-t border-zinc-700 flex justify-between items-center">
-                  <span className="text-zinc-500 text-sm">Geschätzte Kosten</span>
+                <div className="pt-3 border-t border-[var(--vicy-border)] flex justify-between items-center">
+                  <span className="text-[var(--vicy-text-secondary)] text-sm">Geschätzte Kosten</span>
                   <span className="text-green-400 font-semibold">~${usage.ai.costEstimate.toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
-            <div className="p-6 rounded-lg bg-zinc-800/50 border border-zinc-800">
-              <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-4 flex items-center gap-2">
+            <div className="p-6 rounded-lg bg-[var(--vicy-surface)] border border-[var(--vicy-border)]">
+              <h4 className="text-xs font-medium text-[var(--vicy-text-secondary)] uppercase tracking-wide mb-4 flex items-center gap-2">
                 <HardDrive className="h-4 w-4" />
                 Speicher
               </h4>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-500 text-sm">Dokumente</span>
-                  <span className="text-white font-mono">{usage.storage.documentsCount}</span>
+                  <span className="text-[var(--vicy-text-secondary)] text-sm">Dokumente</span>
+                  <span className="text-[var(--vicy-text-primary)] font-mono">{usage.storage.documentsCount}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-500 text-sm">Gesamtgröße</span>
-                  <span className="text-white font-mono">{usage.storage.totalSize} MB</span>
+                  <span className="text-[var(--vicy-text-secondary)] text-sm">Gesamtgröße</span>
+                  <span className="text-[var(--vicy-text-primary)] font-mono">{usage.storage.totalSize} MB</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-500 text-sm">Knowledge Base</span>
-                  <span className="text-white font-mono">{usage.storage.knowledgeBaseSize} MB</span>
+                  <span className="text-[var(--vicy-text-secondary)] text-sm">Knowledge Base</span>
+                  <span className="text-[var(--vicy-text-primary)] font-mono">{usage.storage.knowledgeBaseSize} MB</span>
                 </div>
               </div>
             </div>
@@ -438,17 +450,17 @@ export default function SystemTab() {
 
             return (
               <div key={category} className="space-y-4">
-                <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wide flex items-center gap-2">
+                <h3 className="text-xs font-medium text-[var(--vicy-text-secondary)] uppercase tracking-wide flex items-center gap-2">
                   {categoryInfo && <categoryInfo.icon className="w-4 h-4" />}
                   {categoryInfo?.label || category}
                 </h3>
-                <div className="rounded-lg bg-zinc-800/50 border border-zinc-800 divide-y divide-zinc-700">
+                <div className="rounded-lg bg-[var(--vicy-surface)] border border-[var(--vicy-border)] divide-y divide-[var(--vicy-border)]">
                   {categoryFeatures.map((feature) => (
-                    <div key={feature.id} className={`p-4 ${feature.enabled ? 'bg-indigo-500/5' : ''}`}>
+                    <div key={feature.id} className={`p-4 ${feature.enabled ? 'bg-[var(--vicy-accent-glow)]' : ''}`}>
                       <div className="flex items-center justify-between gap-6">
                         <div className="flex items-start gap-4">
                           <div className={`p-2.5 rounded-lg transition-colors ${
-                            feature.enabled ? 'bg-indigo-500/20 text-indigo-400' : 'bg-zinc-800 text-zinc-500'
+                            feature.enabled ? 'bg-[var(--vicy-accent-20)] text-[var(--vicy-accent)]' : 'bg-[var(--vicy-surface-hover)] text-[var(--vicy-text-secondary)]'
                           }`}>
                             {feature.category === 'limit' ? (
                               <span className="text-sm font-bold">
@@ -459,18 +471,18 @@ export default function SystemTab() {
                             )}
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-white">{feature.name}</p>
-                            <p className="text-xs text-zinc-500">{feature.description}</p>
+                            <p className="text-sm font-medium text-[var(--vicy-text-primary)]">{feature.name}</p>
+                            <p className="text-xs text-[var(--vicy-text-secondary)]">{feature.description}</p>
                           </div>
                         </div>
                         {feature.category !== 'limit' && (
                           <button
                             onClick={() => toggleFeature(feature.id, !feature.enabled)}
                             className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                              feature.enabled ? 'bg-indigo-500' : 'bg-zinc-700'
+                              feature.enabled ? 'bg-[var(--vicy-accent)]' : 'bg-[var(--vicy-surface-hover)]'
                             }`}
                           >
-                            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-card transition-transform ${
+                            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
                               feature.enabled ? 'translate-x-5' : 'translate-x-1'
                             }`} />
                           </button>
@@ -489,25 +501,25 @@ export default function SystemTab() {
       {activeTab === 'data' && (
         <div className="space-y-6">
           {/* Export */}
-          <div className="p-6 rounded-lg bg-zinc-800/50 border border-zinc-800">
-            <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-4 flex items-center gap-2">
+          <div className="p-6 rounded-lg bg-[var(--vicy-surface)] border border-[var(--vicy-border)]">
+            <h4 className="text-xs font-medium text-[var(--vicy-text-secondary)] uppercase tracking-wide mb-4 flex items-center gap-2">
               <Download className="h-4 w-4" />
               Daten exportieren
             </h4>
-            <p className="text-zinc-500 text-sm mb-4">
+            <p className="text-[var(--vicy-text-secondary)] text-sm mb-4">
               Exportieren Sie alle Ihre Daten einschließlich Knowledge Base, Workflows und Einstellungen.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => handleExport('json')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-800 text-zinc-300 text-sm hover:bg-zinc-700 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--vicy-surface-hover)] text-[var(--vicy-text-secondary)] text-sm hover:bg-[var(--vicy-surface-hover)] transition-colors"
               >
                 <FileText className="h-4 w-4" />
                 Als JSON
               </button>
               <button
                 onClick={() => handleExport('csv')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-800 text-zinc-300 text-sm hover:bg-zinc-700 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--vicy-surface-hover)] text-[var(--vicy-text-secondary)] text-sm hover:bg-[var(--vicy-surface-hover)] transition-colors"
               >
                 <FileText className="h-4 w-4" />
                 Als CSV
@@ -516,22 +528,23 @@ export default function SystemTab() {
           </div>
 
           {/* Import */}
-          <div className="p-6 rounded-lg bg-zinc-800/50 border border-zinc-800">
-            <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-4 flex items-center gap-2">
+          <div className="p-6 rounded-lg bg-[var(--vicy-surface)] border border-[var(--vicy-border)]">
+            <h4 className="text-xs font-medium text-[var(--vicy-text-secondary)] uppercase tracking-wide mb-4 flex items-center gap-2">
               <Upload className="h-4 w-4" />
               Daten importieren
             </h4>
-            <p className="text-zinc-500 text-sm mb-4">
+            <p className="text-[var(--vicy-text-secondary)] text-sm mb-4">
               Importieren Sie Daten aus einem vorherigen Export oder von anderen Systemen.
             </p>
             <button
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-800 text-zinc-500 text-sm cursor-not-allowed"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--vicy-surface-hover)] text-[var(--vicy-text-secondary)] text-sm cursor-not-allowed"
               disabled
             >
               <Upload className="h-4 w-4" />
               Datei auswählen
+              <span className="ml-2 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Bald verfügbar</span>
             </button>
-            <p className="text-xs text-zinc-600 mt-2">Unterstützt: JSON, CSV</p>
+            <p className="text-xs text-[var(--vicy-text-tertiary)] mt-2">Unterstützt: JSON, CSV</p>
           </div>
 
           {/* Cleanup */}
@@ -540,25 +553,25 @@ export default function SystemTab() {
               <Trash2 className="h-4 w-4" />
               Daten-Bereinigung
             </h4>
-            <p className="text-zinc-500 text-sm mb-4">
+            <p className="text-[var(--vicy-text-secondary)] text-sm mb-4">
               Bereinigen Sie temporäre Daten und alte Logs, um Speicherplatz freizugeben.
             </p>
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={() => handleCleanup('clear-cache')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-800 hover:bg-red-500/10 text-red-400 text-sm border border-red-500/30 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--vicy-surface-hover)] hover:bg-red-500/10 text-red-400 text-sm border border-red-500/30 transition-colors"
               >
                 Cache leeren
               </button>
               <button
                 onClick={() => handleCleanup('clear-old-logs')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-800 hover:bg-red-500/10 text-red-400 text-sm border border-red-500/30 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--vicy-surface-hover)] hover:bg-red-500/10 text-red-400 text-sm border border-red-500/30 transition-colors"
               >
                 Alte Logs löschen
               </button>
               <button
                 onClick={() => handleCleanup('orphaned-data')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-800 hover:bg-red-500/10 text-red-400 text-sm border border-red-500/30 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--vicy-surface-hover)] hover:bg-red-500/10 text-red-400 text-sm border border-red-500/30 transition-colors"
               >
                 Verwaiste Daten bereinigen
               </button>
@@ -566,22 +579,22 @@ export default function SystemTab() {
           </div>
 
           {/* Version Info */}
-          <div className="p-6 rounded-lg bg-zinc-800/50 border border-zinc-800">
-            <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-4 flex items-center gap-2">
+          <div className="p-6 rounded-lg bg-[var(--vicy-surface)] border border-[var(--vicy-border)]">
+            <h4 className="text-xs font-medium text-[var(--vicy-text-secondary)] uppercase tracking-wide mb-4 flex items-center gap-2">
               <Server className="h-4 w-4" />
               Versionsinformationen
             </h4>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-zinc-500 text-sm">Sintra OS Version</span>
-                <span className="font-mono text-white bg-zinc-800 px-3 py-1 rounded-lg text-sm">v2.0.0-stable</span>
+                <span className="text-[var(--vicy-text-secondary)] text-sm">Sintra OS Version</span>
+                <span className="font-mono text-[var(--vicy-text-primary)] bg-[var(--vicy-surface-hover)] px-3 py-1 rounded-lg text-sm">v2.0.0-stable</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-zinc-500 text-sm">Build-Nummer</span>
-                <span className="font-mono text-zinc-400 text-sm">#1847-prod</span>
+                <span className="text-[var(--vicy-text-secondary)] text-sm">Build-Nummer</span>
+                <span className="font-mono text-[var(--vicy-text-secondary)] text-sm">#1847-prod</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-zinc-500 text-sm">Umgebung</span>
+                <span className="text-[var(--vicy-text-secondary)] text-sm">Umgebung</span>
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
                   <span className="text-xs font-medium text-green-400 uppercase tracking-wider">Produktion</span>
@@ -591,6 +604,16 @@ export default function SystemTab() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmCleanup}
+        onOpenChange={(open) => { if (!open) setConfirmCleanup(null); }}
+        title="Bereinigung ausführen"
+        description={`Möchtest du "${confirmCleanup}" wirklich ausführen? Dieser Vorgang kann nicht rückgängig gemacht werden.`}
+        confirmLabel="Ausführen"
+        variant="danger"
+        onConfirm={() => { if (confirmCleanup) executeCleanup(confirmCleanup); }}
+      />
     </div>
   );
 }
@@ -610,7 +633,7 @@ function MetricCard({
   trend?: 'up' | 'down' | 'stable';
 }) {
   const colorClasses = {
-    indigo: 'bg-indigo-500/10 border-indigo-500/20',
+    indigo: 'bg-[var(--vicy-accent-glow)] border-[var(--vicy-accent-20)]',
     green: 'bg-green-500/10 border-green-500/20',
     red: 'bg-red-500/10 border-red-500/20',
     blue: 'bg-blue-500/10 border-blue-500/20',
@@ -619,7 +642,7 @@ function MetricCard({
   };
 
   const iconColorClasses = {
-    indigo: 'text-indigo-400',
+    indigo: 'text-[var(--vicy-accent)]',
     green: 'text-green-400',
     red: 'text-red-400',
     blue: 'text-blue-400',
@@ -637,8 +660,8 @@ function MetricCard({
           </span>
         )}
       </div>
-      <p className="text-2xl font-bold text-white">{value}</p>
-      <p className="text-xs text-zinc-500 mt-1">{title}</p>
+      <p className="text-2xl font-bold text-[var(--vicy-text-primary)]">{value}</p>
+      <p className="text-xs text-[var(--vicy-text-secondary)] mt-1">{title}</p>
     </div>
   );
 }

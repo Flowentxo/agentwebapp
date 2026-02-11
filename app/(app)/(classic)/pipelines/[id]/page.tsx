@@ -40,6 +40,7 @@ import {
   ExecutionStep,
   AutopilotConfig,
   TriggerType,
+  ActionDeck,
 } from "@/components/pipelines/cockpit";
 import { DEFAULT_AUTOPILOT_CONFIG } from "@/components/pipelines/cockpit/AutopilotToggle";
 import { EmergencyStopButton } from "@/components/pipelines/cockpit/EmergencyStopButton";
@@ -763,6 +764,15 @@ export default function PipelineDetailPage() {
             nodeStatuses={nodeStatuses}
             onNodeClick={handleNodeClick}
           />
+
+          {/* ActionDeck Overlay - Swipeable Approval Cards */}
+          {pendingApprovals.length > 0 && (
+            <ActionDeck
+              approvals={pendingApprovals}
+              onApprove={handleApprove}
+              onReject={handleReject}
+            />
+          )}
 
           {/* Dry-Run Badge */}
           {isDryRun && (

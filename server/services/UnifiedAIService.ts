@@ -1,17 +1,16 @@
 /**
- * Unified AI Service for SINTRA System
- * Automatically routes all AI requests to Anthropic Claude Sonnet 4.5
- * Compatible with existing OpenAI-based interfaces
+ * Unified AI Service for Flowent System
+ * Routes all AI requests to OpenAI GPT models.
  *
  * Instrumented with AI Telemetry for cost tracking and performance monitoring.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { logger } from '../utils/logger';
 import { AITelemetryService } from './AITelemetryService';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
 });
 
 interface ChatMessage {
@@ -47,16 +46,15 @@ export class UnifiedAIService {
   private readonly maxTokens: number;
 
   constructor() {
-    this.model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514';
-    this.maxTokens = parseInt(process.env.ANTHROPIC_MAX_TOKENS || '4096');
+    this.model = process.env.OPENAI_MODEL || 'gpt-4o';
+    this.maxTokens = parseInt(process.env.OPENAI_MAX_TOKENS || '4096');
 
-    logger.info('[UNIFIED_AI] Initialized with Anthropic Claude Sonnet 4.5');
+    logger.info('[UNIFIED_AI] Initialized with OpenAI');
     logger.info(`[UNIFIED_AI] Model: ${this.model}, Max Tokens: ${this.maxTokens}`);
   }
 
   /**
-   * Generate chat completion using Claude Sonnet 4.5
-   * Compatible with OpenAI interface for easy migration
+   * Generate chat completion using OpenAI GPT
    *
    * Instrumented with AI Telemetry for automatic logging.
    */
@@ -73,41 +71,43 @@ export class UnifiedAIService {
     let completionTokens = 0;
 
     try {
-      // Extract system message (Claude handles it separately)
-      const systemMessage = messages.find(m => m.role === 'system');
-      const conversationMessages = messages.filter(m => m.role !== 'system');
-
-      // Convert to Claude format
-      const claudeMessages: Anthropic.MessageParam[] = conversationMessages.map(msg => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content
-      }));
-
       const temperature = options.temperature ?? 0.7;
       const maxTokens = options.maxTokens ?? this.maxTokens;
-      const systemPrompt = options.systemPrompt || systemMessage?.content || '';
+      const model = options.model || this.model;
 
-      logger.info('[UNIFIED_AI] Generating completion with Claude', {
-        messageCount: claudeMessages.length,
+      // If a separate systemPrompt is provided, prepend it
+      let finalMessages: ChatMessage[] = messages;
+      if (options.systemPrompt) {
+        const hasSystem = messages.some(m => m.role === 'system');
+        if (!hasSystem) {
+          finalMessages = [{ role: 'system', content: options.systemPrompt }, ...messages];
+        }
+      }
+
+      logger.info('[UNIFIED_AI] Generating completion with OpenAI', {
+        model,
+        messageCount: finalMessages.length,
         temperature,
         maxTokens,
-        hasSystemPrompt: !!systemPrompt
       });
 
-      const response = await anthropic.messages.create({
-        model: this.model,
-        max_tokens: maxTokens,
-        temperature,
-        system: systemPrompt,
-        messages: claudeMessages,
+      // gpt-5/gpt-4o models use max_completion_tokens, others use max_tokens
+      const isNewModel = model.includes('gpt-5') || model.includes('gpt-4o');
+      const tokenKey = isNewModel ? 'max_completion_tokens' : 'max_tokens';
+
+      // gpt-5 models only support temperature=1 (default), so omit it
+      const response = await openai.chat.completions.create({
+        model,
+        messages: finalMessages,
+        ...(model.includes('gpt-5') ? {} : { temperature }),
+        [tokenKey]: maxTokens,
       });
 
-      const content = response.content[0];
-      const responseText = content.type === 'text' ? content.text : '';
+      const responseText = response.choices[0]?.message?.content || '';
 
       // Capture token usage for telemetry
-      promptTokens = response.usage.input_tokens;
-      completionTokens = response.usage.output_tokens;
+      promptTokens = response.usage?.prompt_tokens || 0;
+      completionTokens = response.usage?.completion_tokens || 0;
 
       const result: AIResponse = {
         message: responseText,
@@ -134,15 +134,11 @@ export class UnifiedAIService {
       errorCode = error.status?.toString() || 'UNKNOWN';
       errorMessage = error.message || 'Unknown error occurred';
 
-      // Enhanced error handling for Anthropic
       if (error.status === 401) {
-        throw new Error('Invalid Anthropic API key. Please check your configuration.');
+        throw new Error('Invalid OpenAI API key. Please check your configuration.');
       }
       if (error.status === 429) {
         throw new Error('Rate limit exceeded. Please try again later.');
-      }
-      if (error.status === 529) {
-        throw new Error('Anthropic API is temporarily overloaded. Please try again.');
       }
 
       throw new Error(`AI Service Error: ${error.message || 'Unknown error occurred'}`);
@@ -151,7 +147,7 @@ export class UnifiedAIService {
       const responseTimeMs = timer.stop();
 
       AITelemetryService.logTrace({
-        provider: 'anthropic',
+        provider: 'openai',
         model: this.model,
         requestType: 'chat',
         userId: options.userId,
@@ -173,36 +169,40 @@ export class UnifiedAIService {
 
   /**
    * Generate streaming chat completion
-   * For future implementation
    */
   async* generateStreamingCompletion(
     messages: ChatMessage[],
     options: AICompletionOptions = {}
   ): AsyncGenerator<string, void, unknown> {
     try {
-      const systemMessage = messages.find(m => m.role === 'system');
-      const conversationMessages = messages.filter(m => m.role !== 'system');
-
-      const claudeMessages: Anthropic.MessageParam[] = conversationMessages.map(msg => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content
-      }));
-
       const temperature = options.temperature ?? 0.7;
       const maxTokens = options.maxTokens ?? this.maxTokens;
-      const systemPrompt = options.systemPrompt || systemMessage?.content || '';
+      const model = options.model || this.model;
 
-      const stream = await anthropic.messages.stream({
-        model: this.model,
-        max_tokens: maxTokens,
-        temperature,
-        system: systemPrompt,
-        messages: claudeMessages,
+      // If a separate systemPrompt is provided, prepend it
+      let finalMessages: ChatMessage[] = messages;
+      if (options.systemPrompt) {
+        const hasSystem = messages.some(m => m.role === 'system');
+        if (!hasSystem) {
+          finalMessages = [{ role: 'system', content: options.systemPrompt }, ...messages];
+        }
+      }
+
+      const isNewModel = model.includes('gpt-5') || model.includes('gpt-4o');
+      const tokenKey = isNewModel ? 'max_completion_tokens' : 'max_tokens';
+
+      const stream = await openai.chat.completions.create({
+        model,
+        messages: finalMessages,
+        ...(model.includes('gpt-5') ? {} : { temperature }),
+        [tokenKey]: maxTokens,
+        stream: true,
       });
 
       for await (const chunk of stream) {
-        if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-          yield chunk.delta.text;
+        const content = chunk.choices[0]?.delta?.content;
+        if (content) {
+          yield content;
         }
       }
     } catch (error: any) {
@@ -216,9 +216,9 @@ export class UnifiedAIService {
    */
   async healthCheck(): Promise<boolean> {
     try {
-      await anthropic.messages.create({
+      await openai.chat.completions.create({
         model: this.model,
-        max_tokens: 10,
+        max_completion_tokens: 10,
         messages: [{ role: 'user', content: 'test' }],
       });
       return true;
@@ -233,10 +233,10 @@ export class UnifiedAIService {
    */
   getModelInfo() {
     return {
-      provider: 'anthropic',
+      provider: 'openai',
       model: this.model,
       maxTokens: this.maxTokens,
-      contextWindow: 200000, // Claude Sonnet 4 has 200k context
+      contextWindow: 128000,
     };
   }
 }

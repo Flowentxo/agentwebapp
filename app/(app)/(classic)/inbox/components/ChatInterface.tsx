@@ -12,7 +12,7 @@
  * - Artifact panel integration
  */
 
-import { useMemo, useRef, useCallback, useEffect } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   useThreads,
@@ -28,6 +28,8 @@ import { useInboxStore } from '@/lib/stores/useInboxStore';
 import { getAgentById } from '@/lib/agents/personas';
 import { cn } from '@/lib/utils';
 import { ArrowLeft, Bot, MoreHorizontal, Loader2, FileText } from 'lucide-react';
+import { EmmieCapabilityBar } from '@/components/inbox/emmie/EmmieCapabilityBar';
+import { EmmieTemplatePicker } from '@/components/inbox/emmie/EmmieTemplatePicker';
 import type { ChatMessage } from '@/types/inbox';
 
 interface ChatInterfaceProps {
@@ -38,8 +40,8 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
   const router = useRouter();
   const composerRef = useRef<{ focus: () => void }>(null);
 
-  // Zustand store for artifact panel + routing feedback
-  const { isArtifactPanelOpen, openArtifactById, routingFeedback, clearRoutingFeedback } = useInboxStore();
+  // Zustand store for artifact panel + routing feedback + processing stages
+  const { isArtifactPanelOpen, openArtifactById, routingFeedback, clearRoutingFeedback, processingStages } = useInboxStore();
 
   // Fetch all threads and find the current one
   const { data: threads, isLoading: isLoadingThreads } = useThreads();
@@ -69,7 +71,7 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
       threadId: msg.threadId,
       role: msg.role as 'user' | 'agent' | 'system',
       content: msg.content,
-      createdAt: msg.createdAt,
+      createdAt: msg.createdAt || msg.timestamp || new Date().toISOString(),
       metadata: msg.metadata,
       artifactId: msg.artifactId,
     }));
@@ -121,6 +123,13 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
 
   // Routing feedback for this thread
   const currentRoutingFeedback = routingFeedback[threadId];
+
+  // Processing stage for this thread
+  const processingStage = processingStages[threadId];
+
+  // Emmie-specific state
+  const isEmmie = thread?.agentId === 'emmie';
+  const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
 
   // Loading state
   if (isLoadingThreads || isLoadingMessages) {
@@ -228,6 +237,23 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
           />
         )}
 
+        {/* Processing Stage Indicator */}
+        {processingStage && (
+          <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white/[0.03] border-b border-white/[0.06]">
+            <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" style={{ color: agentColor }} />
+            <span className="text-xs text-white/60 truncate">{processingStage.label}</span>
+          </div>
+        )}
+
+        {/* Emmie Capability Bar */}
+        {isEmmie && (
+          <EmmieCapabilityBar
+            onAction={handleSendMessage}
+            onOpenTemplates={() => setIsTemplatePickerOpen(true)}
+            agentColor={agentColor}
+          />
+        )}
+
         {/* Message Stream */}
         <MessageStream
           messages={messages}
@@ -235,6 +261,8 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
           isTyping={isTyping}
           agentName={agentName}
           agentColor={agentColor}
+          agentId={thread?.agentId}
+          onSuggestedPrompt={handleSendMessage}
         />
 
         {/* Composer */}
@@ -263,6 +291,19 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
         <div className="hidden lg:flex w-[40%] min-w-[400px] max-w-[600px]">
           <ArtifactPanel />
         </div>
+      )}
+
+      {/* Emmie Template Picker */}
+      {isEmmie && (
+        <EmmieTemplatePicker
+          isOpen={isTemplatePickerOpen}
+          onClose={() => setIsTemplatePickerOpen(false)}
+          onSelectTemplate={(prompt) => {
+            handleSendMessage(prompt);
+            setIsTemplatePickerOpen(false);
+          }}
+          agentColor={agentColor}
+        />
       )}
     </div>
   );

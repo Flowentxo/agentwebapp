@@ -40,6 +40,9 @@ interface InboxState {
   // Orchestration State
   routingFeedback: Record<string, { agentId?: string; agentName: string; confidence: number; reasoning: string; previousAgent?: string; timestamp: number }>;
 
+  // Processing Stage State (per-thread, transient)
+  processingStages: Record<string, { stage: string; agentName: string; label: string } | null>;
+
   // UI Version (Classic v3 vs Next/Vicy v4)
   uiVersion: 'classic' | 'next';
 
@@ -65,6 +68,10 @@ interface InboxState {
   // Orchestration Actions
   setRoutingFeedback: (threadId: string, feedback: { agentId?: string; agentName: string; confidence: number; reasoning: string; previousAgent?: string }) => void;
   clearRoutingFeedback: (threadId: string) => void;
+
+  // Processing Stage Actions
+  setProcessingStage: (threadId: string, stage: { stage: string; agentName: string; label: string }) => void;
+  clearProcessingStage: (threadId: string) => void;
 }
 
 export const useInboxStore = create<InboxState>()(
@@ -87,6 +94,9 @@ export const useInboxStore = create<InboxState>()(
 
       // Orchestration initial state
       routingFeedback: {},
+
+      // Processing stage initial state
+      processingStages: {},
 
       // UI Version
       uiVersion: 'classic',
@@ -168,6 +178,15 @@ export const useInboxStore = create<InboxState>()(
         const { [threadId]: _, ...rest } = state.routingFeedback;
         return { routingFeedback: rest };
       }),
+
+      // Processing Stage Actions
+      setProcessingStage: (threadId, stage) => set((state) => ({
+        processingStages: { ...state.processingStages, [threadId]: stage },
+      })),
+
+      clearProcessingStage: (threadId) => set((state) => ({
+        processingStages: { ...state.processingStages, [threadId]: null },
+      })),
     }),
     {
       name: 'flowent-inbox-store',

@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { workflowGenerator } from '@/server/services/workflow/WorkflowGenerator';
+import { validateAndEnhance } from '@/server/services/workflow/WorkflowValidator';
 import {
   QUICK_EXAMPLES,
   EXAMPLE_PROMPTS,
@@ -75,26 +76,37 @@ export async function POST(req: NextRequest) {
 
     const { workflow } = result;
 
+    // Phase II: Validate and auto-inject approval nodes before risky actions
+    const enhanced = validateAndEnhance(workflow);
+
+    if (enhanced.injectionReport.injectedCount > 0) {
+      console.log(
+        `[PIPELINE_GENERATE] Auto-injected ${enhanced.injectionReport.injectedCount} approval node(s):`,
+        enhanced.injectionReport.injections.map((i) => i.reason)
+      );
+    }
+
     // Transform nodes to use pipeline-node type with nodeType in data
-    const transformedNodes = workflow.nodes.map((node: any) => ({
+    const transformedNodes = enhanced.nodes.map((node: any) => ({
       ...node,
       type: 'pipeline-node',
       data: {
         ...node.data,
-        nodeType: node.type, // Move the node type into data.nodeType
+        nodeType: node.data?.nodeType || node.type, // Preserve nodeType if already set
       },
     }));
 
-    console.log(`[PIPELINE_GENERATE] Successfully generated pipeline: ${workflow.name}`);
+    console.log(`[PIPELINE_GENERATE] Successfully generated pipeline: ${enhanced.name}`);
 
     return NextResponse.json({
       success: true,
       pipeline: {
-        name: workflow.name,
-        description: workflow.description,
+        name: enhanced.name,
+        description: enhanced.description,
         nodes: transformedNodes,
-        edges: workflow.edges,
+        edges: enhanced.edges,
       },
+      injectionReport: enhanced.injectionReport,
     });
   } catch (error: any) {
     console.error('[PIPELINE_GENERATE] Error:', error);

@@ -326,91 +326,91 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
     <div className="w-full px-6 py-6 space-y-6">
       {/* Status Cards */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="p-4 rounded-xl bg-card border-2 border-border">
+        <div className="p-4 rounded-xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)]">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-xl bg-muted">
-              <Shield className={`w-4 h-4 ${profile.mfaEnabled ? 'text-emerald-500' : 'text-muted-foreground'}`} />
+            <div className="p-2 rounded-xl bg-[var(--vicy-glass-bg)]">
+              <Shield className={`w-4 h-4 ${profile.mfaEnabled ? 'text-emerald-500' : 'text-[var(--vicy-text-secondary)]'}`} />
             </div>
-            <span className={`text-xs px-2 py-0.5 rounded-lg ${profile.mfaEnabled ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30' : 'bg-muted text-muted-foreground'}`}>
+            <span className={`text-xs px-2 py-0.5 rounded-lg ${profile.mfaEnabled ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30' : 'bg-[var(--vicy-glass-bg)] text-[var(--vicy-text-secondary)]'}`}>
               {profile.mfaEnabled ? 'Aktiv' : 'Inaktiv'}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground">2FA</p>
-          <p className="text-sm text-foreground font-medium">{profile.mfaEnabled ? 'Aktiviert' : 'Deaktiviert'}</p>
+          <p className="text-xs text-[var(--vicy-text-secondary)]">2FA</p>
+          <p className="text-sm text-[var(--vicy-text-primary)] font-medium">{profile.mfaEnabled ? 'Aktiviert' : 'Deaktiviert'}</p>
         </div>
 
-        <div className="p-4 rounded-xl bg-card border-2 border-border">
+        <div className="p-4 rounded-xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)]">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-xl bg-muted">
-              <Key className="w-4 h-4 text-primary" />
+            <div className="p-2 rounded-xl bg-[var(--vicy-glass-bg)]">
+              <Key className="w-4 h-4 text-[var(--vicy-accent)]" />
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">Passwort</p>
-          <p className="text-sm text-foreground font-medium">Geschützt</p>
+          <p className="text-xs text-[var(--vicy-text-secondary)]">Passwort</p>
+          <p className="text-sm text-[var(--vicy-text-primary)] font-medium">Geschützt</p>
         </div>
 
-        <div className="p-4 rounded-xl bg-card border-2 border-border">
+        <div className="p-4 rounded-xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)]">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-xl bg-muted">
-              <Lock className={`w-4 h-4 ${profile.emailVerified ? 'text-emerald-500' : 'text-muted-foreground'}`} />
+            <div className="p-2 rounded-xl bg-[var(--vicy-glass-bg)]">
+              <Lock className={`w-4 h-4 ${profile.emailVerified ? 'text-emerald-500' : 'text-[var(--vicy-text-secondary)]'}`} />
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">E-Mail</p>
-          <p className="text-sm text-foreground font-medium">{profile.emailVerified ? 'Verifiziert' : 'Nicht verifiziert'}</p>
+          <p className="text-xs text-[var(--vicy-text-secondary)]">E-Mail</p>
+          <p className="text-sm text-[var(--vicy-text-primary)] font-medium">{profile.emailVerified ? 'Verifiziert' : 'Nicht verifiziert'}</p>
         </div>
       </div>
 
       {/* Password Section */}
-      <div className="p-6 rounded-xl bg-card border-2 border-border">
+      <div className="p-6 rounded-xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)]">
         <button
           onClick={() => setShowPasswordForm(!showPasswordForm)}
           className="w-full flex items-center justify-between"
         >
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-muted">
-              <Lock className="w-4 h-4 text-muted-foreground" />
+            <div className="p-2 rounded-xl bg-[var(--vicy-glass-bg)]">
+              <Lock className="w-4 h-4 text-[var(--vicy-text-secondary)]" />
             </div>
             <div className="text-left">
-              <p className="text-sm font-medium text-foreground">Passwort ändern</p>
-              <p className="text-xs text-muted-foreground">Aktualisieren Sie Ihr Passwort</p>
+              <p className="text-sm font-medium text-[var(--vicy-text-primary)]">Passwort ändern</p>
+              <p className="text-xs text-[var(--vicy-text-secondary)]">Aktualisieren Sie Ihr Passwort</p>
             </div>
           </div>
-          {showPasswordForm ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          {showPasswordForm ? <ChevronUp className="w-4 h-4 text-[var(--vicy-text-secondary)]" /> : <ChevronDown className="w-4 h-4 text-[var(--vicy-text-secondary)]" />}
         </button>
 
         {showPasswordForm && (
           <div className="mt-6 space-y-4">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Aktuelles Passwort</label>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-input border-2 border-border focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/20">
+              <label className="block text-xs font-medium text-[var(--vicy-text-secondary)] mb-1.5">Aktuelles Passwort</label>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--vicy-glass-bg)] border-2 border-[var(--vicy-border)] focus-within:border-[var(--vicy-accent)]/40 focus-within:ring-2 focus-within:ring-primary/20">
                 <input
                   type={showCurrentPassword ? 'text' : 'password'}
                   value={passwordData.currentPassword}
                   onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
-                  className="flex-1 bg-transparent text-foreground text-sm outline-none"
+                  className="flex-1 bg-transparent text-[var(--vicy-text-primary)] text-sm outline-none"
                 />
-                <button onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="text-muted-foreground hover:text-foreground">
+                <button onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="text-[var(--vicy-text-secondary)] hover:text-[var(--vicy-text-primary)]">
                   {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Neues Passwort</label>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-input border-2 border-border focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/20">
+              <label className="block text-xs font-medium text-[var(--vicy-text-secondary)] mb-1.5">Neues Passwort</label>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--vicy-glass-bg)] border-2 border-[var(--vicy-border)] focus-within:border-[var(--vicy-accent)]/40 focus-within:ring-2 focus-within:ring-primary/20">
                 <input
                   type={showNewPassword ? 'text' : 'password'}
                   value={passwordData.newPassword}
                   onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
-                  className="flex-1 bg-transparent text-foreground text-sm outline-none"
+                  className="flex-1 bg-transparent text-[var(--vicy-text-primary)] text-sm outline-none"
                 />
-                <button onClick={() => setShowNewPassword(!showNewPassword)} className="text-muted-foreground hover:text-foreground">
+                <button onClick={() => setShowNewPassword(!showNewPassword)} className="text-[var(--vicy-text-secondary)] hover:text-[var(--vicy-text-primary)]">
                   {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
               {passwordData.newPassword && (
                 <div className="mt-2">
-                  <div className="h-1 rounded-full bg-muted overflow-hidden">
+                  <div className="h-1 rounded-full bg-[var(--vicy-glass-bg)] overflow-hidden">
                     <div
                       className={`h-full transition-all ${passwordStrength < 50 ? 'bg-red-500' : passwordStrength < 75 ? 'bg-yellow-500' : 'bg-emerald-500'}`}
                       style={{ width: `${passwordStrength}%` }}
@@ -421,12 +421,12 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Passwort bestätigen</label>
+              <label className="block text-xs font-medium text-[var(--vicy-text-secondary)] mb-1.5">Passwort bestätigen</label>
               <input
                 type="password"
                 value={passwordData.confirmPassword}
                 onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-input border-2 border-border text-foreground text-sm outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+                className="w-full px-3 py-2 rounded-xl bg-[var(--vicy-glass-bg)] border-2 border-[var(--vicy-border)] text-[var(--vicy-text-primary)] text-sm outline-none focus:border-[var(--vicy-accent-50)]/40 focus:ring-2 focus:ring-[var(--vicy-accent-20)]/20"
               />
             </div>
 
@@ -439,7 +439,7 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
             <button
               onClick={handlePasswordSubmit}
               disabled={passwordSaving}
-              className="w-full py-2 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 disabled:opacity-40 transition-colors"
+              className="w-full py-2 rounded-xl bg-[var(--vicy-accent-glow)] text-[var(--vicy-accent)] text-sm font-medium hover:bg-[var(--vicy-accent-20)] disabled:opacity-40 transition-colors"
             >
               {passwordSaving ? 'Speichern...' : 'Passwort ändern'}
             </button>
@@ -448,15 +448,15 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
       </div>
 
       {/* 2FA Section */}
-      <div className="p-6 rounded-xl bg-card border-2 border-border">
+      <div className="p-6 rounded-xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-muted">
-              <Smartphone className="w-4 h-4 text-muted-foreground" />
+            <div className="p-2 rounded-xl bg-[var(--vicy-glass-bg)]">
+              <Smartphone className="w-4 h-4 text-[var(--vicy-text-secondary)]" />
             </div>
             <div>
-              <p className="text-sm font-medium text-foreground">Zwei-Faktor-Authentifizierung</p>
-              <p className="text-xs text-muted-foreground">Zusätzliche Sicherheit mit TOTP</p>
+              <p className="text-sm font-medium text-[var(--vicy-text-primary)]">Zwei-Faktor-Authentifizierung</p>
+              <p className="text-xs text-[var(--vicy-text-secondary)]">Zusätzliche Sicherheit mit TOTP</p>
             </div>
           </div>
           {profile.mfaEnabled ? (
@@ -471,7 +471,7 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
             <button
               onClick={handleMfaSetup}
               disabled={mfaLoading}
-              className="px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"
+              className="px-4 py-2 rounded-xl bg-[var(--vicy-accent-glow)] text-[var(--vicy-accent)] text-sm font-medium hover:bg-[var(--vicy-accent-20)] transition-colors"
             >
               Aktivieren
             </button>
@@ -486,23 +486,23 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
         )}
 
         {showMfaSetup && (
-          <div className="mt-6 p-5 rounded-xl bg-muted/50 border-2 border-border">
+          <div className="mt-6 p-5 rounded-xl bg-[var(--vicy-glass-bg)] border-2 border-[var(--vicy-border)]">
             {mfaStep === 'qr' && (
               <div className="space-y-5">
                 {/* Header */}
                 <div className="text-center">
-                  <h3 className="text-lg font-semibold text-foreground mb-1">Authenticator einrichten</h3>
-                  <p className="text-sm text-muted-foreground">Scannen Sie den QR-Code mit Google Authenticator, Authy oder einer anderen TOTP-App</p>
+                  <h3 className="text-lg font-semibold text-[var(--vicy-text-primary)] mb-1">Authenticator einrichten</h3>
+                  <p className="text-sm text-[var(--vicy-text-secondary)]">Scannen Sie den QR-Code mit Google Authenticator, Authy oder einer anderen TOTP-App</p>
                 </div>
 
                 {/* QR Code */}
                 <div className="flex justify-center">
-                  <div className="p-4 bg-card rounded-xl shadow-lg border-2 border-border">
+                  <div className="p-4 bg-[var(--vicy-surface)] rounded-xl shadow-lg border-2 border-[var(--vicy-border)]">
                     {mfaQrCode ? (
                       <img src={mfaQrCode} alt="QR Code für 2FA" className="w-48 h-48" />
                     ) : (
-                      <div className="w-48 h-48 flex items-center justify-center bg-muted">
-                        <span className="text-muted-foreground text-sm">Lädt...</span>
+                      <div className="w-48 h-48 flex items-center justify-center bg-[var(--vicy-glass-bg)]">
+                        <span className="text-[var(--vicy-text-secondary)] text-sm">Lädt...</span>
                       </div>
                     )}
                   </div>
@@ -512,7 +512,7 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
                 <div className="text-center">
                   <button
                     onClick={() => setShowManualEntry(!showManualEntry)}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    className="text-xs text-[var(--vicy-text-secondary)] hover:text-[var(--vicy-text-primary)] transition-colors"
                   >
                     {showManualEntry ? 'QR-Code anzeigen' : 'Code manuell eingeben?'}
                   </button>
@@ -520,18 +520,18 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
 
                 {/* Manual Secret */}
                 {showManualEntry && mfaSecret && (
-                  <div className="p-4 rounded-xl bg-card border-2 border-border">
-                    <p className="text-xs text-muted-foreground mb-2">Manueller Schlüssel:</p>
+                  <div className="p-4 rounded-xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)]">
+                    <p className="text-xs text-[var(--vicy-text-secondary)] mb-2">Manueller Schlüssel:</p>
                     <div className="flex items-center gap-2">
-                      <code className="flex-1 text-sm font-mono text-primary break-all">{mfaSecret}</code>
+                      <code className="flex-1 text-sm font-mono text-[var(--vicy-accent)] break-all">{mfaSecret}</code>
                       <button
                         onClick={() => copyCode(mfaSecret)}
-                        className="p-2 rounded-xl bg-muted hover:bg-muted/80 transition-colors"
+                        className="p-2 rounded-xl bg-[var(--vicy-glass-bg)] hover:bg-[var(--vicy-surface-hover)] transition-colors"
                       >
                         {copiedCode === mfaSecret ? (
                           <Check className="w-4 h-4 text-emerald-500" />
                         ) : (
-                          <Copy className="w-4 h-4 text-muted-foreground" />
+                          <Copy className="w-4 h-4 text-[var(--vicy-text-secondary)]" />
                         )}
                       </button>
                     </div>
@@ -541,7 +541,7 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
                 {/* Continue Button */}
                 <button
                   onClick={() => setMfaStep('verify')}
-                  className="w-full py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
+                  className="w-full py-2.5 rounded-xl bg-[var(--vicy-accent)] text-white text-sm font-medium hover:bg-[var(--vicy-accent-90)] transition-colors"
                 >
                   Weiter zur Verifizierung
                 </button>
@@ -552,8 +552,8 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
               <div className="space-y-5">
                 {/* Header */}
                 <div className="text-center">
-                  <h3 className="text-lg font-semibold text-foreground mb-1">Code verifizieren</h3>
-                  <p className="text-sm text-muted-foreground">Geben Sie den 6-stelligen Code aus Ihrer Authenticator-App ein</p>
+                  <h3 className="text-lg font-semibold text-[var(--vicy-text-primary)] mb-1">Code verifizieren</h3>
+                  <p className="text-sm text-[var(--vicy-text-secondary)]">Geben Sie den 6-stelligen Code aus Ihrer Authenticator-App ein</p>
                 </div>
 
                 {/* Code Input */}
@@ -565,7 +565,7 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
                       setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6));
                       setMfaError(null);
                     }}
-                    className="w-full px-4 py-4 rounded-xl bg-input border-2 border-border text-foreground text-center text-3xl font-mono tracking-[0.5em] outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-all"
+                    className="w-full px-4 py-4 rounded-xl bg-[var(--vicy-glass-bg)] border-2 border-[var(--vicy-border)] text-[var(--vicy-text-primary)] text-center text-3xl font-mono tracking-[0.5em] outline-none focus:border-[var(--vicy-accent-50)]/40 focus:ring-2 focus:ring-[var(--vicy-accent-20)]/20 transition-all"
                     placeholder="000000"
                     maxLength={6}
                     autoFocus
@@ -586,14 +586,14 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
                       setMfaStep('qr');
                       setMfaError(null);
                     }}
-                    className="flex-1 py-2.5 rounded-xl bg-muted text-foreground text-sm font-medium border-2 border-border hover:bg-muted/80 transition-colors"
+                    className="flex-1 py-2.5 rounded-xl bg-[var(--vicy-glass-bg)] text-[var(--vicy-text-primary)] text-sm font-medium border-2 border-[var(--vicy-border)] hover:bg-[var(--vicy-surface-hover)] transition-colors"
                   >
                     Zurück
                   </button>
                   <button
                     onClick={handleMfaVerify}
                     disabled={mfaCode.length !== 6 || mfaLoading}
-                    className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="flex-1 py-2.5 rounded-xl bg-[var(--vicy-accent)] text-white text-sm font-medium hover:bg-[var(--vicy-accent-90)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     {mfaLoading ? 'Verifiziere...' : 'Aktivieren'}
                   </button>
@@ -608,8 +608,8 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 mb-3">
                     <Check className="w-6 h-6 text-emerald-500" />
                   </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-1">2FA aktiviert!</h3>
-                  <p className="text-sm text-muted-foreground">Speichern Sie Ihre Wiederherstellungs-Codes sicher</p>
+                  <h3 className="text-lg font-semibold text-[var(--vicy-text-primary)] mb-1">2FA aktiviert!</h3>
+                  <p className="text-sm text-[var(--vicy-text-secondary)]">Speichern Sie Ihre Wiederherstellungs-Codes sicher</p>
                 </div>
 
                 {/* Warning */}
@@ -629,13 +629,13 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
                     <button
                       key={i}
                       onClick={() => copyCode(code)}
-                      className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-card border-2 border-border text-sm font-mono text-foreground hover:border-primary/30 hover:bg-muted transition-colors"
+                      className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)] text-sm font-mono text-[var(--vicy-text-primary)] hover:border-[var(--vicy-accent)]/30 hover:bg-[var(--vicy-surface-hover)] transition-colors"
                     >
                       <span>{code}</span>
                       {copiedCode === code ? (
                         <Check className="w-4 h-4 text-emerald-500" />
                       ) : (
-                        <Copy className="w-4 h-4 text-muted-foreground" />
+                        <Copy className="w-4 h-4 text-[var(--vicy-text-secondary)]" />
                       )}
                     </button>
                   ))}
@@ -645,7 +645,7 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
                 <div className="flex gap-3">
                   <button
                     onClick={downloadCodes}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-muted text-foreground text-sm font-medium border-2 border-border hover:bg-muted/80 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[var(--vicy-glass-bg)] text-[var(--vicy-text-primary)] text-sm font-medium border-2 border-[var(--vicy-border)] hover:bg-[var(--vicy-surface-hover)] transition-colors"
                   >
                     <Download className="w-4 h-4" />
                     Herunterladen
@@ -657,7 +657,7 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
                       setMfaCode('');
                       setMfaError(null);
                     }}
-                    className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
+                    className="flex-1 py-2.5 rounded-xl bg-[var(--vicy-accent)] text-white text-sm font-medium hover:bg-[var(--vicy-accent-90)] transition-colors"
                   >
                     Fertig
                   </button>
@@ -669,15 +669,15 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
       </div>
 
       {/* Sudo Mode / Re-Authentication Timeout Section */}
-      <div className="p-6 rounded-xl bg-card border-2 border-border">
+      <div className="p-6 rounded-xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)]">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-muted">
-              <Clock className="w-4 h-4 text-muted-foreground" />
+            <div className="p-2 rounded-xl bg-[var(--vicy-glass-bg)]">
+              <Clock className="w-4 h-4 text-[var(--vicy-text-secondary)]" />
             </div>
             <div>
-              <p className="text-sm font-medium text-foreground">Sicherheits-Timeout</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-sm font-medium text-[var(--vicy-text-primary)]">Sicherheits-Timeout</p>
+              <p className="text-xs text-[var(--vicy-text-secondary)] mt-0.5">
                 Wie lange sensible Aktionen ohne erneute Passwort-Eingabe durchgeführt werden können
               </p>
             </div>
@@ -693,8 +693,8 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
                 disabled={sudoTimeoutSaving}
                 className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   sudoTimeout === option.value
-                    ? 'bg-primary/10 text-primary border-2 border-primary/30'
-                    : 'bg-card text-muted-foreground border-2 border-border hover:border-primary/30 hover:text-foreground'
+                    ? 'bg-[var(--vicy-accent-glow)] text-[var(--vicy-accent)] border-2 border-[var(--vicy-accent)]/30'
+                    : 'bg-[var(--vicy-surface)] text-[var(--vicy-text-secondary)] border-2 border-[var(--vicy-border)] hover:border-[var(--vicy-accent)]/30 hover:text-[var(--vicy-text-primary)]'
                 } ${sudoTimeoutSaving ? 'opacity-50 cursor-wait' : ''}`}
               >
                 {option.label}
@@ -703,9 +703,9 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
           </div>
 
           {/* Info Box */}
-          <div className="flex items-start gap-2 p-3 rounded-xl bg-muted/50 border-2 border-border">
-            <AlertCircle className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-muted-foreground">
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-[var(--vicy-glass-bg)] border-2 border-[var(--vicy-border)]">
+            <AlertCircle className="w-4 h-4 text-[var(--vicy-text-secondary)] mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-[var(--vicy-text-secondary)]">
               {sudoTimeout === 0
                 ? 'Bei jeder sensiblen Aktion (z.B. Passkey löschen) wird Ihr Passwort erneut abgefragt.'
                 : `Nach der Anmeldung können Sie ${sudoTimeout} Minuten lang sensible Aktionen ohne erneute Passwort-Eingabe durchführen.`}
@@ -731,8 +731,8 @@ WICHTIG: Jeder Code kann nur einmal verwendet werden.
           <div className="flex items-center gap-3">
             <Shield className="w-5 h-5 text-amber-500" />
             <div>
-              <p className="text-sm text-foreground font-medium">Sicherheitsempfehlung</p>
-              <p className="text-xs text-muted-foreground">Aktivieren Sie 2FA für zusätzliche Sicherheit</p>
+              <p className="text-sm text-[var(--vicy-text-primary)] font-medium">Sicherheitsempfehlung</p>
+              <p className="text-xs text-[var(--vicy-text-secondary)]">Aktivieren Sie 2FA für zusätzliche Sicherheit</p>
             </div>
           </div>
         </div>

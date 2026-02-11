@@ -58,10 +58,10 @@ export default function SettingsHeader({ profile, onLogout }: SettingsHeaderProp
     <div className="flex items-center justify-between">
       {/* Left: Title & Subtitle */}
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">
+        <h1 className="text-2xl font-bold text-[var(--vicy-text-primary)] tracking-tight">
           Einstellungen
         </h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-[var(--vicy-text-secondary)]">
           Verwalte dein Konto, Sicherheit und Präferenzen
         </p>
       </div>
@@ -96,7 +96,7 @@ export default function SettingsHeader({ profile, onLogout }: SettingsHeaderProp
         {/* User Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-3 pl-1 pr-3 py-1 rounded-xl bg-muted border border-border hover:bg-muted/80 hover:border-primary/30 transition-all group">
+            <button className="flex items-center gap-3 pl-1 pr-3 py-1 rounded-xl bg-[var(--vicy-surface)] border border-[var(--vicy-border)] hover:bg-[var(--vicy-surface-hover)] hover:border-[var(--vicy-accent-30)] transition-all group">
               {/* Avatar */}
               <div className="relative">
                 {profile.avatarUrl ? (
@@ -111,26 +111,26 @@ export default function SettingsHeader({ profile, onLogout }: SettingsHeaderProp
                   </div>
                 )}
                 {/* Online indicator */}
-                <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-background" />
+                <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[var(--vicy-bg)]" />
               </div>
 
               {/* Name */}
               <div className="hidden sm:flex flex-col items-start min-w-0">
-                <span className="text-sm font-medium text-foreground truncate max-w-[120px]">
+                <span className="text-sm font-medium text-[var(--vicy-text-primary)] truncate max-w-[120px]">
                   {profile.displayName || 'User'}
                 </span>
-                <span className="text-[11px] text-muted-foreground truncate max-w-[120px]">
+                <span className="text-[11px] text-[var(--vicy-text-secondary)] truncate max-w-[120px]">
                   {profile.email}
                 </span>
               </div>
 
-              <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+              <ChevronDown className="h-4 w-4 text-[var(--vicy-text-secondary)] group-hover:text-[var(--vicy-text-primary)] transition-colors" />
             </button>
           </DropdownMenuTrigger>
 
           <DropdownMenuContent
             align="end"
-            className="w-56 p-1.5 bg-popover backdrop-blur-xl border-border rounded-xl shadow-2xl"
+            className="w-56 p-1.5 bg-[var(--vicy-surface)] backdrop-blur-xl border-[var(--vicy-border)] rounded-xl shadow-2xl"
           >
             {/* User Info */}
             <div className="px-3 py-2.5 mb-1">
@@ -147,22 +147,22 @@ export default function SettingsHeader({ profile, onLogout }: SettingsHeaderProp
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{profile.displayName}</p>
-                  <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
+                  <p className="text-sm font-medium text-[var(--vicy-text-primary)] truncate">{profile.displayName}</p>
+                  <p className="text-xs text-[var(--vicy-text-secondary)] truncate">{profile.email}</p>
                 </div>
               </div>
             </div>
 
-            <DropdownMenuSeparator className="bg-border" />
+            <DropdownMenuSeparator className="bg-[var(--vicy-border)]" />
 
             <DropdownMenuItem
               onClick={() => router.push('/dashboard')}
-              className="px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+              className="px-3 py-2 rounded-lg text-sm text-[var(--vicy-text-secondary)] hover:text-[var(--vicy-text-primary)] hover:bg-[var(--vicy-surface-hover)] cursor-pointer"
             >
               Zum Dashboard
             </DropdownMenuItem>
 
-            <DropdownMenuSeparator className="bg-border" />
+            <DropdownMenuSeparator className="bg-[var(--vicy-border)]" />
 
             <DropdownMenuItem
               onClick={handleLogout}

@@ -13,7 +13,7 @@ import { logger } from '../utils/logger';
 import { authenticateToken } from '../middleware/auth';
 import { toolActionParser } from '../services/ToolActionParser';
 import { inboxApprovalService } from '../services/InboxApprovalService';
-import { emitInboxMessage, emitInboxThreadUpdate, emitApprovalUpdate, emitInboxTyping, emitAgentRouted } from '../socket';
+import { emitInboxMessage, emitInboxThreadUpdate, emitApprovalUpdate, emitInboxTyping, emitAgentRouted, emitInboxMessageStream, emitInboxMessageComplete, emitInboxSystemEvent } from '../socket';
 import { getAgentById } from '../../lib/agents/personas';
 import { getAgentSystemPrompt } from '../../lib/agents/prompts';
 import { UnifiedAIService } from '../services/UnifiedAIService';
@@ -721,7 +721,16 @@ async function generateAgentResponse(
       isTyping: true,
     });
 
-    // 2. Get agent persona and system prompt
+    // 2. Emit "thinking" processing stage
+    emitInboxSystemEvent(threadId, {
+      id: `stage-${Date.now()}-thinking`,
+      type: 'workflow_started',
+      content: `${effectiveAgentName} is analyzing your request...`,
+      metadata: { eventType: 'processing_stage', stage: 'thinking', agentId: effectiveAgentId, agentName: effectiveAgentName },
+      timestamp: new Date().toISOString(),
+    });
+
+    // 3. Get agent persona and system prompt
     const agent = getAgentById(effectiveAgentId);
     if (!agent) {
       logger.warn(`[INBOX_AI] Agent ${effectiveAgentId} not found, using default omni`);
@@ -731,7 +740,7 @@ async function generateAgentResponse(
       ? await getAgentSystemPrompt(agent, userId)
       : `You are a helpful AI assistant. Respond professionally and helpfully to user questions.`;
 
-    // 3. Load conversation history (last 10 messages)
+    // 4. Load conversation history (last 10 messages)
     const history = await db
       .select()
       .from(inboxMessages)
@@ -748,7 +757,7 @@ async function generateAgentResponse(
         content: msg.content,
       }));
 
-    // 4. Build messages array for AI
+    // 5. Build messages array for AI
     const messages = [
       { role: 'system' as const, content: systemPrompt },
       ...conversationHistory,
@@ -757,17 +766,48 @@ async function generateAgentResponse(
 
     logger.info(`[INBOX_AI] Calling AI service with ${messages.length} messages (agent: ${effectiveAgentId})`);
 
-    // 5. Generate AI response
-    const aiResponse = await aiService.generateChatCompletion(messages, {
-      temperature: 0.7,
-      maxTokens: 2000,
-      userId,
-      agentId: effectiveAgentId,
+    // 6. Pre-create message row in DB (needed for streaming message ID)
+    const [agentMessage] = await db
+      .insert(inboxMessages)
+      .values({
+        threadId,
+        role: 'agent',
+        type: 'text',
+        content: '', // Will be updated after streaming completes
+      })
+      .returning();
+
+    // 7. Emit "generating" processing stage
+    emitInboxSystemEvent(threadId, {
+      id: `stage-${Date.now()}-generating`,
+      type: 'workflow_started',
+      content: `${effectiveAgentName} is writing...`,
+      metadata: { eventType: 'processing_stage', stage: 'generating', agentId: effectiveAgentId, agentName: effectiveAgentName },
+      timestamp: new Date().toISOString(),
     });
 
-    logger.info(`[INBOX_AI] AI response generated: ${aiResponse.message.substring(0, 100)}...`);
+    // 8. Stream AI response token-by-token
+    let fullResponse = '';
+    for await (const chunk of aiService.generateStreamingCompletion(messages, {
+      temperature: 0.7,
+      maxTokens: 2000,
+    })) {
+      fullResponse += chunk;
+      emitInboxMessageStream(threadId, { messageId: agentMessage.id, content: chunk });
+    }
 
-    // 6. Stop typing indicator
+    logger.info(`[INBOX_AI] AI response streamed: ${fullResponse.substring(0, 100)}...`);
+
+    // 9. Update DB with full response content
+    await db
+      .update(inboxMessages)
+      .set({ content: fullResponse })
+      .where(eq(inboxMessages.id, agentMessage.id));
+
+    // 10. Emit stream completion
+    emitInboxMessageComplete(threadId, agentMessage.id);
+
+    // 11. Stop typing indicator
     emitInboxTyping({
       threadId,
       agentId: effectiveAgentId,
@@ -775,19 +815,8 @@ async function generateAgentResponse(
       isTyping: false,
     });
 
-    // 7. Save agent response to database
-    const [agentMessage] = await db
-      .insert(inboxMessages)
-      .values({
-        threadId,
-        role: 'agent',
-        type: 'text',
-        content: aiResponse.message,
-      })
-      .returning();
-
-    // 8. Check for tool actions in agent response
-    const hasToolActions = toolActionParser.hasToolActions(aiResponse.message);
+    // 12. Check for tool actions in agent response
+    const hasToolActions = toolActionParser.hasToolActions(fullResponse);
     let processResult = null;
 
     if (hasToolActions) {
@@ -797,15 +826,15 @@ async function generateAgentResponse(
           threadId,
           effectiveAgentId,
           effectiveAgentName,
-          aiResponse.message
+          fullResponse
         );
       } catch (err) {
         logger.error('[INBOX_AI] Error processing tool actions:', err);
       }
     }
 
-    // 9. Update thread preview
-    const agentPreview = toolActionParser.stripToolActions(aiResponse.message).substring(0, 200);
+    // 13. Update thread preview
+    const agentPreview = toolActionParser.stripToolActions(fullResponse).substring(0, 200);
     const newLastMessageAt = new Date();
 
     await db
@@ -819,19 +848,19 @@ async function generateAgentResponse(
       })
       .where(eq(inboxThreads.id, threadId));
 
-    // 10. Emit agent message to thread subscribers
+    // 14. Emit final complete message to thread subscribers
     emitInboxMessage({
       id: agentMessage.id,
       threadId,
       role: 'agent',
       type: 'text',
-      content: aiResponse.message,
+      content: fullResponse,
       agentId: effectiveAgentId,
       agentName: effectiveAgentName,
       timestamp: agentMessage.createdAt?.toISOString() || new Date().toISOString(),
     });
 
-    // 11. Emit thread update to sidebar
+    // 15. Emit thread update to sidebar
     emitInboxThreadUpdate(userId, {
       id: threadId,
       subject: '', // Will be populated from DB
@@ -841,7 +870,7 @@ async function generateAgentResponse(
       lastMessageAt: newLastMessageAt.toISOString(),
     });
 
-    logger.info(`[INBOX_AI] Agent response saved and emitted for thread ${threadId}`);
+    logger.info(`[INBOX_AI] Agent response streamed and saved for thread ${threadId}`);
 
   } catch (error: any) {
     logger.error(`[INBOX_AI] Error generating agent response:`, error);

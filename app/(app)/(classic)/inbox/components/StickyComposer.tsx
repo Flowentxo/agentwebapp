@@ -189,7 +189,7 @@ export function StickyComposer({
           maxRows={5}
           className={cn(
             'flex-1 resize-none bg-transparent text-sm text-white',
-            'placeholder-white/30 focus:outline-none',
+            'placeholder-white/40 focus:outline-none',
             'scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent'
           )}
         />
@@ -213,7 +213,7 @@ export function StickyComposer({
           className={cn(
             'flex-shrink-0 p-2.5 rounded-xl transition-all duration-200',
             canSend
-              ? 'bg-violet-500 hover:bg-violet-400 text-white shadow-sm'
+              ? 'bg-violet-500 hover:bg-violet-400 text-white shadow-sm shadow-violet-500/25'
               : 'bg-white/[0.06] text-white/20 cursor-not-allowed'
           )}
           title={canSend ? 'Send message' : 'Type a message to send'}
@@ -227,12 +227,12 @@ export function StickyComposer({
       </div>
 
       {/* Hint */}
-      <div className="flex items-center justify-center gap-4 mt-2 text-xs text-white/30">
+      <div className="flex items-center justify-center gap-4 mt-2 text-xs text-white/50">
         <span>
-          <kbd className="px-1.5 py-0.5 bg-white/[0.04] border border-white/[0.06] rounded">Enter</kbd> to send
+          <kbd className="px-1.5 py-0.5 bg-white/[0.06] border border-white/[0.08] rounded text-white/60">Enter</kbd> to send
         </span>
         <span>
-          <kbd className="px-1.5 py-0.5 bg-white/[0.04] border border-white/[0.06] rounded">@</kbd> to mention agent
+          <kbd className="px-1.5 py-0.5 bg-white/[0.06] border border-white/[0.08] rounded text-white/60">@</kbd> to mention agent
         </span>
       </div>
     </div>

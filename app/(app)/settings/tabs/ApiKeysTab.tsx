@@ -18,6 +18,7 @@ import {
   Loader2,
   Check
 } from 'lucide-react';
+import ConfirmDialog from '@/components/settings/ConfirmDialog';
 
 interface Permission {
   id: string;
@@ -89,6 +90,7 @@ export default function ApiKeysTab() {
   const [newKeyExpiry, setNewKeyExpiry] = useState<'30' | '90' | '365' | 'never'>('never');
   const [newKeyCreated, setNewKeyCreated] = useState<string | null>(null);
   const [keyCreating, setKeyCreating] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ type: 'revoke' | 'delete'; keyId: string } | null>(null);
 
   const generateApiKey = (prefix: string): string => {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -140,13 +142,20 @@ export default function ApiKeysTab() {
   };
 
   const handleRevokeKey = (keyId: string) => {
-    if (!confirm('API-Key wirklich widerrufen?')) return;
-    setApiKeys(apiKeys.map(k => k.id === keyId ? { ...k, status: 'revoked' as const } : k));
+    setConfirmAction({ type: 'revoke', keyId });
   };
 
   const handleDeleteKey = (keyId: string) => {
-    if (!confirm('API-Key endgültig löschen?')) return;
-    setApiKeys(apiKeys.filter(k => k.id !== keyId));
+    setConfirmAction({ type: 'delete', keyId });
+  };
+
+  const executeKeyAction = () => {
+    if (!confirmAction) return;
+    if (confirmAction.type === 'revoke') {
+      setApiKeys(apiKeys.map(k => k.id === confirmAction.keyId ? { ...k, status: 'revoked' as const } : k));
+    } else {
+      setApiKeys(apiKeys.filter(k => k.id !== confirmAction.keyId));
+    }
   };
 
   return (
@@ -154,12 +163,12 @@ export default function ApiKeysTab() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-medium text-foreground">API-Schlüssel</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Programmatischer Zugriff</p>
+          <h3 className="text-sm font-medium text-[var(--vicy-text-primary)]">API-Schlüssel</h3>
+          <p className="text-xs text-[var(--vicy-text-secondary)] mt-0.5">Programmatischer Zugriff</p>
         </div>
         <button
           onClick={() => setCreateKeyModalOpen(true)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--vicy-accent)] text-white text-sm font-medium hover:bg-[var(--vicy-accent-90)] transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
           Neuer Key
@@ -171,26 +180,26 @@ export default function ApiKeysTab() {
         {apiKeys.map((apiKey) => (
           <div
             key={apiKey.id}
-            className={`p-4 rounded-xl bg-card border-2 border-border ${
+            className={`p-4 rounded-xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)] ${
               apiKey.status === 'revoked' ? 'opacity-50' : ''
             }`}
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Key className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-foreground">{apiKey.name}</span>
+                <Key className="w-4 h-4 text-[var(--vicy-text-secondary)]" />
+                <span className="text-sm font-medium text-[var(--vicy-text-primary)]">{apiKey.name}</span>
                 {apiKey.status === 'revoked' && (
                   <span className="px-1.5 py-0.5 text-xs bg-red-500/10 text-red-500 border border-red-500/30 rounded">
                     Widerrufen
                   </span>
                 )}
                 {apiKey.expiresAt && (
-                  <span className="px-1.5 py-0.5 text-xs bg-muted text-muted-foreground rounded">
+                  <span className="px-1.5 py-0.5 text-xs bg-[var(--vicy-glass-bg)] text-[var(--vicy-text-secondary)] rounded">
                     Läuft ab: {apiKey.expiresAt}
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 text-xs text-[var(--vicy-text-secondary)]">
                 <span>{apiKey.rateLimit}/min</span>
                 {apiKey.lastUsed && <span>· {apiKey.lastUsed}</span>}
               </div>
@@ -198,33 +207,33 @@ export default function ApiKeysTab() {
 
             <div className="flex flex-wrap gap-1 mb-3">
               {apiKey.permissions.map(p => (
-                <span key={p.id} className="px-1.5 py-0.5 text-xs bg-muted text-muted-foreground rounded">
+                <span key={p.id} className="px-1.5 py-0.5 text-xs bg-[var(--vicy-glass-bg)] text-[var(--vicy-text-secondary)] rounded">
                   {p.name}
                 </span>
               ))}
             </div>
 
             <div className="flex items-center gap-2">
-              <code className="flex-1 px-3 py-2 bg-input border-2 border-border rounded-xl font-mono text-xs text-foreground overflow-hidden">
+              <code className="flex-1 px-3 py-2 bg-[var(--vicy-glass-bg)] border-2 border-[var(--vicy-border)] rounded-xl font-mono text-xs text-[var(--vicy-text-primary)] overflow-hidden">
                 {showKey === apiKey.id ? apiKey.key : apiKey.keyPreview}
               </code>
               {apiKey.status === 'active' && (
                 <>
                   <button
                     onClick={() => setShowKey(showKey === apiKey.id ? null : apiKey.id)}
-                    className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted border-2 border-border transition-colors"
+                    className="p-2 rounded-xl text-[var(--vicy-text-secondary)] hover:text-[var(--vicy-text-primary)] hover:bg-[var(--vicy-surface-hover)] border-2 border-[var(--vicy-border)] transition-colors"
                   >
                     {showKey === apiKey.id ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                   <button
                     onClick={() => handleCopyKey(apiKey.id, apiKey.key)}
-                    className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted border-2 border-border transition-colors"
+                    className="p-2 rounded-xl text-[var(--vicy-text-secondary)] hover:text-[var(--vicy-text-primary)] hover:bg-[var(--vicy-surface-hover)] border-2 border-[var(--vicy-border)] transition-colors"
                   >
                     {copied === apiKey.id ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                   </button>
                   <button
                     onClick={() => handleRevokeKey(apiKey.id)}
-                    className="p-2 rounded-xl text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 border-2 border-border transition-colors"
+                    className="p-2 rounded-xl text-[var(--vicy-text-secondary)] hover:text-amber-500 hover:bg-amber-500/10 border-2 border-[var(--vicy-border)] transition-colors"
                   >
                     <AlertTriangle className="w-4 h-4" />
                   </button>
@@ -232,7 +241,7 @@ export default function ApiKeysTab() {
               )}
               <button
                 onClick={() => handleDeleteKey(apiKey.id)}
-                className="p-2 rounded-xl text-muted-foreground hover:text-red-500 hover:bg-red-500/10 border-2 border-border transition-colors"
+                className="p-2 rounded-xl text-[var(--vicy-text-secondary)] hover:text-red-500 hover:bg-red-500/10 border-2 border-[var(--vicy-border)] transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -241,47 +250,47 @@ export default function ApiKeysTab() {
         ))}
 
         {apiKeys.length === 0 && (
-          <div className="p-8 rounded-xl bg-muted/50 border-2 border-dashed border-border text-center">
-            <Key className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Keine API-Keys vorhanden</p>
+          <div className="p-8 rounded-xl bg-[var(--vicy-glass-bg)] border-2 border-dashed border-[var(--vicy-border)] text-center">
+            <Key className="w-8 h-8 text-[var(--vicy-text-secondary)] mx-auto mb-2" />
+            <p className="text-sm text-[var(--vicy-text-secondary)]">Keine API-Keys vorhanden</p>
           </div>
         )}
       </div>
 
       {/* Create API Key Modal */}
       {createKeyModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="max-w-lg w-full p-6 rounded-2xl bg-card border-2 border-border shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--vicy-bg)] backdrop-blur-sm">
+          <div className="max-w-lg w-full p-6 rounded-2xl bg-[var(--vicy-surface)] border-2 border-[var(--vicy-border)] shadow-2xl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-foreground">Neuen API-Key erstellen</h3>
+              <h3 className="text-sm font-medium text-[var(--vicy-text-primary)]">Neuen API-Key erstellen</h3>
               <button
                 onClick={handleCloseCreateKeyModal}
-                className="p-1 rounded-xl hover:bg-muted transition-colors"
+                className="p-1 rounded-xl hover:bg-[var(--vicy-surface-hover)] transition-colors"
               >
-                <X className="w-4 h-4 text-muted-foreground" />
+                <X className="w-4 h-4 text-[var(--vicy-text-secondary)]" />
               </button>
             </div>
 
             {!newKeyCreated ? (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs text-muted-foreground mb-1.5">Name</label>
+                  <label className="block text-xs text-[var(--vicy-text-secondary)] mb-1.5">Name</label>
                   <input
                     type="text"
                     value={newKeyName}
                     onChange={(e) => setNewKeyName(e.target.value)}
                     placeholder="z.B. Production, Staging"
-                    className="w-full px-3 py-2 rounded-xl bg-input border-2 border-border text-foreground text-sm focus:border-primary/40 focus:ring-2 focus:ring-primary/10 focus:outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-[var(--vicy-glass-bg)] border-2 border-[var(--vicy-border)] text-[var(--vicy-text-primary)] text-sm focus:border-[var(--vicy-accent-50)]/40 focus:ring-2 focus:ring-[var(--vicy-accent-20)]/10 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs text-muted-foreground mb-1.5">Berechtigungen</label>
-                  <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 rounded-xl bg-muted/50 border-2 border-border">
+                  <label className="block text-xs text-[var(--vicy-text-secondary)] mb-1.5">Berechtigungen</label>
+                  <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 rounded-xl bg-[var(--vicy-glass-bg)] border-2 border-[var(--vicy-border)]">
                     {AVAILABLE_PERMISSIONS.map((perm) => (
                       <label
                         key={perm.id}
-                        className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted cursor-pointer transition-colors"
+                        className="flex items-center gap-2 p-2 rounded-lg hover:bg-[var(--vicy-surface-hover)] cursor-pointer transition-colors"
                       >
                         <input
                           type="checkbox"
@@ -293,10 +302,10 @@ export default function ApiKeysTab() {
                               setNewKeyPermissions(newKeyPermissions.filter(p => p !== perm.id));
                             }
                           }}
-                          className="rounded border-border bg-input text-primary focus:ring-primary focus:ring-offset-0"
+                          className="rounded border-[var(--vicy-border)] bg-[var(--vicy-glass-bg)] text-[var(--vicy-accent)] focus:ring-[var(--vicy-accent-20)] focus:ring-offset-0"
                         />
                         <div>
-                          <p className="text-xs text-foreground">{perm.name}</p>
+                          <p className="text-xs text-[var(--vicy-text-primary)]">{perm.name}</p>
                         </div>
                       </label>
                     ))}
@@ -305,11 +314,11 @@ export default function ApiKeysTab() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-muted-foreground mb-1.5">Rate Limit</label>
+                    <label className="block text-xs text-[var(--vicy-text-secondary)] mb-1.5">Rate Limit</label>
                     <select
                       value={newKeyRateLimit}
                       onChange={(e) => setNewKeyRateLimit(parseInt(e.target.value))}
-                      className="w-full px-3 py-2 rounded-xl bg-input border-2 border-border text-foreground text-sm focus:border-primary/40 focus:outline-none"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--vicy-glass-bg)] border-2 border-[var(--vicy-border)] text-[var(--vicy-text-primary)] text-sm focus:border-[var(--vicy-accent-50)]/40 focus:outline-none"
                     >
                       <option value={100}>100/min</option>
                       <option value={500}>500/min</option>
@@ -318,11 +327,11 @@ export default function ApiKeysTab() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-muted-foreground mb-1.5">Ablauf</label>
+                    <label className="block text-xs text-[var(--vicy-text-secondary)] mb-1.5">Ablauf</label>
                     <select
                       value={newKeyExpiry}
                       onChange={(e) => setNewKeyExpiry(e.target.value as typeof newKeyExpiry)}
-                      className="w-full px-3 py-2 rounded-xl bg-input border-2 border-border text-foreground text-sm focus:border-primary/40 focus:outline-none"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--vicy-glass-bg)] border-2 border-[var(--vicy-border)] text-[var(--vicy-text-primary)] text-sm focus:border-[var(--vicy-accent-50)]/40 focus:outline-none"
                     >
                       <option value="30">30 Tage</option>
                       <option value="90">90 Tage</option>
@@ -335,7 +344,7 @@ export default function ApiKeysTab() {
                 <button
                   onClick={handleCreateKey}
                   disabled={!newKeyName.trim() || newKeyPermissions.length === 0 || keyCreating}
-                  className="w-full px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
+                  className="w-full px-4 py-2.5 rounded-xl bg-[var(--vicy-accent)] text-white text-sm font-medium hover:bg-[var(--vicy-accent-90)] disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
                 >
                   {keyCreating && <Loader2 className="w-4 h-4 animate-spin" />}
                   Key erstellen
@@ -358,7 +367,7 @@ export default function ApiKeysTab() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 px-3 py-2 bg-input rounded-xl text-xs text-foreground font-mono break-all border-2 border-border">
+                  <code className="flex-1 px-3 py-2 bg-[var(--vicy-glass-bg)] rounded-xl text-xs text-[var(--vicy-text-primary)] font-mono break-all border-2 border-[var(--vicy-border)]">
                     {newKeyCreated}
                   </code>
                   <button
@@ -367,7 +376,7 @@ export default function ApiKeysTab() {
                       setCopied('new');
                       setTimeout(() => setCopied(null), 2000);
                     }}
-                    className="p-2 rounded-xl bg-muted text-muted-foreground hover:text-foreground border-2 border-border transition-colors"
+                    className="p-2 rounded-xl bg-[var(--vicy-glass-bg)] text-[var(--vicy-text-secondary)] hover:text-[var(--vicy-text-primary)] border-2 border-[var(--vicy-border)] transition-colors"
                   >
                     {copied === 'new' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                   </button>
@@ -375,7 +384,7 @@ export default function ApiKeysTab() {
 
                 <button
                   onClick={handleCloseCreateKeyModal}
-                  className="w-full px-4 py-2 rounded-xl bg-muted text-foreground text-sm font-medium border-2 border-border hover:bg-muted/80 transition-colors"
+                  className="w-full px-4 py-2 rounded-xl bg-[var(--vicy-glass-bg)] text-[var(--vicy-text-primary)] text-sm font-medium border-2 border-[var(--vicy-border)] hover:bg-[var(--vicy-surface-hover)] transition-colors"
                 >
                   Fertig
                 </button>
@@ -384,6 +393,20 @@ export default function ApiKeysTab() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmAction}
+        onOpenChange={(open) => { if (!open) setConfirmAction(null); }}
+        title={confirmAction?.type === 'revoke' ? 'API-Key widerrufen' : 'API-Key löschen'}
+        description={
+          confirmAction?.type === 'revoke'
+            ? 'Der Key wird sofort ungültig. Anwendungen die diesen Key nutzen verlieren den Zugriff.'
+            : 'Der Key wird endgültig gelöscht und kann nicht wiederhergestellt werden.'
+        }
+        confirmLabel={confirmAction?.type === 'revoke' ? 'Widerrufen' : 'Endgültig löschen'}
+        variant="danger"
+        onConfirm={executeKeyAction}
+      />
     </div>
   );
 }

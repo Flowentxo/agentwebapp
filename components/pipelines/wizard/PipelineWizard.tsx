@@ -3,13 +3,15 @@
 /**
  * PipelineWizard Component
  *
- * Enterprise-grade wizard for creating new pipelines with:
- * - AI-powered generation from natural language (German & English)
- * - Database-backed template gallery with real data
- * - Skeleton loading states
- * - Business-centric design with ROI badges
+ * Multi-step "Consultant-to-Solution" wizard for creating new pipelines:
+ * 1. Persona Selection - Choose your business type
+ * 2. Pain Point Diagnosis - Identify challenges
+ * 3. Strategy Proposal - AI generates tailored solutions
+ * 4. Pipeline Generation - Full workflow built from strategy
  *
- * Part of Phase 7: AI Workflow Wizard - Enterprise Templates
+ * Also includes a "Vorlagen" (Templates) tab for pre-built templates.
+ *
+ * Phase I: Dynamic Discovery Engine
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -46,14 +48,19 @@ import {
 } from 'lucide-react';
 import { MiniGraphPreview } from './MiniGraphPreview';
 import { usePipelineStore } from '@/components/pipelines/store/usePipelineStore';
-
-import { getValidToken } from '@/lib/auth/get-token';
 import type {
   PipelineTemplateListItem,
   TemplatesApiResponse,
   TemplateCategory,
   TemplateComplexity,
 } from '@/lib/types/pipeline-templates';
+
+// Discovery Engine Steps
+import { PersonaStep } from './steps/PersonaStep';
+import { PainPointStep } from './steps/PainPointStep';
+import { StrategyStep, type Strategy } from './steps/StrategyStep';
+import { type BusinessPersona, getPersonaById } from '@/lib/pipelines/business-personas';
+import { type PainPoint, getPainPointById } from '@/lib/pipelines/pain-points';
 
 // ============================================================================
 // Types & Constants
@@ -62,7 +69,12 @@ import type {
 interface PipelineWizardProps {
   isOpen: boolean;
   onClose: () => void;
+  initialPrompt?: string;
+  userId?: string;
 }
+
+type WizardTab = 'consultant' | 'templates';
+type WizardStep = 'persona' | 'pain-points' | 'strategy' | 'ghost-analysis' | 'generating' | 'complete' | 'error';
 
 type GenerationState =
   | 'idle'
@@ -74,47 +86,50 @@ type GenerationState =
   | 'complete'
   | 'error';
 
-const GENERATION_STEPS: { state: GenerationState; message: string; messageDe: string; icon: React.ElementType }[] = [
-  { state: 'analyzing', message: 'Analyzing requirements...', messageDe: 'Analysiere Anforderungen...', icon: Brain },
-  { state: 'designing', message: 'Designing architecture...', messageDe: 'Entwerfe Architektur...', icon: GitBranch },
-  { state: 'building', message: 'Building nodes...', messageDe: 'Erstelle Nodes...', icon: Zap },
-  { state: 'connecting', message: 'Connecting data flows...', messageDe: 'Verbinde Datenflüsse...', icon: ArrowRight },
-  { state: 'finalizing', message: 'Finalizing pipeline...', messageDe: 'Finalisiere Pipeline...', icon: CheckCircle },
+const GENERATION_STEPS: { state: GenerationState; messageDe: string; icon: React.ElementType }[] = [
+  { state: 'analyzing', messageDe: 'Konstruiere Pipeline...', icon: Brain },
+  { state: 'designing', messageDe: 'Integriere Agenten...', icon: GitBranch },
+  { state: 'building', messageDe: 'Erstelle Nodes...', icon: Zap },
+  { state: 'connecting', messageDe: 'Verbinde Datenflüsse...', icon: ArrowRight },
+  { state: 'finalizing', messageDe: 'Finalisiere Setup...', icon: CheckCircle },
+];
+
+const GHOST_ANALYSIS_STEPS = [
+  'Lese Anforderung...',
+  'Erkenne Branche...',
+  'Identifiziere Herausforderungen...',
+  'Entwickle Strategien...',
 ];
 
 // Category definitions with German labels
-const CATEGORIES: { id: TemplateCategory | 'all'; label: string; labelDe: string; icon: React.ElementType }[] = [
-  { id: 'all', label: 'All', labelDe: 'Alle', icon: Sparkles },
-  { id: 'sales', label: 'Sales', labelDe: 'Verkauf', icon: Target },
-  { id: 'automation', label: 'Automation', labelDe: 'Automatisierung', icon: Zap },
-  { id: 'customer-support', label: 'Support', labelDe: 'Kundenservice', icon: MessageSquare },
-  { id: 'marketing', label: 'Marketing', labelDe: 'Marketing', icon: TrendingUp },
-  { id: 'data-analysis', label: 'Data', labelDe: 'Daten', icon: BarChart },
+const CATEGORIES: { id: TemplateCategory | 'all'; labelDe: string; icon: React.ElementType }[] = [
+  { id: 'all', labelDe: 'Alle', icon: Sparkles },
+  { id: 'sales', labelDe: 'Verkauf', icon: Target },
+  { id: 'automation', labelDe: 'Automatisierung', icon: Zap },
+  { id: 'customer-support', labelDe: 'Kundenservice', icon: MessageSquare },
+  { id: 'marketing', labelDe: 'Marketing', icon: TrendingUp },
+  { id: 'data-analysis', labelDe: 'Daten', icon: BarChart },
 ];
 
-// Icon mapping
 const ICON_MAP: Record<string, React.ElementType> = {
   Zap, Bot, Target, TrendingUp, Users, Clock, BarChart, FileText, Sparkles,
   Brain, GitBranch, MessageSquare, Database, Share2, Layers,
 };
 
-// Example prompts (German)
-const EXAMPLE_PROMPTS = [
-  'Wenn ein neuer Lead eingeht, analysiere die Firma, bewerte sie und leite Hot-Leads an Slack weiter',
-  'Jeden Morgen um 8 Uhr meinen Kalender zusammenfassen und mir ein E-Mail-Briefing senden',
-  'Bei einem Support-Ticket automatisch eine Antwort entwerfen und auf meine Freigabe warten',
-  'Eingehende E-Mails auf Dringlichkeit prüfen und mich bei wichtigen sofort per Slack benachrichtigen',
-];
-
-// Complexity labels (German)
 const COMPLEXITY_LABELS: Record<TemplateComplexity, { label: string; color: string }> = {
   beginner: { label: 'Einsteiger', color: '#10B981' },
   intermediate: { label: 'Fortgeschritten', color: '#F59E0B' },
   advanced: { label: 'Experte', color: '#EF4444' },
 };
 
+const STEP_LABELS: Record<string, string> = {
+  persona: 'Branche',
+  'pain-points': 'Herausforderungen',
+  strategy: 'Strategie',
+};
+
 // ============================================================================
-// Skeleton Components
+// Skeleton Component
 // ============================================================================
 
 function TemplateCardSkeleton() {
@@ -141,38 +156,77 @@ function TemplateCardSkeleton() {
 // Main Component
 // ============================================================================
 
-export function PipelineWizard({ isOpen, onClose }: PipelineWizardProps) {
+export function PipelineWizard({ isOpen, onClose, initialPrompt, userId }: PipelineWizardProps) {
   const router = useRouter();
 
-  // Template data state
+  // Active tab
+  const [activeTab, setActiveTab] = useState<WizardTab>('consultant');
+
+  // Discovery Engine state
+  const [wizardStep, setWizardStep] = useState<WizardStep>('persona');
+  const [selectedPersona, setSelectedPersona] = useState<BusinessPersona | null>(null);
+  const [selectedPainPoints, setSelectedPainPoints] = useState<PainPoint[]>([]);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+
+  // Generation animation state
+  const [generationState, setGenerationState] = useState<GenerationState>('idle');
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+
+  // Ghost Analysis state (Smart-Entry)
+  const [ghostResult, setGhostResult] = useState<{
+    strategies: Strategy[];
+    summary: string;
+    personaId: string;
+    painPointIds: string[];
+  } | null>(null);
+  const [ghostAnalysisStep, setGhostAnalysisStep] = useState(0);
+
+  // Template state
   const [templates, setTemplates] = useState<PipelineTemplateListItem[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
   const [templatesError, setTemplatesError] = useState<string | null>(null);
-
-  // UI state
-  const [prompt, setPrompt] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<TemplateCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [generationState, setGenerationState] = useState<GenerationState>('idle');
-  const [generationError, setGenerationError] = useState<string | null>(null);
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
   // ============================================================================
-  // Data Fetching
+  // Reset on open
+  // ============================================================================
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab('consultant');
+      setSelectedPersona(null);
+      setSelectedPainPoints([]);
+      setGenerationError(null);
+      setGenerationState('idle');
+      setCurrentStepIndex(0);
+      setSelectedCategory('all');
+      setSearchQuery('');
+      setGhostResult(null);
+      setGhostAnalysisStep(0);
+      fetchTemplates();
+
+      // Smart-Entry: if user typed a substantial prompt, run ghost analysis
+      if (initialPrompt && initialPrompt.trim().length > 15) {
+        setWizardStep('ghost-analysis');
+        runGhostAnalysis(initialPrompt.trim());
+      } else {
+        setWizardStep('persona');
+      }
+    }
+  }, [isOpen]);
+
+  // ============================================================================
+  // Template Fetching
   // ============================================================================
 
   const fetchTemplates = useCallback(async () => {
     setIsLoadingTemplates(true);
     setTemplatesError(null);
-
     try {
       const response = await fetch('/api/pipelines/templates');
       const data: TemplatesApiResponse = await response.json();
-
-      if (!data.success) {
-        throw new Error('Failed to load templates');
-      }
-
+      if (!data.success) throw new Error('Failed to load templates');
       setTemplates(data.data.templates);
     } catch (error: any) {
       console.error('[PipelineWizard] Failed to fetch templates:', error);
@@ -182,28 +236,9 @@ export function PipelineWizard({ isOpen, onClose }: PipelineWizardProps) {
     }
   }, []);
 
-  // Fetch templates when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      fetchTemplates();
-      // Reset UI state
-      setPrompt('');
-      setSelectedCategory('all');
-      setSearchQuery('');
-      setGenerationState('idle');
-      setGenerationError(null);
-      setCurrentStepIndex(0);
-    }
-  }, [isOpen, fetchTemplates]);
-
-  // ============================================================================
-  // Template Filtering
-  // ============================================================================
-
   const filteredTemplates = useMemo(() => {
     return templates.filter((template) => {
-      const matchesCategory =
-        selectedCategory === 'all' || template.templateCategory === selectedCategory;
+      const matchesCategory = selectedCategory === 'all' || template.templateCategory === selectedCategory;
       const matchesSearch =
         searchQuery === '' ||
         template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -219,151 +254,186 @@ export function PipelineWizard({ isOpen, onClose }: PipelineWizardProps) {
 
   useEffect(() => {
     if (generationState === 'analyzing') {
-      const steps = GENERATION_STEPS;
       let stepIndex = 0;
-
       const interval = setInterval(() => {
         stepIndex++;
-        if (stepIndex < steps.length) {
+        if (stepIndex < GENERATION_STEPS.length) {
           setCurrentStepIndex(stepIndex);
-          setGenerationState(steps[stepIndex].state);
+          setGenerationState(GENERATION_STEPS[stepIndex].state);
         }
       }, 1200);
-
       return () => clearInterval(interval);
     }
   }, [generationState]);
 
   // ============================================================================
-  // Handlers
+  // Ghost Analysis (Smart-Entry)
   // ============================================================================
 
-  const handleGenerate = async () => {
-    if (!prompt.trim() || prompt.length < 10) {
-      setGenerationError('Bitte beschreiben Sie Ihren Workflow detaillierter (mindestens 10 Zeichen)');
+  const runGhostAnalysis = useCallback(async (prompt: string) => {
+    setGhostAnalysisStep(0);
+
+    // Animated step progress
+    const interval = setInterval(() => {
+      setGhostAnalysisStep((prev) =>
+        prev < GHOST_ANALYSIS_STEPS.length - 1 ? prev + 1 : prev
+      );
+    }, 1000);
+
+    try {
+      const res = await fetch('/api/pipelines/analyze-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+
+      const data = await res.json();
+
+      if (data.success && !data.fallback && data.strategies?.length > 0) {
+        // Resolve persona and pain points from IDs
+        const persona = getPersonaById(data.personaId);
+        const painPoints = (data.painPointIds || [])
+          .map((id: string) => getPainPointById(id))
+          .filter(Boolean) as PainPoint[];
+
+        if (persona) setSelectedPersona(persona);
+        if (painPoints.length > 0) setSelectedPainPoints(painPoints);
+
+        setGhostResult({
+          strategies: data.strategies,
+          summary: data.summary || '',
+          personaId: data.personaId,
+          painPointIds: data.painPointIds || [],
+        });
+        setWizardStep('strategy');
+      } else {
+        // Fallback: start at persona step
+        setWizardStep('persona');
+      }
+    } catch (error) {
+      console.error('[PipelineWizard] Ghost analysis error:', error);
+      setWizardStep('persona');
+    } finally {
+      clearInterval(interval);
+    }
+  }, []);
+
+  // ============================================================================
+  // Discovery Engine Handlers
+  // ============================================================================
+
+  const handlePersonaSelect = (persona: BusinessPersona) => {
+    setSelectedPersona(persona);
+    setWizardStep('pain-points');
+  };
+
+  const handlePainPointsNext = (painPoints: PainPoint[]) => {
+    setSelectedPainPoints(painPoints);
+    setWizardStep('strategy');
+  };
+
+  const handleStrategySelect = async (strategy: Strategy, enhancedPrompt: string) => {
+    setWizardStep('generating');
+    setGenerationState('analyzing');
+    setCurrentStepIndex(0);
+    setGenerationError(null);
+
+    // Use userId from props (from useSession), fallback to empty string
+    const authUserId = userId || '';
+    if (!authUserId) {
+      setWizardStep('error');
+      setGenerationState('error');
+      setGenerationError('Nicht authentifiziert. Bitte melden Sie sich erneut an.');
       return;
     }
 
-    setGenerationState('analyzing');
-    setGenerationError(null);
-    setCurrentStepIndex(0);
-
     try {
-      // Get JWT token and extract user ID
-      const token = getValidToken();
-      let userId = 'demo-user';
-
-      if (token) {
-        try {
-          // Decode JWT payload (base64 decode the middle part)
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          userId = payload.userId || payload.sub || payload.id || 'demo-user';
-          console.log('[PipelineWizard] Using authenticated userId:', userId);
-        } catch (e) {
-          console.warn('[PipelineWizard] Failed to decode token, using demo-user');
-        }
-      }
-
+      // Step 1: Generate full pipeline from enhanced prompt
       const response = await fetch('/api/pipelines/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': userId,
+          'x-user-id': authUserId,
         },
-        body: JSON.stringify({ prompt: prompt.trim() }),
+        body: JSON.stringify({ prompt: enhancedPrompt }),
       });
 
       const data = await response.json();
-
       if (!response.ok || !data.success) {
         throw new Error(data.error || 'Pipeline konnte nicht generiert werden');
       }
 
-      setGenerationState('complete');
+      // Step 2: Save to DB (sequential, no setTimeout)
+      setGenerationState('finalizing');
+      setCurrentStepIndex(4);
 
-      // Use async IIFE inside setTimeout to save pipeline to database
-      setTimeout(async () => {
-        try {
-          // STEP 1: Save the generated pipeline to database
-          const saveResponse = await fetch('/api/pipelines', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-user-id': userId,
-            },
-            body: JSON.stringify({
-              name: data.pipeline.name || 'AI Generated Pipeline',
-              description: data.pipeline.description || '',
-              nodes: data.pipeline.nodes || [],
-              edges: data.pipeline.edges || [],
-              status: 'draft',
-            }),
-          });
+      const pipelineName = data.pipeline.name || strategy.name || 'AI Generated Pipeline';
 
-          const saveData = await saveResponse.json();
-
-          // Validate response - API returns { success, pipeline: { id, ... } }
-          if (!saveResponse.ok || !saveData.success || !saveData.pipeline?.id) {
-            console.error('[PipelineWizard] Invalid API response:', saveData);
-            throw new Error(saveData.error || 'Pipeline ID missing from response');
-          }
-
-          const savedPipelineId = saveData.pipeline.id;
-          const pipelineName = data.pipeline.name || 'AI Generated Pipeline';
-          console.log('[PipelineWizard] Pipeline saved to database:', savedPipelineId);
-
-          // STEP 2: Load into editor store WITH the database ID
-          const { loadPipeline } = usePipelineStore.getState();
-          loadPipeline(
-            savedPipelineId,
-            data.pipeline.nodes || [],
-            data.pipeline.edges || [],
-            pipelineName
-          );
-
-          // STEP 3: Notify sidebar to refetch from database
-          window.dispatchEvent(new Event('pipeline-created'));
-          console.log('[PipelineWizard] Dispatched pipeline-created event for sidebar refresh');
-
-          onClose();
-          // STEP 4: Navigate to studio with the saved pipeline ID
-          router.push(`/studio?id=${savedPipelineId}`);
-        } catch (error: any) {
-          console.error('[PipelineWizard] Failed to save pipeline:', error);
-          setGenerationState('error');
-          setGenerationError('Pipeline wurde generiert, konnte aber nicht gespeichert werden.');
-        }
-      }, 1500);
-    } catch (error: any) {
-      console.error('Generation error:', error);
-      setGenerationState('error');
-      setGenerationError(error.message || 'Pipeline konnte nicht generiert werden. Bitte versuchen Sie es erneut.');
-    }
-  };
-
-  const handleSelectTemplate = async (template: PipelineTemplateListItem) => {
-    try {
-      // Clone the template
-      const response = await fetch('/api/pipelines/templates/clone', {
+      const saveResponse = await fetch('/api/pipelines', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': 'demo-user',
+          'x-user-id': authUserId,
         },
-        body: JSON.stringify({ templateId: template.id }),
+        body: JSON.stringify({
+          name: pipelineName,
+          description: data.pipeline.description || strategy.description || '',
+          nodes: data.pipeline.nodes || [],
+          edges: data.pipeline.edges || [],
+          status: 'draft',
+        }),
       });
 
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Template konnte nicht kopiert werden');
+      const saveData = await saveResponse.json();
+      if (!saveResponse.ok || !saveData.success || !saveData.pipeline?.id) {
+        throw new Error(saveData.error || 'Pipeline konnte nicht gespeichert werden');
       }
 
+      // Step 3: Load into Zustand, dispatch event, navigate
+      const savedPipelineId = saveData.pipeline.id;
+
+      const { loadPipeline } = usePipelineStore.getState();
+      loadPipeline(
+        savedPipelineId,
+        data.pipeline.nodes || [],
+        data.pipeline.edges || [],
+        pipelineName
+      );
+
+      window.dispatchEvent(new Event('pipeline-created'));
+
+      setGenerationState('complete');
+      setWizardStep('complete');
+
+      // Brief pause to show success checkmark, then navigate to cockpit
+      setTimeout(() => {
+        onClose();
+        router.push(`/pipelines/${savedPipelineId}`);
+      }, 1200);
+    } catch (error: any) {
+      console.error('[PipelineWizard] Generation/Save error:', error);
+      setWizardStep('error');
+      setGenerationState('error');
+      setGenerationError(error.message || 'Pipeline konnte nicht generiert werden.');
+    }
+  };
+
+  // ============================================================================
+  // Template Handlers
+  // ============================================================================
+
+  const handleSelectTemplate = async (template: PipelineTemplateListItem) => {
+    try {
+      const response = await fetch('/api/pipelines/templates/clone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': 'demo-user' },
+        body: JSON.stringify({ templateId: template.id }),
+      });
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'Template konnte nicht kopiert werden');
       onClose();
       router.push(`/studio?id=${data.data.workflowId}`);
-    } catch (error: any) {
-      console.error('Clone error:', error);
-      // Fallback: Navigate to studio with template param
+    } catch {
       onClose();
       router.push(`/studio?template=${template.id}`);
     }
@@ -374,11 +444,12 @@ export function PipelineWizard({ isOpen, onClose }: PipelineWizardProps) {
     router.push('/studio');
   };
 
-  const getIcon = (iconName: string | null) => {
-    return ICON_MAP[iconName || 'Zap'] || Zap;
-  };
+  const getIcon = (iconName: string | null) => ICON_MAP[iconName || 'Zap'] || Zap;
 
-  const currentStep = GENERATION_STEPS[currentStepIndex];
+  const currentGenStep = GENERATION_STEPS[currentStepIndex];
+
+  // Progress dots for wizard steps
+  const wizardStepIndex = wizardStep === 'persona' ? 0 : wizardStep === 'pain-points' ? 1 : 2;
 
   // ============================================================================
   // Render
@@ -403,419 +474,527 @@ export function PipelineWizard({ isOpen, onClose }: PipelineWizardProps) {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-4 md:inset-8 lg:inset-12 bg-card rounded-3xl shadow-2xl z-50 flex flex-col overflow-hidden border border-border"
+            className="fixed inset-4 md:inset-8 lg:inset-12 bg-[#0a0a0a] rounded-3xl shadow-2xl z-50 flex flex-col overflow-hidden border border-white/[0.06]"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-8 py-6 border-b border-border bg-gradient-to-r from-gray-900 to-gray-800">
-              <div>
-                <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600">
-                    <Wand2 className="w-6 h-6 text-white" />
-                  </div>
-                  Neue Pipeline erstellen
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                  Beschreiben Sie Ihre Automatisierung oder wählen Sie eine Vorlage
-                </p>
+            <div className="flex items-center justify-between px-8 py-5 border-b border-white/[0.06]">
+              <div className="flex items-center gap-4">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 border border-violet-500/30">
+                  <Wand2 className="w-5 h-5 text-violet-400" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-semibold text-white">
+                    Neue Pipeline erstellen
+                  </h1>
+                  <p className="text-xs text-white/40 mt-0.5">
+                    Lassen Sie sich beraten oder wählen Sie eine Vorlage
+                  </p>
+                </div>
               </div>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-muted rounded-xl text-muted-foreground hover:text-white transition-colors"
-              >
-                <X size={24} />
-              </button>
+
+              <div className="flex items-center gap-3">
+                {/* Tab Switcher */}
+                <div className="flex bg-white/[0.03] rounded-lg p-0.5 border border-white/[0.06]">
+                  <button
+                    onClick={() => setActiveTab('consultant')}
+                    className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                      activeTab === 'consultant'
+                        ? 'bg-violet-600 text-white shadow-sm'
+                        : 'text-white/50 hover:text-white/80'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      KI-Berater
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('templates')}
+                    className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                      activeTab === 'templates'
+                        ? 'bg-violet-600 text-white shadow-sm'
+                        : 'text-white/50 hover:text-white/80'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5" />
+                      Vorlagen
+                    </span>
+                  </button>
+                </div>
+
+                <button
+                  onClick={onClose}
+                  className="p-2 hover:bg-white/[0.05] rounded-xl text-white/40 hover:text-white transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-hidden flex">
-              {/* Left Panel - AI Generator */}
-              <div className="w-[480px] border-r border-border flex flex-col bg-card/50">
-                <div className="p-8 flex-1 overflow-auto">
-                  {/* AI Section Header */}
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500/20 to-purple-500/20 border border-violet-500/30">
-                      <Sparkles className="w-5 h-5 text-violet-400" />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-semibold text-white">KI Pipeline-Generator</h2>
-                      <p className="text-sm text-muted-foreground">Beschreiben Sie Ihren Workflow</p>
-                    </div>
-                  </div>
-
-                  {/* Generation States */}
-                  <AnimatePresence mode="wait">
-                    {generationState === 'idle' || generationState === 'error' ? (
-                      <motion.div
-                        key="input"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                      >
-                        {/* Input Area */}
-                        <div className="relative">
-                          <textarea
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                            placeholder="z.B. Wenn ein neuer Lead über das Webformular eingeht, analysiere die Firmendaten mit KI, bewerte den Lead und sende bei hohem Score eine Slack-Nachricht an das Vertriebsteam..."
-                            className="w-full h-40 p-4 bg-muted/50 border border-border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 resize-none transition-all"
-                          />
-                          <div className="absolute bottom-3 right-3 text-xs text-muted-foreground">
-                            {prompt.length} / 500
+            <div className="flex-1 overflow-hidden">
+              <AnimatePresence mode="wait">
+                {activeTab === 'consultant' ? (
+                  <motion.div
+                    key="consultant"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="h-full flex flex-col"
+                  >
+                    {/* Progress Indicator (only for persona/pain-points/strategy steps) */}
+                    {['persona', 'pain-points', 'strategy'].includes(wizardStep) && (
+                      <div className="flex items-center justify-center gap-8 py-4 border-b border-white/[0.04]">
+                        {['persona', 'pain-points', 'strategy'].map((step, i) => (
+                          <div key={step} className="flex items-center gap-2">
+                            <div
+                              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all ${
+                                i < wizardStepIndex
+                                  ? 'bg-violet-500 text-white'
+                                  : i === wizardStepIndex
+                                  ? 'bg-violet-500/20 text-violet-400 border border-violet-500/40'
+                                  : 'bg-white/[0.04] text-white/30'
+                              }`}
+                            >
+                              {i < wizardStepIndex ? (
+                                <CheckCircle className="w-3.5 h-3.5" />
+                              ) : (
+                                i + 1
+                              )}
+                            </div>
+                            <span
+                              className={`text-xs font-medium ${
+                                i <= wizardStepIndex ? 'text-white/70' : 'text-white/30'
+                              }`}
+                            >
+                              {STEP_LABELS[step]}
+                            </span>
+                            {i < 2 && (
+                              <div className={`w-12 h-px ${i < wizardStepIndex ? 'bg-violet-500' : 'bg-white/[0.06]'}`} />
+                            )}
                           </div>
-                        </div>
+                        ))}
+                      </div>
+                    )}
 
-                        {/* Error Message */}
-                        {generationError && (
+                    {/* Step Content */}
+                    <div className="flex-1 overflow-auto p-8">
+                      <AnimatePresence mode="wait">
+                        {/* Ghost Analysis (Smart-Entry) */}
+                        {wizardStep === 'ghost-analysis' && (
                           <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 flex items-start gap-3"
+                            key="ghost-analysis"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="flex flex-col items-center justify-center h-full"
                           >
-                            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                            <div>
-                              <p className="text-sm text-red-400">{generationError}</p>
-                              <button
-                                onClick={() => setGenerationError(null)}
-                                className="text-xs text-red-300 hover:text-red-200 mt-1 flex items-center gap-1"
-                              >
-                                <RefreshCw size={12} />
-                                Erneut versuchen
-                              </button>
+                            <motion.div
+                              initial={{ scale: 0.8, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              className="text-center"
+                            >
+                              <div className="relative w-16 h-16 mx-auto mb-6">
+                                <div className="absolute inset-0 rounded-2xl bg-violet-500/10 animate-pulse" />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <Brain className="w-8 h-8 text-violet-400 animate-spin" style={{ animationDuration: '3s' }} />
+                                </div>
+                              </div>
+
+                              <h3 className="text-lg font-medium text-white mb-2">
+                                Analysiere Anforderung...
+                              </h3>
+                              <p className="text-sm text-white/40 mb-6 max-w-md mx-auto">
+                                {initialPrompt && initialPrompt.length > 60
+                                  ? `"${initialPrompt.substring(0, 60)}..."`
+                                  : `"${initialPrompt}"`}
+                              </p>
+
+                              <div className="space-y-2 mt-4">
+                                {GHOST_ANALYSIS_STEPS.map((step, i) => (
+                                  <motion.div
+                                    key={step}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{
+                                      opacity: i <= ghostAnalysisStep ? 1 : 0.3,
+                                      x: 0,
+                                    }}
+                                    transition={{ delay: i * 0.1 }}
+                                    className="flex items-center gap-2 text-sm"
+                                  >
+                                    {i < ghostAnalysisStep ? (
+                                      <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                                    ) : i === ghostAnalysisStep ? (
+                                      <Loader2 className="w-4 h-4 text-violet-400 animate-spin flex-shrink-0" />
+                                    ) : (
+                                      <div className="w-4 h-4 rounded-full border border-white/10 flex-shrink-0" />
+                                    )}
+                                    <span className={i <= ghostAnalysisStep ? 'text-white/70' : 'text-white/30'}>
+                                      {step}
+                                    </span>
+                                  </motion.div>
+                                ))}
+                              </div>
+                            </motion.div>
+                          </motion.div>
+                        )}
+
+                        {/* Step 1: Persona Selection */}
+                        {wizardStep === 'persona' && (
+                          <motion.div
+                            key="persona"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="h-full"
+                          >
+                            <PersonaStep
+                              onSelect={handlePersonaSelect}
+                              preselectedPersonaId={ghostResult?.personaId}
+                            />
+                          </motion.div>
+                        )}
+
+                        {/* Step 2: Pain Points */}
+                        {wizardStep === 'pain-points' && selectedPersona && (
+                          <motion.div
+                            key="pain-points"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="h-full"
+                          >
+                            <PainPointStep
+                              persona={selectedPersona}
+                              onBack={() => setWizardStep('persona')}
+                              onNext={handlePainPointsNext}
+                              preselectedPainPointIds={ghostResult?.painPointIds}
+                            />
+                          </motion.div>
+                        )}
+
+                        {/* Step 3: Strategy Proposal */}
+                        {wizardStep === 'strategy' && selectedPersona && (
+                          <motion.div
+                            key="strategy"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="h-full"
+                          >
+                            <StrategyStep
+                              persona={selectedPersona}
+                              painPoints={selectedPainPoints}
+                              onBack={() => {
+                                setWizardStep('pain-points');
+                              }}
+                              onSelect={handleStrategySelect}
+                              preloadedStrategies={ghostResult?.strategies}
+                              analysisSummary={ghostResult?.summary}
+                            />
+                          </motion.div>
+                        )}
+
+                        {/* Generating State */}
+                        {wizardStep === 'generating' && (
+                          <motion.div
+                            key="generating"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="flex flex-col items-center justify-center h-full"
+                          >
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                              className="w-16 h-16 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 p-0.5 mb-6"
+                            >
+                              <div className="w-full h-full rounded-full bg-[#0a0a0a] flex items-center justify-center">
+                                {currentGenStep && <currentGenStep.icon className="w-8 h-8 text-violet-400" />}
+                              </div>
+                            </motion.div>
+                            <h3 className="text-lg font-semibold text-white mb-2">
+                              {currentGenStep?.messageDe || 'Generiere Pipeline...'}
+                            </h3>
+                            <p className="text-sm text-white/40 mb-8">
+                              Dies dauert normalerweise 5-10 Sekunden
+                            </p>
+                            <div className="space-y-3 w-full max-w-md">
+                              {GENERATION_STEPS.map((step, index) => {
+                                const isActive = index === currentStepIndex;
+                                const isComplete = index < currentStepIndex;
+                                const StepIcon = step.icon;
+                                return (
+                                  <motion.div
+                                    key={step.state}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
+                                      isActive ? 'bg-violet-500/10 border border-violet-500/30' : ''
+                                    } ${isComplete ? 'opacity-50' : ''}`}
+                                  >
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                      isComplete ? 'bg-green-500/20' : isActive ? 'bg-violet-500/20' : 'bg-white/[0.04]'
+                                    }`}>
+                                      {isComplete ? (
+                                        <CheckCircle className="w-4 h-4 text-green-400" />
+                                      ) : isActive ? (
+                                        <Loader2 className="w-4 h-4 text-violet-400 animate-spin" />
+                                      ) : (
+                                        <StepIcon className="w-4 h-4 text-white/30" />
+                                      )}
+                                    </div>
+                                    <span className={`text-sm ${isActive ? 'text-white font-medium' : 'text-white/40'}`}>
+                                      {step.messageDe}
+                                    </span>
+                                  </motion.div>
+                                );
+                              })}
                             </div>
                           </motion.div>
                         )}
 
-                        {/* Generate Button */}
-                        <button
-                          onClick={handleGenerate}
-                          disabled={!prompt.trim() || prompt.length < 10}
-                          className="w-full mt-4 py-4 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-violet-500/25"
-                        >
-                          <Wand2 size={20} />
-                          Pipeline zaubern
-                          <Sparkles size={16} className="opacity-70" />
-                        </button>
-
-                        {/* Example Prompts */}
-                        <div className="mt-6">
-                          <p className="text-sm text-muted-foreground mb-3">Beispiele zum Ausprobieren:</p>
-                          <div className="space-y-2">
-                            {EXAMPLE_PROMPTS.map((example, index) => (
-                              <button
-                                key={index}
-                                onClick={() => setPrompt(example)}
-                                className="w-full text-left p-3 rounded-lg bg-muted/30 hover:bg-muted/60 border border-border/50 text-sm text-muted-foreground hover:text-gray-300 transition-all"
-                              >
-                                "{example.slice(0, 70)}..."
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </motion.div>
-                    ) : generationState === 'complete' ? (
-                      <motion.div
-                        key="complete"
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="flex flex-col items-center justify-center py-16"
-                      >
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{ type: 'spring', delay: 0.2 }}
-                          className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mb-6"
-                        >
-                          <CheckCircle className="w-10 h-10 text-green-400" />
-                        </motion.div>
-                        <h3 className="text-xl font-semibold text-white mb-2">Pipeline erstellt!</h3>
-                        <p className="text-muted-foreground text-center">Weiterleitung zum Editor...</p>
-                      </motion.div>
-                    ) : (
-                      /* Generating Animation */
-                      <motion.div
-                        key="generating"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="py-12"
-                      >
-                        <div className="flex flex-col items-center mb-8">
+                        {/* Complete State */}
+                        {wizardStep === 'complete' && (
                           <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                            className="w-16 h-16 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 p-0.5 mb-6"
+                            key="complete"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="flex flex-col items-center justify-center h-full"
                           >
-                            <div className="w-full h-full rounded-full bg-card flex items-center justify-center">
-                              {currentStep && <currentStep.icon className="w-8 h-8 text-violet-400" />}
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              transition={{ type: 'spring', delay: 0.2 }}
+                              className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mb-6"
+                            >
+                              <CheckCircle className="w-10 h-10 text-green-400" />
+                            </motion.div>
+                            <h3 className="text-xl font-semibold text-white mb-2">Pipeline erstellt!</h3>
+                            <p className="text-white/40">Weiterleitung zum Cockpit...</p>
+                          </motion.div>
+                        )}
+
+                        {/* Error State */}
+                        {wizardStep === 'error' && (
+                          <motion.div
+                            key="error"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="flex flex-col items-center justify-center h-full"
+                          >
+                            <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+                            <h3 className="text-lg font-medium text-white mb-2">Fehler</h3>
+                            <p className="text-sm text-white/50 mb-6 text-center max-w-md">
+                              {generationError}
+                            </p>
+                            <div className="flex gap-3">
+                              <button
+                                onClick={() => setWizardStep('strategy')}
+                                className="px-4 py-2 text-sm text-white/50 hover:text-white/80 transition-colors"
+                              >
+                                Zurück
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setWizardStep('persona');
+                                  setGenerationError(null);
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm transition-colors"
+                              >
+                                <RefreshCw className="w-4 h-4" />
+                                Neu starten
+                              </button>
                             </div>
                           </motion.div>
-                          <h3 className="text-lg font-semibold text-white mb-2">
-                            {currentStep?.messageDe || 'Generiere...'}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">Dies dauert normalerweise 5-10 Sekunden</p>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* Bottom: Start from scratch */}
+                    {['persona', 'pain-points', 'strategy'].includes(wizardStep) && (
+                      <div className="px-8 py-4 border-t border-white/[0.04]">
+                        <button
+                          onClick={handleStartFromScratch}
+                          className="w-full py-2.5 rounded-xl border border-dashed border-white/[0.1] hover:border-white/[0.2] text-white/30 hover:text-white/60 transition-all flex items-center justify-center gap-2 text-sm"
+                        >
+                          <Plus size={16} />
+                          Von Grund auf neu starten
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
+                ) : (
+                  /* Templates Tab */
+                  <motion.div
+                    key="templates"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    className="h-full flex flex-col"
+                  >
+                    {/* Search & Filters */}
+                    <div className="p-6 border-b border-white/[0.06]">
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <div className="relative flex-1 min-w-[200px]">
+                          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+                          <input
+                            type="text"
+                            placeholder="Vorlagen durchsuchen..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 bg-white/[0.03] border border-white/[0.06] rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-violet-500 transition-all"
+                          />
                         </div>
-
-                        <div className="space-y-3">
-                          {GENERATION_STEPS.map((step, index) => {
-                            const isActive = index === currentStepIndex;
-                            const isComplete = index < currentStepIndex;
-                            const StepIcon = step.icon;
-
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {CATEGORIES.map((category) => {
+                            const Icon = category.icon;
                             return (
-                              <motion.div
-                                key={step.state}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                                className={`
-                                  flex items-center gap-3 p-3 rounded-lg transition-all
-                                  ${isActive ? 'bg-violet-500/10 border border-violet-500/30' : ''}
-                                  ${isComplete ? 'opacity-50' : ''}
-                                `}
+                              <button
+                                key={category.id}
+                                onClick={() => setSelectedCategory(category.id)}
+                                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                  selectedCategory === category.id
+                                    ? 'bg-violet-600 text-white'
+                                    : 'bg-white/[0.03] text-white/40 hover:text-white/70'
+                                }`}
                               >
-                                <div
-                                  className={`
-                                    w-8 h-8 rounded-lg flex items-center justify-center
-                                    ${isComplete ? 'bg-green-500/20' : isActive ? 'bg-violet-500/20' : 'bg-muted'}
-                                  `}
-                                >
-                                  {isComplete ? (
-                                    <CheckCircle className="w-4 h-4 text-green-400" />
-                                  ) : isActive ? (
-                                    <Loader2 className="w-4 h-4 text-violet-400 animate-spin" />
-                                  ) : (
-                                    <StepIcon className="w-4 h-4 text-muted-foreground" />
-                                  )}
-                                </div>
-                                <span
-                                  className={`
-                                    text-sm font-medium
-                                    ${isActive ? 'text-white' : isComplete ? 'text-muted-foreground' : 'text-muted-foreground'}
-                                  `}
-                                >
-                                  {step.messageDe}
-                                </span>
-                              </motion.div>
+                                <Icon size={14} />
+                                {category.labelDe}
+                              </button>
                             );
                           })}
                         </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {/* Start from Scratch */}
-                <div className="p-6 border-t border-border">
-                  <button
-                    onClick={handleStartFromScratch}
-                    className="w-full py-3 rounded-xl border-2 border-dashed border-border hover:border-gray-600 text-muted-foreground hover:text-white transition-all flex items-center justify-center gap-2"
-                  >
-                    <Plus size={18} />
-                    Von Grund auf neu starten
-                  </button>
-                </div>
-              </div>
-
-              {/* Right Panel - Templates */}
-              <div className="flex-1 flex flex-col bg-background">
-                {/* Search & Filters */}
-                <div className="p-6 border-b border-border">
-                  <div className="flex items-center gap-4 flex-wrap">
-                    {/* Search */}
-                    <div className="relative flex-1 min-w-[200px]">
-                      <Search
-                        size={18}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Vorlagen durchsuchen..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-all"
-                      />
+                      </div>
                     </div>
 
-                    {/* Category Pills */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {CATEGORIES.map((category) => {
-                        const Icon = category.icon;
-                        const isActive = selectedCategory === category.id;
+                    {/* Templates Grid */}
+                    <div className="flex-1 overflow-auto p-6">
+                      {isLoadingTemplates && (
+                        <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+                          {[...Array(6)].map((_, i) => <TemplateCardSkeleton key={i} />)}
+                        </div>
+                      )}
 
-                        return (
+                      {templatesError && !isLoadingTemplates && (
+                        <div className="flex flex-col items-center justify-center py-16">
+                          <AlertCircle size={48} className="text-red-500/50 mb-4" />
+                          <p className="text-white/40">{templatesError}</p>
                           <button
-                            key={category.id}
-                            onClick={() => setSelectedCategory(category.id)}
-                            className={`
-                              flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all
-                              ${isActive
-                                ? 'bg-violet-600 text-white'
-                                : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-white'
-                              }
-                            `}
+                            onClick={fetchTemplates}
+                            className="mt-4 flex items-center gap-2 text-sm text-violet-400 hover:text-violet-300"
                           >
-                            <Icon size={14} />
-                            {category.labelDe}
+                            <RefreshCw size={14} />
+                            Erneut laden
                           </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
+                        </div>
+                      )}
 
-                {/* Templates Grid */}
-                <div className="flex-1 overflow-auto p-6">
-                  {/* Loading State */}
-                  {isLoadingTemplates && (
-                    <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
-                      {[...Array(6)].map((_, i) => (
-                        <TemplateCardSkeleton key={i} />
-                      ))}
-                    </div>
-                  )}
+                      {!isLoadingTemplates && !templatesError && (
+                        <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+                          {filteredTemplates.map((template) => {
+                            const Icon = getIcon(template.iconName);
+                            const complexityInfo = COMPLEXITY_LABELS[template.complexity || 'beginner'];
+                            return (
+                              <motion.button
+                                key={template.id}
+                                whileHover={{ scale: 1.02, y: -2 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => handleSelectTemplate(template)}
+                                className="group relative bg-white/[0.02] border border-white/[0.06] rounded-xl p-5 text-left hover:bg-white/[0.04] hover:border-white/[0.1] transition-all overflow-hidden"
+                              >
+                                <div
+                                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  style={{
+                                    background: `radial-gradient(circle at 50% 0%, ${template.colorAccent}15 0%, transparent 60%)`,
+                                  }}
+                                />
+                                {template.roiBadge && (
+                                  <div className="absolute top-3 right-3">
+                                    <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-green-500/20 text-green-400 border border-green-500/30">
+                                      {template.roiBadge}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="relative">
+                                  <div className="mb-4 rounded-lg bg-white/[0.02] p-2 border border-white/[0.04]">
+                                    <MiniGraphPreview nodes={template.nodes} edges={template.edges} width={200} height={100} />
+                                  </div>
+                                  <div className="flex items-start gap-3 mb-3">
+                                    <div className="p-2 rounded-lg flex-shrink-0" style={{ backgroundColor: `${template.colorAccent}20` }}>
+                                      <Icon size={18} style={{ color: template.colorAccent }} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <h3 className="font-semibold text-white group-hover:text-violet-200 transition-colors truncate">
+                                        {template.name}
+                                      </h3>
+                                      <p className="text-xs text-white/40">
+                                        {CATEGORIES.find((c) => c.id === template.templateCategory)?.labelDe || 'Sonstige'}
+                                        {' · '}
+                                        <span style={{ color: complexityInfo.color }}>{complexityInfo.label}</span>
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <p className="text-sm text-white/40 line-clamp-2 mb-4">
+                                    {template.businessBenefit || template.description}
+                                  </p>
+                                  <div className="flex items-center justify-between pt-3 border-t border-white/[0.04]">
+                                    <div className="flex items-center gap-3 text-xs text-white/30">
+                                      {template.estimatedSetupMinutes && (
+                                        <span className="flex items-center gap-1">
+                                          <Clock size={12} />
+                                          {template.estimatedSetupMinutes} Min.
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {template.rating > 0 && (
+                                        <span className="flex items-center gap-0.5 text-yellow-400 text-xs">
+                                          <Star size={12} fill="currentColor" />
+                                          {template.rating.toFixed(1)}
+                                        </span>
+                                      )}
+                                      {template.downloadCount > 0 && (
+                                        <span className="flex items-center gap-0.5 text-white/30 text-xs">
+                                          <Download size={12} />
+                                          {template.downloadCount > 1000 ? `${(template.downloadCount / 1000).toFixed(1)}k` : template.downloadCount}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="absolute bottom-5 right-5 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                                  <ChevronRight className="w-5 h-5 text-violet-400" />
+                                </div>
+                              </motion.button>
+                            );
+                          })}
+                        </div>
+                      )}
 
-                  {/* Error State */}
-                  {templatesError && !isLoadingTemplates && (
-                    <div className="flex flex-col items-center justify-center py-16">
-                      <AlertCircle size={48} className="text-red-500/50 mb-4" />
-                      <p className="text-muted-foreground">{templatesError}</p>
+                      {!isLoadingTemplates && !templatesError && filteredTemplates.length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-16">
+                          <Search size={48} className="text-white/20 mb-4" />
+                          <p className="text-white/40">Keine Vorlagen gefunden</p>
+                          <p className="text-sm text-white/30 mt-1">Versuchen Sie eine andere Suche oder Kategorie</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bottom: Start from scratch */}
+                    <div className="px-6 py-4 border-t border-white/[0.04]">
                       <button
-                        onClick={fetchTemplates}
-                        className="mt-4 flex items-center gap-2 text-sm text-violet-400 hover:text-violet-300"
+                        onClick={handleStartFromScratch}
+                        className="w-full py-2.5 rounded-xl border border-dashed border-white/[0.1] hover:border-white/[0.2] text-white/30 hover:text-white/60 transition-all flex items-center justify-center gap-2 text-sm"
                       >
-                        <RefreshCw size={14} />
-                        Erneut laden
+                        <Plus size={16} />
+                        Von Grund auf neu starten
                       </button>
                     </div>
-                  )}
-
-                  {/* Templates */}
-                  {!isLoadingTemplates && !templatesError && (
-                    <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
-                      {filteredTemplates.map((template) => {
-                        const Icon = getIcon(template.iconName);
-                        const complexityInfo = COMPLEXITY_LABELS[template.complexity || 'beginner'];
-
-                        return (
-                          <motion.button
-                            key={template.id}
-                            whileHover={{ scale: 1.02, y: -2 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => handleSelectTemplate(template)}
-                            className="group relative bg-card border border-border rounded-xl p-5 text-left hover:border-border hover:bg-muted/50 transition-all overflow-hidden"
-                          >
-                            {/* Glow effect */}
-                            <div
-                              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                              style={{
-                                background: `radial-gradient(circle at 50% 0%, ${template.colorAccent}15 0%, transparent 60%)`,
-                              }}
-                            />
-
-                            {/* ROI Badge */}
-                            {template.roiBadge && (
-                              <div className="absolute top-3 right-3">
-                                <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-green-500/20 text-green-400 border border-green-500/30">
-                                  {template.roiBadge}
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Featured Badge */}
-                            {template.isFeatured && !template.roiBadge && (
-                              <div className="absolute top-3 right-3">
-                                <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                                  Beliebt
-                                </span>
-                              </div>
-                            )}
-
-                            <div className="relative">
-                              {/* Mini Graph Preview */}
-                              <div className="mb-4 rounded-lg bg-muted/50 p-2 border border-border/50">
-                                <MiniGraphPreview
-                                  nodes={template.nodes}
-                                  edges={template.edges}
-                                  width={200}
-                                  height={100}
-                                />
-                              </div>
-
-                              {/* Header */}
-                              <div className="flex items-start gap-3 mb-3">
-                                <div
-                                  className="p-2 rounded-lg flex-shrink-0"
-                                  style={{ backgroundColor: `${template.colorAccent}20` }}
-                                >
-                                  <Icon size={18} style={{ color: template.colorAccent }} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <h3 className="font-semibold text-white group-hover:text-violet-200 transition-colors truncate">
-                                    {template.name}
-                                  </h3>
-                                  <p className="text-xs text-muted-foreground">
-                                    {CATEGORIES.find(c => c.id === template.templateCategory)?.labelDe || 'Sonstige'}
-                                    {' • '}
-                                    <span style={{ color: complexityInfo.color }}>{complexityInfo.label}</span>
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Business Benefit */}
-                              <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                                {template.businessBenefit || template.description}
-                              </p>
-
-                              {/* Footer */}
-                              <div className="flex items-center justify-between pt-3 border-t border-border/50">
-                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                  {template.estimatedSetupMinutes && (
-                                    <span className="flex items-center gap-1">
-                                      <Clock size={12} />
-                                      {template.estimatedSetupMinutes} Min. Setup
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {template.rating > 0 && (
-                                    <span className="flex items-center gap-0.5 text-yellow-400 text-xs">
-                                      <Star size={12} fill="currentColor" />
-                                      {template.rating.toFixed(1)}
-                                    </span>
-                                  )}
-                                  {template.downloadCount > 0 && (
-                                    <span className="flex items-center gap-0.5 text-muted-foreground text-xs">
-                                      <Download size={12} />
-                                      {template.downloadCount > 1000
-                                        ? `${(template.downloadCount / 1000).toFixed(1)}k`
-                                        : template.downloadCount}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Hover Arrow */}
-                            <div className="absolute bottom-5 right-5 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
-                              <ChevronRight className="w-5 h-5 text-violet-400" />
-                            </div>
-                          </motion.button>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* No Results */}
-                  {!isLoadingTemplates && !templatesError && filteredTemplates.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-16">
-                      <Search size={48} className="text-foreground mb-4" />
-                      <p className="text-muted-foreground">Keine Vorlagen gefunden</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Versuchen Sie eine andere Suche oder Kategorie
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </motion.div>
         </>

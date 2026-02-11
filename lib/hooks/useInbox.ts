@@ -12,8 +12,9 @@
 
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { useEffect, useCallback, useRef, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
 import { toast } from 'sonner';
+import { useInboxSocket as useSocketContext } from '@/lib/socket';
+import { useInboxStore } from '@/lib/stores/useInboxStore';
 import {
   getThreads,
   getThread,
@@ -63,114 +64,6 @@ export const inboxKeys = {
 };
 
 // =====================================================
-// SOCKET CONNECTION
-// =====================================================
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-
-let socketInstance: Socket | null = null;
-let reconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 10;
-const BASE_RECONNECT_DELAY = 1000; // 1 second
-const MAX_RECONNECT_DELAY = 30000; // 30 seconds
-
-/**
- * Calculate exponential backoff delay with jitter
- * Formula: min(maxDelay, baseDelay * 2^attempts) + random jitter
- */
-function getReconnectDelay(): number {
-  const exponentialDelay = Math.min(
-    MAX_RECONNECT_DELAY,
-    BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempts)
-  );
-  // Add random jitter (0-25% of delay) to prevent thundering herd
-  const jitter = Math.random() * 0.25 * exponentialDelay;
-  return Math.floor(exponentialDelay + jitter);
-}
-
-/**
- * Get or create socket instance for inbox namespace
- * Implements exponential backoff for reconnection stability
- */
-function getSocket(): Socket {
-  if (!socketInstance) {
-    const socketUrl = `${API_BASE_URL}/inbox`;
-    console.log('[INBOX_SOCKET] Initializing connection to:', socketUrl);
-
-    socketInstance = io(socketUrl, {
-      transports: ['websocket', 'polling'],
-      withCredentials: true,
-      autoConnect: true,
-      reconnection: true,
-      reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
-      reconnectionDelay: BASE_RECONNECT_DELAY,
-      reconnectionDelayMax: MAX_RECONNECT_DELAY,
-      // Enable exponential backoff via factor
-      randomizationFactor: 0.25,
-      timeout: 20000, // 20 second connection timeout
-    });
-
-    socketInstance.on('connect', () => {
-      console.log('[INBOX_SOCKET] ✅ Connected successfully');
-      // Reset reconnect attempts on successful connection
-      reconnectAttempts = 0;
-    });
-
-    socketInstance.on('disconnect', (reason) => {
-      console.log('[INBOX_SOCKET] Disconnected:', reason);
-      // If server disconnected us, don't auto-reconnect immediately
-      if (reason === 'io server disconnect') {
-        console.log('[INBOX_SOCKET] Server-initiated disconnect, manual reconnect needed');
-      }
-    });
-
-    socketInstance.on('connect_error', (error) => {
-      reconnectAttempts++;
-      const nextDelay = getReconnectDelay();
-      console.error(`[INBOX_SOCKET] Connection error (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}):`, error.message);
-      console.log(`[INBOX_SOCKET] Next reconnect in ${nextDelay}ms`);
-
-      // If max attempts reached, stop trying and notify user
-      if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-        console.error('[INBOX_SOCKET] Max reconnection attempts reached. Socket disconnected.');
-        // Dispatch event for UI to show connection error
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('socket:connection-failed', {
-            detail: { namespace: 'inbox', attempts: reconnectAttempts }
-          }));
-        }
-      }
-    });
-
-    // Handle reconnection events
-    socketInstance.io.on('reconnect', (attemptNumber) => {
-      console.log(`[INBOX_SOCKET] ✅ Reconnected after ${attemptNumber} attempts`);
-      reconnectAttempts = 0;
-    });
-
-    socketInstance.io.on('reconnect_attempt', (attemptNumber) => {
-      console.log(`[INBOX_SOCKET] Reconnection attempt ${attemptNumber}...`);
-    });
-
-    socketInstance.io.on('reconnect_failed', () => {
-      console.error('[INBOX_SOCKET] ❌ All reconnection attempts failed');
-    });
-  }
-
-  return socketInstance;
-}
-
-/**
- * Disconnect socket
- */
-export function disconnectInboxSocket(): void {
-  if (socketInstance) {
-    socketInstance.disconnect();
-    socketInstance = null;
-  }
-}
-
-// =====================================================
 // THREADS HOOK
 // =====================================================
 
@@ -184,7 +77,7 @@ export interface UseThreadsOptions {
  */
 export function useThreads(options?: UseThreadsOptions) {
   const queryClient = useQueryClient();
-  const socket = getSocket();
+  const { socket } = useSocketContext();
 
   const query = useQuery({
     queryKey: inboxKeys.threads(),
@@ -196,6 +89,8 @@ export function useThreads(options?: UseThreadsOptions) {
 
   // Listen for thread updates via socket
   useEffect(() => {
+    if (!socket) return;
+
     const handleThreadUpdate = (updatedThread: Partial<Thread> & { id: string }) => {
       queryClient.setQueryData<Thread[]>(inboxKeys.threads(), (oldData) => {
         if (!oldData) return oldData;
@@ -247,7 +142,7 @@ export interface UseThreadsInfiniteOptions {
  */
 export function useThreadsInfinite(options?: UseThreadsInfiniteOptions) {
   const queryClient = useQueryClient();
-  const socket = getSocket();
+  const { socket } = useSocketContext();
   const limit = options?.limit || 20;
 
   // Normalize empty search to undefined for consistent query key
@@ -319,6 +214,7 @@ export function useThreadsInfinite(options?: UseThreadsInfiniteOptions) {
 
   // Listen for thread updates via socket (only when not searching to avoid stale updates)
   useEffect(() => {
+    if (!socket) return;
     // Don't update cache from socket events when searching
     // as the results are filtered server-side
     if (normalizedSearch) return;
@@ -410,7 +306,7 @@ export interface UseThreadMessagesOptions {
  */
 export function useThreadMessages(threadId: string | null, options?: UseThreadMessagesOptions) {
   const queryClient = useQueryClient();
-  const socket = getSocket();
+  const { socket } = useSocketContext();
   const typingIndicatorRef = useRef<TypingIndicator | null>(null);
 
   const query = useQuery({
@@ -422,7 +318,7 @@ export function useThreadMessages(threadId: string | null, options?: UseThreadMe
 
   // Join/leave thread room
   useEffect(() => {
-    if (!threadId) return;
+    if (!threadId || !socket) return;
 
     socket.emit('thread:join', { threadId });
     console.log('[INBOX_SOCKET] Joined thread:', threadId);
@@ -435,11 +331,14 @@ export function useThreadMessages(threadId: string | null, options?: UseThreadMe
 
   // Listen for real-time message events
   useEffect(() => {
-    if (!threadId) return;
+    if (!threadId || !socket) return;
 
     // New message arrived - FIXED: Merge with placeholder if streaming started first
     const handleNewMessage = (message: InboxMessage) => {
       if (message.threadId !== threadId) return;
+
+      // Clear processing stage when a new message arrives
+      useInboxStore.getState().clearProcessingStage(threadId);
 
       queryClient.setQueryData<InboxMessage[]>(inboxKeys.messages(threadId), (oldData) => {
         if (!oldData) return [message];
@@ -511,6 +410,9 @@ export function useThreadMessages(threadId: string | null, options?: UseThreadMe
     const handleMessageComplete = (data: string | { messageId: string }) => {
       const messageId = typeof data === 'string' ? data : data.messageId;
 
+      // Clear processing stage on stream completion
+      useInboxStore.getState().clearProcessingStage(threadId);
+
       queryClient.setQueryData<InboxMessage[]>(inboxKeys.messages(threadId), (oldData) => {
         if (!oldData) return oldData;
 
@@ -567,6 +469,16 @@ export function useThreadMessages(threadId: string | null, options?: UseThreadMe
       metadata?: Record<string, unknown>;
       timestamp: string;
     }) => {
+      // Processing stage events are transient UI indicators, not persisted messages
+      if (event.metadata?.eventType === 'processing_stage') {
+        useInboxStore.getState().setProcessingStage(threadId, {
+          stage: event.metadata.stage as string,
+          agentName: event.metadata.agentName as string,
+          label: event.content,
+        });
+        return;
+      }
+
       const systemMessage: InboxMessage = {
         id: event.id,
         threadId,
@@ -639,7 +551,7 @@ export function useThreadMessagesInfinite(
   options?: UseThreadMessagesInfiniteOptions
 ) {
   const queryClient = useQueryClient();
-  const socket = getSocket();
+  const { socket } = useSocketContext();
   const limit = options?.limit || 50;
 
   const query = useInfiniteQuery({
@@ -674,7 +586,7 @@ export function useThreadMessagesInfinite(
 
   // Join/leave thread room
   useEffect(() => {
-    if (!threadId) return;
+    if (!threadId || !socket) return;
 
     socket.emit('thread:join', { threadId });
     console.log('[INBOX_SOCKET] Joined thread (infinite):', threadId);
@@ -687,11 +599,14 @@ export function useThreadMessagesInfinite(
 
   // Listen for real-time message events
   useEffect(() => {
-    if (!threadId) return;
+    if (!threadId || !socket) return;
 
     // New message arrived - append to the most recent page (first page)
     const handleNewMessage = (message: InboxMessage) => {
       if (message.threadId !== threadId) return;
+
+      // Clear processing stage when a new message arrives
+      useInboxStore.getState().clearProcessingStage(threadId);
 
       queryClient.setQueryData(
         inboxKeys.messagesInfinite(threadId),
@@ -839,6 +754,9 @@ export function useThreadMessagesInfinite(
     const handleMessageComplete = (data: string | { messageId: string }) => {
       const messageId = typeof data === 'string' ? data : data.messageId;
 
+      // Clear processing stage on stream completion
+      useInboxStore.getState().clearProcessingStage(threadId);
+
       queryClient.setQueryData(
         inboxKeys.messagesInfinite(threadId),
         (oldData: { pages: MessagesPageResponse[]; pageParams: (string | undefined)[] } | undefined) => {
@@ -904,6 +822,16 @@ export function useThreadMessagesInfinite(
       metadata?: Record<string, unknown>;
       timestamp: string;
     }) => {
+      // Processing stage events are transient UI indicators, not persisted messages
+      if (event.metadata?.eventType === 'processing_stage') {
+        useInboxStore.getState().setProcessingStage(threadId, {
+          stage: event.metadata.stage as string,
+          agentName: event.metadata.agentName as string,
+          label: event.content,
+        });
+        return;
+      }
+
       const systemMessage: InboxMessage = {
         id: event.id,
         threadId,
@@ -994,13 +922,13 @@ export interface TypingAgent {
  * - Returns array of currently typing agents
  */
 export function useTypingIndicator(threadId: string | null): TypingAgent[] {
-  const socket = getSocket();
+  const { socket } = useSocketContext();
   const [typingAgents, setTypingAgents] = useState<Map<string, TypingAgent>>(new Map());
   const timeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   useEffect(() => {
-    if (!threadId) {
-      // Clear all typing state when leaving thread
+    if (!threadId || !socket) {
+      // Clear all typing state when leaving thread or no socket
       setTypingAgents(new Map());
       return;
     }
@@ -1679,27 +1607,3 @@ export function useCreateThread() {
   });
 }
 
-// =====================================================
-// INBOX SOCKET HOOK (for subscription management)
-// =====================================================
-
-/**
- * Hook for managing inbox socket subscription
- */
-export function useInboxSocket(userId: string | null) {
-  const socket = getSocket();
-
-  useEffect(() => {
-    if (!userId) return;
-
-    socket.emit('inbox:subscribe', userId);
-    console.log('[INBOX_SOCKET] Subscribed to inbox updates for user:', userId);
-
-    return () => {
-      socket.emit('inbox:unsubscribe', userId);
-      console.log('[INBOX_SOCKET] Unsubscribed from inbox updates');
-    };
-  }, [userId, socket]);
-
-  return socket;
-}

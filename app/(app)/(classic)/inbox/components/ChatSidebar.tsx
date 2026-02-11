@@ -193,14 +193,14 @@ export function ChatSidebar({
 
         {/* Search Input - Ultra minimal */}
         <div className="relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20 group-focus-within:text-white/50 transition-colors" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/35 group-focus-within:text-white/60 transition-colors" />
           <input
             ref={searchInputRef}
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search..."
-            className="w-full pl-9 pr-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-violet-500/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] focus:shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_0_0_1px_rgba(139,92,246,0.1)] transition-all"
+            className="w-full pl-9 pr-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white placeholder-white/40 focus:outline-none focus:border-violet-500/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] focus:shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_0_0_1px_rgba(139,92,246,0.1)] transition-all"
           />
           {searchQuery && (
             <button
@@ -226,7 +226,7 @@ export function ChatSidebar({
                 'flex-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all',
                 viewMode === tab.key
                   ? 'bg-white/[0.08] text-white'
-                  : 'text-white/30 hover:text-white/50'
+                  : 'text-white/40 hover:text-white/60'
               )}
             >
               {tab.label}
@@ -274,7 +274,7 @@ export function ChatSidebar({
             {Array.from(groupedThreads.entries()).map(([group, groupThreads]) => (
               <div key={group}>
                 {/* Date Group Header - Ultra minimal */}
-                <div className="px-4 py-1.5 text-[10px] font-medium text-white/25 uppercase tracking-wider">
+                <div className="px-4 py-1.5 text-[10px] font-medium text-white/40 uppercase tracking-wider">
                   {group}
                 </div>
 
@@ -435,14 +435,14 @@ function ConversationItem({
             >
               {thread.subject || 'New Conversation'}
             </h3>
-            <span className="text-[10px] text-white/25 flex-shrink-0">{formattedTime}</span>
+            <span className="text-[10px] text-white/40 flex-shrink-0">{formattedTime}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-medium truncate" style={{ color: agentColor }}>
               {thread.agentName || 'AI Assistant'}
             </span>
-            <span className="text-white/15">·</span>
-            <p className="text-xs text-white/30 truncate flex-1">
+            <span className="text-white/25">·</span>
+            <p className="text-xs text-white/40 truncate flex-1">
               {thread.preview || 'No messages yet'}
             </p>
           </div>
@@ -467,7 +467,7 @@ function ConversationItem({
 
         {/* Unread indicator */}
         {hasUnread && (
-          <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-gray-900 dark:bg-white" />
+          <div className="flex-shrink-0 w-2 h-2 rounded-full bg-violet-500" />
         )}
       </div>
 
@@ -479,7 +479,7 @@ function ConversationItem({
             className={cn(
               'absolute top-2.5 right-2.5 p-1 rounded-lg transition-opacity',
               'text-muted-foreground hover:text-foreground hover:bg-muted',
-              'opacity-0 group-hover:opacity-100 focus:opacity-100',
+              'opacity-40 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100',
               'focus:outline-none focus:ring-2 focus:ring-primary/20'
             )}
           >

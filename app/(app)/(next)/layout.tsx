@@ -1,11 +1,49 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { WorkspaceProvider } from '@/lib/contexts/workspace-context';
 import { ShellProvider } from '@/components/shell/ShellContext';
 import { InboxSocketProvider } from '@/lib/socket';
 import { VicySidebar } from '@/components/vicy/VicySidebar';
+import { useSession } from '@/store/session';
+import { Loader2 } from 'lucide-react';
 
 export default function VicyLayout({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, fetchSession } = useSession();
+  const redirectingRef = useRef(false);
+
+  useEffect(() => {
+    fetchSession();
+  }, [fetchSession]);
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated && !redirectingRef.current) {
+      redirectingRef.current = true;
+      // Clear stale session so middleware won't redirect /login back to /v4
+      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+        .finally(() => {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('token');
+          window.location.replace('/login?next=/v4');
+        });
+    }
+  }, [isLoading, isAuthenticated]);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#0a0a0a]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+          <p className="text-sm text-white/40">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
     <WorkspaceProvider>
       <ShellProvider>
