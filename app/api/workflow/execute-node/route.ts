@@ -481,7 +481,7 @@ function emitNodeExecutionResult(
   }
 ) {
   // Get socket server URL from environment
-  const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
+  const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000';
 
   try {
     // Emit via internal event system instead of client connection

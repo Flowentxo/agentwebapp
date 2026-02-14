@@ -258,6 +258,14 @@ const config = {
             backgroundPosition: "0% 50%",
           },
         },
+        "scan-line": {
+          "0%": {
+            transform: "translateX(-100%)",
+          },
+          "100%": {
+            transform: "translateX(200%)",
+          },
+        },
         // Flowent Inbox - Floating particle animations
         "float-slow": {
           "0%, 100%": {
@@ -313,6 +321,7 @@ const config = {
         "fade-in-up": "fade-in-up 0.3s ease-out",
         "glow-pulse": "glow-pulse 2s ease-in-out infinite",
         "border-flow": "border-flow 3s ease infinite",
+        "scan-line": "scan-line 3s ease-in-out infinite",
         // Flowent Inbox - Floating particle animation classes
         "float-slow": "float-slow 12s ease-in-out infinite",
         "float-medium": "float-medium 8s ease-in-out infinite",

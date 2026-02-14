@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Lightbulb, Sparkles, TrendingUp, Clock, Zap, Star, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Filter } from 'lucide-react';
+import { Lightbulb, Sparkles, TrendingUp, Clock, Zap, Star, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Filter, GitBranch } from 'lucide-react';
 import { IdeasAnalytics } from './IdeasAnalytics';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -23,12 +23,17 @@ interface BusinessIdea {
   userVote?: 'up' | 'down' | null; // New: User's vote
 }
 
-export function BusinessIdeas() {
+interface BusinessIdeasProps {
+  onConvertToPipeline?: (idea: BusinessIdea) => void;
+}
+
+export function BusinessIdeas({ onConvertToPipeline }: BusinessIdeasProps = {}) {
   const [ideas, setIdeas] = useState<BusinessIdea[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [expandedIdea, setExpandedIdea] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [convertedIds, setConvertedIds] = useState<Set<string>>(new Set());
   const fetchedRef = useRef(false);
 
   // Mock data fallback
@@ -370,6 +375,25 @@ export function BusinessIdeas() {
                 >
                   Start Planning
                 </button>
+                {onConvertToPipeline && !convertedIds.has(idea.id) && (
+                  <button
+                    onClick={() => {
+                      onConvertToPipeline(idea);
+                      setConvertedIds(prev => new Set(prev).add(idea.id));
+                      updateStatus(idea.id, 'planning');
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 text-sm hover:bg-indigo-500/20 transition-colors"
+                  >
+                    <GitBranch className="h-3.5 w-3.5" />
+                    In Pipeline
+                  </button>
+                )}
+                {convertedIds.has(idea.id) && (
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 text-green-400 text-xs">
+                    <GitBranch className="h-3.5 w-3.5" />
+                    Pipeline erstellt
+                  </span>
+                )}
                 <button
                   onClick={() => updateStatus(idea.id, 'rejected')}
                   className="px-3 py-1.5 rounded-lg bg-card/5 text-muted-foreground text-sm hover:bg-card/10 transition-colors"

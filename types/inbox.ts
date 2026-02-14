@@ -372,6 +372,9 @@ export interface ToolCall {
   status: 'pending' | 'running' | 'completed' | 'failed';
   input?: Record<string, unknown>;
   output?: Record<string, unknown>;
+  args?: Record<string, any>;
+  result?: { success?: boolean; data?: any; error?: string; summary?: string };
+  displayName?: string;
 }
 
 export interface InboxAgent {

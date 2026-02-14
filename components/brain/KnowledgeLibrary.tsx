@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  Search, Filter, FileText, Globe, MessageSquare, Calendar, Tag, 
+import {
+  Search, Filter, FileText, Globe, MessageSquare, Calendar, Tag,
   MoreVertical, Edit2, Trash2, Download, ExternalLink, RefreshCw,
-  ChevronDown, X, Loader2, Brain, Folder
+  ChevronDown, X, Loader2, Brain, Folder, CheckSquare, Square, Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -99,6 +99,10 @@ export function KnowledgeLibrary({ onEditItem, onRefresh }: KnowledgeLibraryProp
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [freshnessFilter, setFreshnessFilter] = useState<'all' | 'fresh' | 'aging' | 'stale'>('all');
+  const [aiSummaries, setAiSummaries] = useState<Record<string, string>>({});
+  const [loadingSummaryId, setLoadingSummaryId] = useState<string | null>(null);
   const fetchedRef = useRef(false);
 
   // Fetch knowledge items
@@ -173,9 +177,10 @@ export function KnowledgeLibrary({ onEditItem, onRefresh }: KnowledgeLibraryProp
     .filter(item => {
       if (selectedCategory !== 'all' && item.category !== selectedCategory) return false;
       if (selectedTags.length > 0 && !selectedTags.some(tag => item.tags.includes(tag))) return false;
+      if (freshnessFilter !== 'all' && getFreshness(item.createdAt) !== freshnessFilter) return false;
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        return item.title.toLowerCase().includes(query) || 
+        return item.title.toLowerCase().includes(query) ||
                item.content.toLowerCase().includes(query) ||
                item.tags.some(tag => tag.toLowerCase().includes(query));
       }
@@ -193,11 +198,95 @@ export function KnowledgeLibrary({ onEditItem, onRefresh }: KnowledgeLibraryProp
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
+
     if (days === 0) return 'Heute';
     if (days === 1) return 'Gestern';
     if (days < 7) return `Vor ${days} Tagen`;
     return date.toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  // Freshness helper
+  const getFreshness = (dateString: string): 'fresh' | 'aging' | 'stale' => {
+    const days = Math.floor((Date.now() - new Date(dateString).getTime()) / (1000 * 60 * 60 * 24));
+    if (days < 30) return 'fresh';
+    if (days < 90) return 'aging';
+    return 'stale';
+  };
+
+  const freshnessColors = { fresh: 'bg-green-500', aging: 'bg-yellow-500', stale: 'bg-red-500' };
+  const freshnessLabels = { fresh: 'Aktuell', aging: 'Älter', stale: 'Veraltet' };
+
+  // Multi-select handlers
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (selectedIds.size === filteredItems.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredItems.map(i => i.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`${selectedIds.size} Einträge wirklich löschen?`)) return;
+    for (const id of selectedIds) {
+      try {
+        await fetch(`/api/brain/knowledge/${id}`, { method: 'DELETE', headers: { 'x-user-id': 'demo-user' } });
+      } catch { /* continue */ }
+    }
+    setItems(prev => prev.filter(item => !selectedIds.has(item.id)));
+    setSelectedIds(new Set());
+  };
+
+  const handleAISummary = async (item: KnowledgeItem) => {
+    if (aiSummaries[item.id]) return; // Already cached
+    setLoadingSummaryId(item.id);
+    try {
+      const response = await fetch('/api/brain/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `Fasse diesen Text in 3 kurzen Bullet Points zusammen: ${item.content.slice(0, 2000)}`,
+          useSemanticSearch: false,
+        }),
+      });
+      if (response.ok && response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let result = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          result += decoder.decode(value, { stream: true });
+        }
+        setAiSummaries(prev => ({ ...prev, [item.id]: result }));
+      }
+    } catch {
+      setAiSummaries(prev => ({ ...prev, [item.id]: 'Zusammenfassung konnte nicht erstellt werden.' }));
+    } finally {
+      setLoadingSummaryId(null);
+    }
+  };
+
+  const handleBulkExport = () => {
+    const selected = items.filter(item => selectedIds.has(item.id));
+    const content = selected.map(item =>
+      `# ${item.title}\n\n${item.content}\n\n---\nKategorie: ${item.category}\nTags: ${item.tags.join(', ')}\nErstellt: ${new Date(item.createdAt).toLocaleDateString('de-DE')}\n`
+    ).join('\n\n===\n\n');
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `knowledge-export-${selected.length}-items.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setSelectedIds(new Set());
   };
 
   return (
@@ -332,10 +421,35 @@ export function KnowledgeLibrary({ onEditItem, onRefresh }: KnowledgeLibraryProp
                   </div>
                 </div>
 
+                {/* Freshness Filter */}
+                <div className="flex items-center gap-4">
+                  <label className="text-xs font-medium text-muted-foreground">Aktualität:</label>
+                  <div className="flex gap-2">
+                    {([
+                      { id: 'all' as const, label: 'Alle' },
+                      { id: 'fresh' as const, label: 'Aktuell (<30d)' },
+                      { id: 'aging' as const, label: 'Älter (30-90d)' },
+                      { id: 'stale' as const, label: 'Veraltet (>90d)' },
+                    ]).map((f) => (
+                      <button
+                        key={f.id}
+                        onClick={() => setFreshnessFilter(f.id)}
+                        className={`px-2 py-1 rounded-lg text-xs transition-all ${
+                          freshnessFilter === f.id
+                            ? 'bg-indigo-500/20 text-indigo-300'
+                            : 'text-muted-foreground hover:text-white'
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Clear Filters */}
-                {(selectedCategory !== 'all' || selectedTags.length > 0) && (
+                {(selectedCategory !== 'all' || selectedTags.length > 0 || freshnessFilter !== 'all') && (
                   <button
-                    onClick={() => { setSelectedCategory('all'); setSelectedTags([]); }}
+                    onClick={() => { setSelectedCategory('all'); setSelectedTags([]); setFreshnessFilter('all'); }}
                     className="text-xs text-indigo-400 hover:text-indigo-300"
                   >
                     Filter zurücksetzen
@@ -346,6 +460,57 @@ export function KnowledgeLibrary({ onEditItem, onRefresh }: KnowledgeLibraryProp
           )}
         </AnimatePresence>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between px-4 py-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20"
+        >
+          <div className="flex items-center gap-3">
+            <button onClick={selectAll} className="text-indigo-300 hover:text-indigo-200 transition-colors">
+              {selectedIds.size === filteredItems.length ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+            </button>
+            <span className="text-sm text-indigo-300 font-medium">{selectedIds.size} ausgewählt</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleBulkExport}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 text-xs font-medium hover:bg-indigo-500/30 transition-colors"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Exportieren
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-300 text-xs font-medium hover:bg-red-500/30 transition-colors"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Löschen
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-white transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Select All Toggle (when no selection) */}
+      {!isLoading && filteredItems.length > 0 && selectedIds.size === 0 && (
+        <div className="flex items-center gap-2 px-1">
+          <button
+            onClick={selectAll}
+            className="flex items-center gap-2 text-xs text-muted-foreground hover:text-white transition-colors"
+          >
+            <Square className="h-3.5 w-3.5" />
+            Alle auswählen
+          </button>
+        </div>
+      )}
 
       {/* Knowledge List */}
       {isLoading ? (
@@ -369,13 +534,26 @@ export function KnowledgeLibrary({ onEditItem, onRefresh }: KnowledgeLibraryProp
               className="rounded-xl bg-card/5 border border-white/10 overflow-hidden hover:border-white/20 transition-all"
             >
               {/* Item Header */}
-              <div 
+              <div
                 className="p-4 cursor-pointer"
                 onClick={() => setExpandedItem(expandedItem === item.id ? null : item.id)}
               >
                 <div className="flex items-start justify-between">
+                  {/* Checkbox */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleSelect(item.id); }}
+                    className="mr-3 mt-1 flex-shrink-0 text-muted-foreground hover:text-white transition-colors"
+                  >
+                    {selectedIds.has(item.id) ? <CheckSquare className="h-4 w-4 text-indigo-400" /> : <Square className="h-4 w-4" />}
+                  </button>
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
+                      {/* Freshness Dot */}
+                      <span
+                        className={`w-2 h-2 rounded-full flex-shrink-0 ${freshnessColors[getFreshness(item.createdAt)]}`}
+                        title={freshnessLabels[getFreshness(item.createdAt)]}
+                      />
                       {sourceTypeLabels[item.sourceType] && (
                         <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-card/5 text-xs text-muted-foreground">
                           {(() => { const Icon = sourceTypeLabels[item.sourceType].icon; return <Icon className="h-3 w-3" />; })()}
@@ -470,9 +648,34 @@ export function KnowledgeLibrary({ onEditItem, onRefresh }: KnowledgeLibraryProp
                     exit={{ height: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="px-4 pb-4 border-t border-white/10 pt-4">
+                    <div className="px-4 pb-4 border-t border-white/10 pt-4 space-y-4">
                       <p className="text-sm text-gray-300 whitespace-pre-wrap">{item.content}</p>
-                      <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground">
+
+                      {/* AI Summary Section */}
+                      {aiSummaries[item.id] ? (
+                        <div className="p-3 rounded-xl bg-indigo-500/5 border border-indigo-500/20">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
+                            <span className="text-xs font-medium text-indigo-300">AI Summary</span>
+                          </div>
+                          <p className="text-sm text-gray-300 whitespace-pre-wrap">{aiSummaries[item.id]}</p>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleAISummary(item); }}
+                          disabled={loadingSummaryId === item.id}
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-500/10 text-indigo-300 text-xs font-medium hover:bg-indigo-500/20 transition-colors disabled:opacity-50"
+                        >
+                          {loadingSummaryId === item.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Sparkles className="h-3.5 w-3.5" />
+                          )}
+                          {loadingSummaryId === item.id ? 'Wird erstellt...' : 'AI Summary'}
+                        </button>
+                      )}
+
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <span>{item.wordCount.toLocaleString()} Wörter</span>
                         {item.source && (
                           <span className="truncate max-w-xs" title={item.source}>

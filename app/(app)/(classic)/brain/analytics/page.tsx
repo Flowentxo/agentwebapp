@@ -92,134 +92,142 @@ export default function AnalyticsPage() {
 
   const fetchAnalytics = async () => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
 
-    // Mock KPIs
-    setKpis([
-      {
-        label: 'Avg Time to Insight',
-        value: '2.3s',
-        change: -12.5,
-        changeLabel: 'vs. last week',
-        icon: Clock,
-        color: 'rgb(var(--accent))',
-      },
-      {
-        label: 'Total Queries',
-        value: '12,847',
-        change: 18.2,
-        changeLabel: 'vs. last week',
-        icon: Zap,
-        color: 'rgb(var(--accent-2))',
-      },
-      {
-        label: 'Active Users',
-        value: '342',
-        change: 8.7,
-        changeLabel: 'vs. last week',
-        icon: Users,
-        color: 'var(--success)',
-      },
-      {
-        label: 'Error Rate',
-        value: '0.34%',
-        change: -42.1,
-        changeLabel: 'vs. last week',
-        icon: AlertCircle,
-        color: 'var(--warning)',
-      },
-    ]);
+    try {
+      // Map frontend time ranges to API period params
+      const periodMap: Record<string, string> = { '24h': '7d', '7d': '7d', '30d': '30d', '90d': '90d' };
+      const period = periodMap[timeRange] || '30d';
 
-    // Mock Time-to-Insight trend data
-    setTimeToInsightData([
-      { timestamp: 'Mon', value: 2.8 },
-      { timestamp: 'Tue', value: 2.5 },
-      { timestamp: 'Wed', value: 2.3 },
-      { timestamp: 'Thu', value: 2.6 },
-      { timestamp: 'Fri', value: 2.2 },
-      { timestamp: 'Sat', value: 2.4 },
-      { timestamp: 'Sun', value: 2.3 },
-    ]);
+      const res = await fetch(`/api/brain/analytics?period=${period}`, {
+        headers: { 'x-workspace-id': 'default-workspace' },
+      });
 
-    // Mock API Consumption data
-    setApiConsumptionData([
-      { timestamp: 'Mon', value: 1847 },
-      { timestamp: 'Tue', value: 2134 },
-      { timestamp: 'Wed', value: 1923 },
-      { timestamp: 'Thu', value: 2456 },
-      { timestamp: 'Fri', value: 2789 },
-      { timestamp: 'Sat', value: 1456 },
-      { timestamp: 'Sun', value: 1678 },
-    ]);
+      if (!res.ok) throw new Error('Analytics fetch failed');
 
-    // Mock Agent Performance
-    setAgentPerformance([
-      {
-        agentId: 'dexter',
-        agentName: 'Dexter',
-        totalQueries: 3245,
-        successRate: 98.5,
-        avgResponseTime: 1.8,
-        tokensUsed: 245678,
-        costUSD: 12.34,
-      },
-      {
-        agentId: 'cassie',
-        agentName: 'Cassie',
-        totalQueries: 2876,
-        successRate: 99.2,
-        avgResponseTime: 1.5,
-        tokensUsed: 198765,
-        costUSD: 9.87,
-      },
-      {
-        agentId: 'emmie',
-        agentName: 'Emmie',
-        totalQueries: 2134,
-        successRate: 97.8,
-        avgResponseTime: 2.1,
-        tokensUsed: 176543,
-        costUSD: 8.21,
-      },
-      {
-        agentId: 'kai',
-        agentName: 'Kai',
-        totalQueries: 1987,
-        successRate: 96.4,
-        avgResponseTime: 2.4,
-        tokensUsed: 234567,
-        costUSD: 11.23,
-      },
-      {
-        agentId: 'finn',
-        agentName: 'Finn',
-        totalQueries: 1654,
-        successRate: 98.1,
-        avgResponseTime: 1.9,
-        tokensUsed: 145678,
-        costUSD: 7.45,
-      },
-    ]);
+      const json = await res.json();
+      const data = json.data as {
+        query: { totalQueries: number; uniqueUsers: number; avgResponseTime: number; queriesOverTime: { date: string; count: number }[] };
+        usage: { totalDocuments: number; documentsPerCategory: { category: string; count: number }[] };
+        quality: { searchSuccessRate: number };
+        performance: { avgQueryLatency: number; errorRate: number; cacheHitRate: number; queriesPerMinute: number };
+      };
 
-    // Mock User Activity (by feature)
-    setUserActivityData([
-      { feature: 'Document Upload', usage: 245, color: 'rgb(var(--accent))' },
-      { feature: 'AI Queries', usage: 412, color: 'rgb(var(--accent-2))' },
-      { feature: 'Workflows', usage: 178, color: 'var(--success)' },
-      { feature: 'Analytics', usage: 134, color: 'var(--warning)' },
-      { feature: 'Settings', usage: 89, color: 'oklch(70% 0.2 25)' },
-    ]);
+      // Build KPIs from real data
+      const avgLatencyS = data.performance.avgQueryLatency > 0
+        ? (data.performance.avgQueryLatency / 1000).toFixed(1) + 's'
+        : '0s';
+      const errorPct = (data.performance.errorRate * 100).toFixed(2) + '%';
 
-    // Mock Error Rate data
-    setErrorRateData([
-      { timestamp: 'Mon', value: 0.52 },
-      { timestamp: 'Tue', value: 0.48 },
-      { timestamp: 'Wed', value: 0.41 },
-      { timestamp: 'Thu', value: 0.38 },
-      { timestamp: 'Fri', value: 0.35 },
-      { timestamp: 'Sat', value: 0.32 },
-      { timestamp: 'Sun', value: 0.34 },
-    ]);
+      setKpis([
+        {
+          label: 'Avg Time to Insight',
+          value: avgLatencyS,
+          change: 0,
+          changeLabel: period,
+          icon: Clock,
+          color: 'rgb(var(--accent))',
+        },
+        {
+          label: 'Total Queries',
+          value: data.query.totalQueries.toLocaleString('de-DE'),
+          change: 0,
+          changeLabel: period,
+          icon: Zap,
+          color: 'rgb(var(--accent-2))',
+        },
+        {
+          label: 'Active Users',
+          value: data.query.uniqueUsers.toLocaleString('de-DE'),
+          change: 0,
+          changeLabel: period,
+          icon: Users,
+          color: 'var(--success)',
+        },
+        {
+          label: 'Error Rate',
+          value: errorPct,
+          change: 0,
+          changeLabel: period,
+          icon: AlertCircle,
+          color: 'var(--warning)',
+        },
+      ]);
+
+      // Time-to-Insight trend from queriesOverTime (use avg response time per day if available, otherwise show query volume)
+      const queriesOverTime = data.query.queriesOverTime || [];
+      setTimeToInsightData(
+        queriesOverTime.slice(0, 14).reverse().map((d) => ({
+          timestamp: new Date(d.date).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit' }),
+          value: d.count,
+        }))
+      );
+
+      // API Consumption = same queriesOverTime data
+      setApiConsumptionData(
+        queriesOverTime.slice(0, 14).reverse().map((d) => ({
+          timestamp: new Date(d.date).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit' }),
+          value: d.count,
+        }))
+      );
+
+      // Agent performance from /api/brain/agents/metrics (separate call)
+      try {
+        const agentRes = await fetch('/api/brain/agents/metrics?includeTrends=false');
+        if (agentRes.ok) {
+          const agentJson = await agentRes.json();
+          const agents = agentJson.data || agentJson.metrics || [];
+          if (Array.isArray(agents) && agents.length > 0) {
+            setAgentPerformance(agents.map((a: any) => ({
+              agentId: a.agentId || a.id || 'unknown',
+              agentName: a.agentName || a.name || a.agentId || 'Agent',
+              totalQueries: a.totalQueries || a.queryCount || 0,
+              successRate: a.successRate ?? a.accuracy ?? 0,
+              avgResponseTime: a.avgResponseTime ?? a.latency ?? 0,
+              tokensUsed: a.tokensUsed ?? a.tokens ?? 0,
+              costUSD: a.costUSD ?? a.cost ?? 0,
+            })));
+          } else {
+            setAgentPerformance([]);
+          }
+        } else {
+          setAgentPerformance([]);
+        }
+      } catch {
+        setAgentPerformance([]);
+      }
+
+      // User Activity by feature (from document categories)
+      const featureColors = ['rgb(var(--accent))', 'rgb(var(--accent-2))', 'var(--success)', 'var(--warning)', 'oklch(70% 0.2 25)'];
+      const categories = data.usage.documentsPerCategory || [];
+      setUserActivityData(
+        categories.slice(0, 5).map((cat, i) => ({
+          feature: cat.category.charAt(0).toUpperCase() + cat.category.slice(1),
+          usage: cat.count,
+          color: featureColors[i % featureColors.length],
+        }))
+      );
+
+      // Error rate - show search success rate inverted as "error" trend (single point for now)
+      const failRate = ((1 - (data.quality.searchSuccessRate || 0)) * 100);
+      setErrorRateData([
+        { timestamp: 'Current', value: parseFloat(failRate.toFixed(2)) },
+      ]);
+
+    } catch (error) {
+      console.error('[Analytics] Failed to fetch:', error);
+      // Set empty state on error
+      setKpis([
+        { label: 'Avg Time to Insight', value: '—', change: 0, changeLabel: 'N/A', icon: Clock, color: 'rgb(var(--accent))' },
+        { label: 'Total Queries', value: '0', change: 0, changeLabel: 'N/A', icon: Zap, color: 'rgb(var(--accent-2))' },
+        { label: 'Active Users', value: '0', change: 0, changeLabel: 'N/A', icon: Users, color: 'var(--success)' },
+        { label: 'Error Rate', value: '—', change: 0, changeLabel: 'N/A', icon: AlertCircle, color: 'var(--warning)' },
+      ]);
+      setTimeToInsightData([]);
+      setApiConsumptionData([]);
+      setAgentPerformance([]);
+      setUserActivityData([]);
+      setErrorRateData([]);
+    }
 
     setIsLoading(false);
   };

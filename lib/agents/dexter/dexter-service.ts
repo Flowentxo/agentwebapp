@@ -98,6 +98,7 @@ export class DexterService {
           : 'max_tokens';
 
         // Create chat completion with function calling
+        // gpt-5 models don't support custom temperature - omit it
         const response = await this.client.chat.completions.create({
           model,
           messages: [
@@ -106,7 +107,7 @@ export class DexterService {
           ],
           tools: this.tools,
           tool_choice: 'auto',
-          temperature: DEXTER_OPENAI_CONFIG.temperature,
+          ...(model.includes('gpt-5') ? {} : { temperature: DEXTER_OPENAI_CONFIG.temperature }),
           [maxTokensKey]: DEXTER_OPENAI_CONFIG.maxTokens,
           stream: false, // We'll implement streaming in the next iteration
         } as any);

@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const next = searchParams.get('next') || '/dashboard';
+    const next = searchParams.get('next') || '/v4';
 
     // Generate state token for CSRF protection
     const state = crypto.randomBytes(32).toString('hex');

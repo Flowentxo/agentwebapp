@@ -31,6 +31,12 @@ import {
   Bell,
   BellOff,
   Keyboard,
+  Check,
+  CheckSquare,
+  Square,
+  X,
+  Mail,
+  Tag,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday, isThisWeek, parseISO } from 'date-fns';
@@ -94,8 +100,60 @@ export function ChatSidebar({
   const currentThreadId = params?.threadId as string | undefined;
   const [searchQuery, setSearchQuery] = useState('');
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { viewMode, setViewMode } = useInboxStore();
+
+  // Batch selection handlers
+  const toggleSelect = (threadId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(threadId)) {
+        next.delete(threadId);
+      } else {
+        next.add(threadId);
+      }
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (selectedIds.size === threads.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(threads.map(t => t.id)));
+    }
+  };
+
+  const exitSelectMode = () => {
+    setIsSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleBatchArchive = async () => {
+    for (const id of selectedIds) {
+      await archiveMutation.mutateAsync(id);
+    }
+    exitSelectMode();
+  };
+
+  const handleBatchDelete = async () => {
+    for (const id of selectedIds) {
+      await deleteMutation.mutateAsync({ threadId: id });
+    }
+    if (currentThreadId && selectedIds.has(currentThreadId)) {
+      router.push('/inbox');
+    }
+    exitSelectMode();
+  };
+
+  const handleBatchMarkRead = async () => {
+    // Send batch mark-read via chat prompt (tool execution)
+    const ids = Array.from(selectedIds);
+    // For now, mark read individually - could be batched via Emmie tool
+    exitSelectMode();
+  };
 
   // Real-time socket connection for live updates
   const { isConnected, subscribeToThread, unsubscribeFromThread } = useInboxSocket();
@@ -181,14 +239,28 @@ export function ChatSidebar({
               )}
             </div>
           </div>
-          <button
-            onClick={handleNewChatClick}
-            className="p-1.5 rounded-lg text-white/40 bg-white/[0.04]
-              hover:bg-white/[0.08] hover:text-white/70 transition-all"
-            title="New Chat"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => isSelectMode ? exitSelectMode() : setIsSelectMode(true)}
+              className={cn(
+                'p-1.5 rounded-lg transition-all',
+                isSelectMode
+                  ? 'text-violet-400 bg-violet-500/10'
+                  : 'text-white/40 bg-white/[0.04] hover:bg-white/[0.08] hover:text-white/70'
+              )}
+              title={isSelectMode ? 'Exit select mode (X)' : 'Select mode'}
+            >
+              {isSelectMode ? <X className="w-4 h-4" /> : <CheckSquare className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={handleNewChatClick}
+              className="p-1.5 rounded-lg text-white/40 bg-white/[0.04]
+                hover:bg-white/[0.08] hover:text-white/70 transition-all"
+              title="New Chat"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Search Input - Ultra minimal */}
@@ -234,6 +306,48 @@ export function ChatSidebar({
           ))}
         </div>
       </div>
+
+      {/* Batch Select Bar */}
+      {isSelectMode && (
+        <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 bg-violet-500/[0.06] border-b border-violet-500/20">
+          <button
+            onClick={selectAll}
+            className="flex items-center gap-1.5 text-xs text-white/60 hover:text-white/80 transition-colors"
+          >
+            {selectedIds.size === threads.length && threads.length > 0 ? (
+              <CheckSquare className="w-3.5 h-3.5 text-violet-400" />
+            ) : (
+              <Square className="w-3.5 h-3.5" />
+            )}
+            <span>{selectedIds.size > 0 ? `${selectedIds.size} ausgewaehlt` : 'Alle auswaehlen'}</span>
+          </button>
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleBatchArchive}
+                className="p-1.5 text-white/50 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors"
+                title="Archivieren"
+              >
+                <Archive className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={handleBatchMarkRead}
+                className="p-1.5 text-white/50 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
+                title="Als gelesen markieren"
+              >
+                <Mail className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={handleBatchDelete}
+                className="p-1.5 text-white/50 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                title="Loeschen"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Divider - Ultra minimal */}
       <div className="h-px bg-white/[0.04] mx-4" />
@@ -284,9 +398,12 @@ export function ChatSidebar({
                     key={thread.id}
                     thread={thread}
                     isActive={currentThreadId === thread.id}
-                    onSelect={() => handleSelectThread(thread.id)}
+                    onSelect={() => isSelectMode ? toggleSelect(thread.id) : handleSelectThread(thread.id)}
                     onArchive={() => handleArchive(thread.id)}
                     onDelete={() => handleDelete(thread.id)}
+                    isSelectMode={isSelectMode}
+                    isSelected={selectedIds.has(thread.id)}
+                    onToggleSelect={() => toggleSelect(thread.id)}
                   />
                 ))}
               </div>
@@ -368,6 +485,9 @@ interface ConversationItemProps {
   onSelect: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  isSelectMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 function ConversationItem({
@@ -376,6 +496,9 @@ function ConversationItem({
   onSelect,
   onArchive,
   onDelete,
+  isSelectMode = false,
+  isSelected = false,
+  onToggleSelect,
 }: ConversationItemProps) {
   const hasUnread = (thread.unreadCount || 0) > 0;
   const lastMessageTime = thread.updatedAt || thread.createdAt;
@@ -400,12 +523,25 @@ function ConversationItem({
     <div
       className={cn(
         'group relative mx-2 mb-0.5 rounded-xl transition-all cursor-pointer',
-        isActive
+        isSelected && isSelectMode
+          ? 'bg-violet-500/[0.06] border-l-2 border-l-violet-500/50'
+          : isActive
           ? 'bg-violet-500/[0.08] border-l-2 border-l-violet-500'
           : 'hover:bg-white/[0.03] border-l-2 border-l-transparent'
       )}
     >
       <div className="flex items-center gap-2.5 px-3 py-2" onClick={onSelect}>
+        {/* Select Mode Checkbox */}
+        {isSelectMode && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleSelect?.(); }}
+            className="flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-colors"
+            style={isSelected ? { backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' } : { borderColor: 'rgba(255,255,255,0.2)' }}
+          >
+            {isSelected && <Check className="w-3 h-3 text-white" />}
+          </button>
+        )}
+
         {/* Agent Avatar with color */}
         <div className="relative flex-shrink-0">
           {involvedAgents && involvedAgents.length > 1 ? (

@@ -1,41 +1,66 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import { agentPersonas } from '@/lib/agents/personas';
-import { Search, Bot, Sparkles, MessageSquare, ChevronRight, Filter } from 'lucide-react';
 import {
-  PageContainer,
-  PageHeader,
-  BentoCard,
-  Badge,
-  Button,
-  EmptyState,
-} from '@/components/ui/premium';
-import { tokens } from '@/lib/design-system';
+  motion,
+  AnimatePresence,
+  useMotionValue,
+  useTransform,
+  useSpring,
+} from 'framer-motion';
+import { agentPersonas } from '@/lib/agents/personas';
+import {
+  Search,
+  Zap,
+  Activity,
+  Database,
+  Cpu,
+  Terminal,
+  ChevronRight,
+  Hexagon,
+} from 'lucide-react';
+import { Badge, EmptyState } from '@/components/ui/premium';
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+const totalCapabilities = agentPersonas.reduce((sum, a) => sum + a.specialties.length, 0);
+
+const PARTICLES = [
+  { top: '8%', left: '12%', size: 'w-1.5 h-1.5', color: 'bg-emerald-500/20', anim: 'animate-float-slow', delay: '0s' },
+  { top: '15%', left: '78%', size: 'w-1 h-1', color: 'bg-cyan-500/20', anim: 'animate-float-medium', delay: '-3s' },
+  { top: '35%', left: '5%', size: 'w-2 h-2', color: 'bg-indigo-500/15', anim: 'animate-float-fast', delay: '-1s' },
+  { top: '45%', left: '92%', size: 'w-1.5 h-1.5', color: 'bg-violet-500/15', anim: 'animate-float-slow', delay: '-6s' },
+  { top: '62%', left: '25%', size: 'w-1 h-1', color: 'bg-emerald-500/15', anim: 'animate-float-medium', delay: '-2s' },
+  { top: '72%', left: '68%', size: 'w-2 h-2', color: 'bg-cyan-500/15', anim: 'animate-float-fast', delay: '-4s' },
+  { top: '88%', left: '45%', size: 'w-1 h-1', color: 'bg-indigo-500/10', anim: 'animate-float-slow', delay: '-8s' },
+  { top: '22%', left: '55%', size: 'w-1.5 h-1.5', color: 'bg-violet-500/10', anim: 'animate-float-medium', delay: '-5s' },
+];
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AgentsBrowsePage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [isFocused, setIsFocused] = useState(false);
 
   const categories = [
-    { value: 'all', label: 'Alle Agents', icon: Bot },
-    { value: 'marketing', label: 'Marketing', icon: Sparkles },
-    { value: 'data', label: 'Daten & Analytics', icon: Bot },
-    { value: 'support', label: 'Support', icon: MessageSquare },
-    { value: 'operations', label: 'Operations', icon: Bot },
-    { value: 'creative', label: 'Kreativ', icon: Sparkles },
-    { value: 'technical', label: 'Technisch', icon: Bot }
+    { value: 'all', label: 'ALL UNITS' },
+    { value: 'marketing', label: 'MARKETING' },
+    { value: 'data', label: 'DATA' },
+    { value: 'support', label: 'SUPPORT' },
+    { value: 'operations', label: 'OPS' },
+    { value: 'creative', label: 'CREATIVE' },
+    { value: 'technical', label: 'TECH' },
   ];
 
   const filteredAgents = useMemo(() => {
     return agentPersonas.filter(agent => {
+      const q = searchQuery.toLowerCase();
       const matchesSearch =
-        agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        agent.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        agent.specialties.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
+        agent.name.toLowerCase().includes(q) ||
+        agent.role.toLowerCase().includes(q) ||
+        agent.specialties.some(s => s.toLowerCase().includes(q));
 
       const matchesCategory =
         selectedCategory === 'all' || agent.category === selectedCategory;
@@ -45,113 +70,249 @@ export default function AgentsBrowsePage() {
   }, [searchQuery, selectedCategory]);
 
   return (
-    <PageContainer>
-      {/* Header */}
-      <PageHeader
-        title="AI Agents"
-        subtitle={`Wähle aus ${agentPersonas.length} spezialisierten AI-Agents für deine Aufgaben`}
-        actions={
-          <Button variant="gradient" onClick={() => router.push('/studio')}>
-            Agent erstellen
-          </Button>
-        }
+    <div
+      className="min-h-screen px-6 py-8 lg:px-10 bg-neutral-950 relative overflow-hidden"
+      style={{ fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}
+    >
+      {/* Grid pattern overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)',
+          backgroundSize: '60px 60px',
+        }}
       />
 
-      {/* Search & Filters */}
-      <BentoCard delay={0.1} className="!p-6">
-        {/* Search Bar */}
-        <div className="relative mb-6">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
-          <input
-            type="text"
-            placeholder="Suche nach Name, Rolle oder Spezialisierung..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-4 bg-card/[0.03] border border-white/10 rounded-2xl text-white placeholder:text-white/30 focus:outline-none focus:border-white/20 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+      {/* Ambient floating particles */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {PARTICLES.map((p, i) => (
+          <div
+            key={i}
+            className={`absolute rounded-full ${p.size} ${p.color} ${p.anim} blur-[1px]`}
+            style={{ top: p.top, left: p.left, animationDelay: p.delay }}
           />
-        </div>
-
-        {/* Category Pills */}
-        <div className="flex flex-wrap gap-2">
-          {categories.map(category => (
-            <button
-              key={category.value}
-              onClick={() => setSelectedCategory(category.value)}
-              className={`
-                flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all
-                ${selectedCategory === category.value
-                  ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25'
-                  : 'bg-card/5 text-white/60 hover:bg-card/10 hover:text-white'}
-              `}
-            >
-              <category.icon className="w-4 h-4" />
-              {category.label}
-            </button>
-          ))}
-        </div>
-      </BentoCard>
-
-      {/* Results Count */}
-      <div className="flex items-center justify-between">
-        <p className="text-white/40 text-sm">
-          <span className="text-white font-semibold">{filteredAgents.length}</span> {filteredAgents.length === 1 ? 'Agent' : 'Agents'} gefunden
-        </p>
-        <div className="flex items-center gap-2 text-white/40 text-sm">
-          <Filter className="w-4 h-4" />
-          <span>Sortiert nach Beliebtheit</span>
-        </div>
+        ))}
       </div>
 
-      {/* Agents Grid */}
-      <AnimatePresence mode="popLayout">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAgents.map((agent, index) => (
-            <PremiumAgentCard
-              key={agent.id}
-              agent={agent}
-              index={index}
-              onClick={() => router.push(`/agents/${agent.id}/chat`)}
-            />
-          ))}
-        </div>
-      </AnimatePresence>
+      <div className="relative z-10 max-w-[1440px] mx-auto space-y-6">
+        {/* ── Header ──────────────────────────────────────────── */}
+        <motion.header
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6"
+        >
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <Hexagon className="w-5 h-5 text-emerald-400" />
+              <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-emerald-400/70">
+                FLOWENT SYSTEMS
+              </span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight">
+              Agent Command Center
+            </h1>
+            <p className="text-white/30 font-mono text-xs tracking-wide">
+              Neural agent fleet management &middot; v3.0.0
+            </p>
+          </div>
+        </motion.header>
 
-      {/* Empty State */}
-      {filteredAgents.length === 0 && (
-        <EmptyState
-          icon={<Search className="w-12 h-12" />}
-          title="Keine Agents gefunden"
-          description={`Keine Agents für "${searchQuery || selectedCategory}" gefunden. Versuche eine andere Suche.`}
-          action={
-            <Button variant="secondary" onClick={() => { setSearchQuery(''); setSelectedCategory('all'); }}>
-              Filter zurücksetzen
-            </Button>
-          }
-        />
-      )}
-    </PageContainer>
+        {/* ── HUD Stats Bar ───────────────────────────────────── */}
+        <HudStatsBar agentCount={agentPersonas.length} capabilityCount={totalCapabilities} />
+
+        {/* ── Command Search + Filters ────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+          className="space-y-4"
+        >
+          {/* Terminal search */}
+          <div
+            className={`
+              relative flex items-center gap-3 px-4 py-3 rounded-xl font-mono text-sm
+              bg-black/40 border transition-all duration-200 overflow-hidden
+              ${isFocused
+                ? 'border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.08)]'
+                : 'border-emerald-500/15'}
+            `}
+          >
+            {/* Focus scan sweep */}
+            <AnimatePresence>
+              {isFocused && (
+                <motion.div
+                  className="absolute inset-y-0 w-[30%] pointer-events-none z-0"
+                  style={{ background: 'linear-gradient(90deg, transparent, rgba(16,185,129,0.12), transparent)' }}
+                  initial={{ left: '-30%' }}
+                  animate={{ left: '130%' }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.7, ease: 'easeOut' }}
+                />
+              )}
+            </AnimatePresence>
+
+            <Terminal className="w-4 h-4 text-emerald-500/60 flex-shrink-0 relative z-10" />
+            <span className="text-emerald-400 text-sm flex-shrink-0 select-none relative z-10">&#x276F;</span>
+            <input
+              type="text"
+              placeholder="search agents..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              className="flex-1 bg-transparent text-white/80 placeholder:text-white/20 focus:outline-none font-mono text-sm relative z-10"
+            />
+            {!searchQuery && (
+              <span className="text-emerald-400 animate-pulse text-sm font-mono select-none relative z-10">|</span>
+            )}
+          </div>
+
+          {/* Filter tabs */}
+          <div className="flex flex-wrap gap-1.5">
+            {categories.map(cat => (
+              <button
+                key={cat.value}
+                onClick={() => setSelectedCategory(cat.value)}
+                className={`
+                  px-3.5 py-1.5 rounded-lg font-mono text-[10px] uppercase tracking-[0.15em]
+                  transition-all duration-200 border
+                  ${selectedCategory === cat.value
+                    ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.12)]'
+                    : 'text-white/30 bg-transparent border-transparent hover:text-white/50 hover:bg-white/[0.03]'}
+                `}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* ── Results count ────────────────────────────────────── */}
+        <div className="flex items-center gap-2">
+          <div className="h-px flex-1 bg-white/[0.04]" />
+          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/20">
+            {filteredAgents.length} UNIT{filteredAgents.length !== 1 ? 'S' : ''} DETECTED
+          </span>
+          <div className="h-px flex-1 bg-white/[0.04]" />
+        </div>
+
+        {/* ── Agent Grid ──────────────────────────────────────── */}
+        <AnimatePresence mode="popLayout">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {filteredAgents.map((agent, index) => (
+              <HolographicAgentCard
+                key={agent.id}
+                agent={agent}
+                index={index}
+                onClick={() => router.push(`/agents/${agent.id}/chat`)}
+              />
+            ))}
+          </div>
+        </AnimatePresence>
+
+        {/* ── Empty State ─────────────────────────────────────── */}
+        {filteredAgents.length === 0 && (
+          <EmptyState
+            icon={<Search className="w-10 h-10" />}
+            title="No agents found"
+            description={`No units matching "${searchQuery || selectedCategory}". Adjust query parameters.`}
+            action={
+              <button
+                onClick={() => { setSearchQuery(''); setSelectedCategory('all'); }}
+                className="px-5 py-2.5 rounded-lg font-mono text-[10px] uppercase tracking-[0.15em] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all"
+              >
+                Reset Filters
+              </button>
+            }
+          />
+        )}
+      </div>
+    </div>
   );
 }
 
-// Premium Agent Card Component
-interface PremiumAgentCardProps {
-  agent: typeof agentPersonas[0];
+// ─── HUD Stats Bar ────────────────────────────────────────────────────────────
+
+function HudStatsBar({ agentCount, capabilityCount }: { agentCount: number; capabilityCount: number }) {
+  const metrics = [
+    { icon: <Cpu className="w-3.5 h-3.5" />, label: 'TOTAL AGENTS', value: String(agentCount), color: 'text-white' },
+    { icon: <Zap className="w-3.5 h-3.5" />, label: 'CAPABILITIES', value: `${capabilityCount} Tools`, color: 'text-white' },
+    { icon: <Activity className="w-3.5 h-3.5" />, label: 'SYSTEM STATUS', value: 'OPERATIONAL', color: 'text-emerald-400', pulse: true },
+    { icon: <Database className="w-3.5 h-3.5" />, label: 'MEMORY', value: 'PGVECTOR ACTIVE', color: 'text-cyan-400' },
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
+      className="relative rounded-xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm overflow-hidden"
+    >
+      <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent animate-scan-line" style={{ width: '40%' }} />
+
+      <div className="grid grid-cols-2 md:grid-cols-4">
+        {metrics.map((m, i) => (
+          <div
+            key={m.label}
+            className={`px-5 py-4 flex flex-col gap-1.5 ${i < metrics.length - 1 ? 'md:border-r border-white/[0.06]' : ''}`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-white/20">{m.icon}</span>
+              <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-white/30">{m.label}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {m.pulse && (
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+                </span>
+              )}
+              <span className={`font-mono text-sm font-bold tracking-wide ${m.color}`}>{m.value}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Holographic Agent Card with 3D Tilt ──────────────────────────────────────
+
+interface HolographicAgentCardProps {
+  agent: (typeof agentPersonas)[0];
   index: number;
   onClick: () => void;
 }
 
-function PremiumAgentCard({ agent, index, onClick }: PremiumAgentCardProps) {
+function HolographicAgentCard({ agent, index, onClick }: HolographicAgentCardProps) {
   const Icon = agent.icon;
+  const isIconComponent = typeof Icon !== 'string';
+  const isReady = agent.status === 'active';
+  const maturityLevel = isReady ? 10 : agent.status === 'beta' ? 7 : 3;
 
-  // Convert hex color to RGB for glow effect
-  const hexToRgb = (hex: string) => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result
-      ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
-      : '99, 102, 241';
-  };
+  // ── 3D tilt tracking ──
+  const mx = useMotionValue(0);
+  const my = useMotionValue(0);
+  const rotateX = useTransform(my, [-0.5, 0.5], [7, -7]);
+  const rotateY = useTransform(mx, [-0.5, 0.5], [-7, 7]);
+  const springX = useSpring(rotateX, { stiffness: 250, damping: 30 });
+  const springY = useSpring(rotateY, { stiffness: 250, damping: 30 });
 
-  const rgbColor = hexToRgb(agent.color);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    mx.set((e.clientX - rect.left) / rect.width - 0.5);
+    my.set((e.clientY - rect.top) / rect.height - 0.5);
+  }, [mx, my]);
+
+  const handleMouseLeave = useCallback(() => {
+    mx.set(0);
+    my.set(0);
+    setIsHovered(false);
+  }, [mx, my]);
 
   return (
     <motion.div
@@ -159,95 +320,150 @@ function PremiumAgentCard({ agent, index, onClick }: PremiumAgentCardProps) {
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.5, delay: index * 0.05, ease: [0.16, 1, 0.3, 1] }}
-      onClick={onClick}
+      transition={{ duration: 0.5, delay: index * 0.04, ease: [0.16, 1, 0.3, 1] }}
       className="group cursor-pointer"
+      style={{ perspective: 800 }}
+      onClick={onClick}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={handleMouseLeave}
     >
-      <div
-        className="relative p-6 rounded-[32px] border border-white/10 overflow-hidden transition-all duration-500 hover:border-white/20"
+      <motion.div
+        className="relative p-5 rounded-2xl border backdrop-blur-xl overflow-hidden transition-[border-color,box-shadow] duration-300"
         style={{
-          background: tokens.bgCard,
-          backdropFilter: 'blur(50px)',
+          background: 'rgba(255,255,255,0.025)',
+          borderColor: isHovered ? `${agent.color}50` : 'rgba(255,255,255,0.06)',
+          boxShadow: isHovered
+            ? `0 0 30px ${agent.color}15, inset 0 0 30px ${agent.color}05`
+            : 'none',
+          rotateX: springX,
+          rotateY: springY,
+          transformStyle: 'preserve-3d',
         }}
       >
-        {/* Glow Effect on Hover */}
+        {/* Top edge glow line */}
         <div
-          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-          style={{
-            background: `radial-gradient(600px circle at 50% 0%, rgba(${rgbColor}, 0.15), transparent 60%)`,
-          }}
+          className="absolute top-0 left-4 right-4 h-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+          style={{ background: `linear-gradient(90deg, transparent, ${agent.color}80, transparent)` }}
         />
 
-        {/* Content */}
-        <div className="relative z-10">
-          {/* Header: Avatar + Name */}
-          <div className="flex items-start gap-4 mb-4">
-            {/* Avatar */}
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110"
+        {/* ── Header ── */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-3">
+            {/* Avatar with breathing glow */}
+            <motion.div
+              className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{
-                background: `linear-gradient(135deg, ${agent.color}40, ${agent.color}20)`,
-                border: `1px solid ${agent.color}40`,
-                boxShadow: `0 0 30px ${agent.color}20`,
+                background: `${agent.color}15`,
+                border: `1px solid ${agent.color}30`,
               }}
+              animate={{
+                boxShadow: [
+                  `0 0 8px ${agent.color}15, 0 0 20px ${agent.color}08`,
+                  `0 0 18px ${agent.color}30, 0 0 36px ${agent.color}12`,
+                  `0 0 8px ${agent.color}15, 0 0 20px ${agent.color}08`,
+                ],
+                scale: [1, 1.04, 1],
+              }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
             >
-              <Icon className="w-7 h-7" style={{ color: agent.color }} />
-            </div>
+              {isIconComponent ? (
+                <Icon className="w-5 h-5" style={{ color: agent.color }} />
+              ) : (
+                <span className="text-lg">{Icon}</span>
+              )}
+            </motion.div>
 
-            {/* Name & Role */}
-            <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold text-white truncate group-hover:text-indigo-300 transition-colors">
-                {agent.name}
+            {/* Name + Role */}
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold font-mono text-white tracking-wide truncate">
+                {agent.name.toUpperCase()}
               </h3>
-              <p className="text-sm text-white/50 truncate">{agent.role}</p>
+              <p className="text-[11px] text-white/35 truncate">{agent.role}</p>
             </div>
-
-            {/* Status Badge */}
-            {agent.status !== 'active' && (
-              <Badge
-                text={agent.status === 'beta' ? 'BETA' : 'BALD'}
-                color={agent.status === 'beta' ? 'yellow' : 'white'}
-              />
-            )}
           </div>
 
-          {/* Bio */}
-          <p className="text-sm text-white/40 leading-relaxed mb-4 line-clamp-2">
-            {agent.bio}
-          </p>
+          {/* Status */}
+          {agent.status && agent.status !== 'active' ? (
+            <Badge
+              text={agent.status === 'beta' ? 'BETA' : 'SOON'}
+              color={agent.status === 'beta' ? 'yellow' : 'white'}
+            />
+          ) : (
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+              </span>
+              <span className="font-mono text-[9px] uppercase tracking-wider text-emerald-400/80">
+                Ready
+              </span>
+            </div>
+          )}
+        </div>
 
-          {/* Specialties */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {agent.specialties.slice(0, 3).map((specialty) => (
-              <span
-                key={specialty}
-                className="px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide bg-card/5 text-white/50 border border-white/5"
-              >
-                {specialty}
-              </span>
-            ))}
-            {agent.specialties.length > 3 && (
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide bg-card/5 text-white/30 border border-white/5">
-                +{agent.specialties.length - 3}
-              </span>
-            )}
+        {/* ── Capabilities (inline dot-separated) ── */}
+        <p className="font-mono text-[8px] uppercase tracking-[0.12em] text-white/25 mb-3 leading-relaxed truncate">
+          {agent.specialties.join(' · ')}
+        </p>
+
+        {/* ── Maturity Line (thin glowing wire) ── */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-white/25">
+              Maturity
+            </span>
+            <span className="font-mono text-[9px] uppercase tracking-wider text-white/40">
+              LVL {maturityLevel}/10
+            </span>
           </div>
-
-          {/* Action Button */}
-          <div
-            className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all"
-            style={{
-              background: `linear-gradient(135deg, ${agent.color}20, ${agent.color}10)`,
-              border: `1px solid ${agent.color}30`,
-              color: agent.color,
-            }}
-          >
-            <MessageSquare className="w-4 h-4" />
-            Chat starten
-            <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          <div className="h-[1px] bg-white/[0.04] rounded-full overflow-hidden">
+            <motion.div
+              className="h-full rounded-full"
+              style={{
+                background: agent.color,
+                boxShadow: `0 0 6px ${agent.color}50, 0 0 12px ${agent.color}25`,
+              }}
+              initial={{ width: 0 }}
+              animate={{ width: `${maturityLevel * 10}%` }}
+              transition={{ duration: 1, delay: index * 0.04 + 0.3, ease: [0.16, 1, 0.3, 1] }}
+            />
           </div>
         </div>
-      </div>
+
+        {/* ── Uplink Button with light trail ── */}
+        <div className="relative group/btn">
+          {/* Spinning conic gradient border — revealed on hover */}
+          <div
+            className="absolute -inset-[1px] rounded-lg opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300 overflow-hidden"
+          >
+            <div
+              className="absolute inset-[-4px]"
+              style={{
+                background: `conic-gradient(from 0deg, transparent, transparent 70%, ${agent.color}80, transparent)`,
+                animation: 'spin 2.5s linear infinite',
+              }}
+            />
+          </div>
+
+          <button
+            className="relative w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-mono text-[10px] uppercase tracking-[0.15em] transition-all duration-200"
+            style={{
+              background: 'rgb(10,10,10)',
+              borderColor: 'transparent',
+              color: isHovered ? agent.color : 'rgba(255,255,255,0.4)',
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick();
+            }}
+          >
+            <Hexagon className="w-3 h-3" />
+            Initialize Uplink
+            <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+          </button>
+        </div>
+      </motion.div>
     </motion.div>
   );
 }

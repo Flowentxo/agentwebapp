@@ -402,6 +402,51 @@ export async function executeGmailTool(
         result = await executeAITool(toolName, args, context);
         break;
 
+      // ============================================================
+      // CRM Tools
+      // ============================================================
+
+      case 'crm_check_contact': {
+        const { checkContact } = await import('./crm-tools');
+        const crmResult = await checkContact(args);
+        result = {
+          success: true,
+          data: crmResult,
+          summary: crmResult.found
+            ? `Kontakt gefunden: ${crmResult.contact?.name}`
+            : 'Kein Kontakt gefunden',
+        };
+        break;
+      }
+
+      case 'crm_create_contact': {
+        const { createContact } = await import('./crm-tools');
+        const createResult = await createContact(args);
+        result = {
+          success: createResult.success,
+          data: createResult,
+          summary: createResult.success
+            ? `Kontakt erstellt: ${args.name}`
+            : 'Kontakt konnte nicht erstellt werden',
+        };
+        break;
+      }
+
+      // ============================================================
+      // Calendar Tools
+      // ============================================================
+
+      case 'calendar_check_availability': {
+        const { checkCalendarAvailability } = await import('./calendar-tools');
+        const calResult = await checkCalendarAvailability(args);
+        result = {
+          success: true,
+          data: calResult,
+          summary: `${calResult.available_slots.length} freie Zeitfenster am ${args.date}`,
+        };
+        break;
+      }
+
       default:
         result = {
           success: false,

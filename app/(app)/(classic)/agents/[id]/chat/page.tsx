@@ -27,6 +27,7 @@ import {
   XCircle,
   RefreshCw,
   Settings,
+  X,
   // AI Tool Icons
   ListTodo,
   CalendarClock,
@@ -87,7 +88,6 @@ interface AgentThinking {
 // Tool icon mapping
 const getToolIcon = (toolName: string) => {
   const iconMap: Record<string, typeof Search> = {
-    // Basic Gmail tools
     'gmail_search': Search,
     'gmail_read': Eye,
     'gmail_send': Mail,
@@ -99,15 +99,12 @@ const getToolIcon = (toolName: string) => {
     'gmail_mark_read': Eye,
     'gmail_get_thread': MessageSquare,
     'gmail_stats': Database,
-    // Batch operations
     'gmail_batch_archive': Archive,
     'gmail_batch_trash': Trash2,
     'gmail_batch_mark_read': Eye,
     'gmail_batch_label': FileText,
-    // Templates
     'email_use_template': FileText,
     'email_list_templates': FileText,
-    // AI-powered tools
     'gmail_summarize_inbox': Brain,
     'gmail_extract_action_items': ListTodo,
     'gmail_schedule_send': CalendarClock,
@@ -118,7 +115,6 @@ const getToolIcon = (toolName: string) => {
     'gmail_unsubscribe_suggestions': BellOff,
     'gmail_translate': Languages,
     'gmail_snooze': AlarmClock,
-    // Legacy mappings
     'search_emails': Search,
     'read_email': Eye,
     'send_email': Mail,
@@ -135,7 +131,6 @@ const getToolIcon = (toolName: string) => {
 // Agent thinking phases based on tool calls
 const getThinkingPhase = (toolName: string): AgentThinking => {
   const phases: Record<string, AgentThinking> = {
-    // Basic Gmail tools
     'gmail_search': { phase: 'searching', description: 'Durchsucht E-Mails...' },
     'gmail_read': { phase: 'analyzing', description: 'Liest E-Mail-Inhalt...' },
     'gmail_send': { phase: 'processing', description: 'Sendet E-Mail...' },
@@ -147,15 +142,12 @@ const getThinkingPhase = (toolName: string): AgentThinking => {
     'gmail_mark_read': { phase: 'processing', description: 'Markiert als gelesen...' },
     'gmail_get_thread': { phase: 'searching', description: 'Lädt E-Mail-Thread...' },
     'gmail_stats': { phase: 'analyzing', description: 'Ruft Statistiken ab...' },
-    // Batch operations
     'gmail_batch_archive': { phase: 'processing', description: 'Archiviert mehrere E-Mails...' },
     'gmail_batch_trash': { phase: 'processing', description: 'Löscht mehrere E-Mails...' },
     'gmail_batch_mark_read': { phase: 'processing', description: 'Markiert mehrere als gelesen...' },
     'gmail_batch_label': { phase: 'processing', description: 'Ändert Labels...' },
-    // Templates
     'email_use_template': { phase: 'writing', description: 'Wendet Vorlage an...' },
     'email_list_templates': { phase: 'searching', description: 'Lädt Vorlagen...' },
-    // AI-powered tools
     'gmail_summarize_inbox': { phase: 'analyzing', description: 'Fasst Postfach zusammen...' },
     'gmail_extract_action_items': { phase: 'analyzing', description: 'Extrahiert Aufgaben...' },
     'gmail_schedule_send': { phase: 'processing', description: 'Plant E-Mail-Versand...' },
@@ -166,7 +158,6 @@ const getThinkingPhase = (toolName: string): AgentThinking => {
     'gmail_unsubscribe_suggestions': { phase: 'analyzing', description: 'Analysiert Newsletter...' },
     'gmail_translate': { phase: 'processing', description: 'Übersetzt E-Mail...' },
     'gmail_snooze': { phase: 'processing', description: 'Verschiebt E-Mail...' },
-    // Legacy mappings
     'search_emails': { phase: 'searching', description: 'Durchsucht E-Mails...' },
     'read_email': { phase: 'analyzing', description: 'Analysiert E-Mail-Inhalt...' },
     'send_email': { phase: 'processing', description: 'Sendet E-Mail...' },
@@ -192,6 +183,139 @@ interface ChatSession {
   updatedAt: Date;
   preview: string;
 }
+
+// =====================================================
+// MISSION CONTROL: Per-agent titles & specialty icons
+// =====================================================
+const agentMissionTitles: Record<string, string> = {
+  dexter: 'Ready for Analysis',
+  cassie: 'How Can I Help?',
+  emmie: 'Inbox Command Center',
+  kai: "Let's Build Something",
+  lex: 'Legal Intelligence Ready',
+  finn: 'Financial Core Online',
+  nova: 'Research Mode Active',
+  aura: 'Brand Strategy Hub',
+  vince: 'Production Studio Ready',
+  milo: 'Motion Lab Active',
+  ari: 'Automation Engine Online',
+  vera: 'Security Scan Ready',
+  echo: 'Audio Lab Online',
+  omni: 'Orchestrator Online',
+  buddy: 'Financial Intel Active',
+  default: 'Ready to Assist',
+};
+
+const specialtyIcons: Record<string, typeof Search> = {
+  'ROI Calculator': Zap,
+  'Financial Analysis': Database,
+  'Sales Forecasting': ChevronRight,
+  'Ticket Management': MessageSquare,
+  'FAQ Generation': FileText,
+  'Issue Resolution': CheckCircle,
+  'Email Draft': Mail,
+  'Email Automation': Mail,
+  'Campaign Planning': Globe,
+  'Campaign Management': Globe,
+  'Template Creation': FileText,
+  'Follow-Up Sequences': CalendarClock,
+  'Code Generation': Zap,
+  'Code Review': Eye,
+  'Bug Fixing': AlertCircle,
+  'Architecture Design': Database,
+  'Contract Review': FileText,
+  'Compliance Check': CheckCircle,
+  'Risk Assessment': AlertCircle,
+  'Legal Research': Search,
+  'Budget Planning': Database,
+  'Investment Analysis': ChevronRight,
+  'Tax Strategy': FileText,
+  'Market Research': Search,
+  'Trend Analysis': Eye,
+  'Competitive Intelligence': Brain,
+  'Data Synthesis': Database,
+  'Brand Strategy': Sparkles,
+  'Content Creation': Edit3,
+  'Social Media': Globe,
+  'Visual Identity': Eye,
+  'Video Production': Eye,
+  'Storyboarding': FileText,
+  'Workflow Design': Zap,
+  'Process Automation': Zap,
+  'Security Audit': AlertCircle,
+  'Threat Detection': Eye,
+  'Audio Production': Zap,
+  'Task Delegation': MessageSquarePlus,
+  'Multi-Agent Coordination': Brain,
+  'default': Sparkles,
+};
+
+// Specialty descriptions for welcome cards
+const specialtyDescriptions: Record<string, string> = {
+  'ROI Calculator': 'Calculate return on investment for any business scenario with detailed breakdowns',
+  'Financial Analysis': 'Deep-dive into financial statements, margins, and performance metrics',
+  'Sales Forecasting': 'Predict future revenue trends based on historical data and market signals',
+  'Ticket Management': 'Track, prioritize and resolve customer support tickets efficiently',
+  'FAQ Generation': 'Auto-generate comprehensive FAQ documents from your knowledge base',
+  'Issue Resolution': 'Diagnose and resolve complex customer issues step by step',
+  'Customer Feedback': 'Analyze and act on customer feedback to improve satisfaction',
+  'Email Automation': 'Set up automated email sequences and drip campaigns',
+  'Campaign Management': 'Plan, execute and monitor multi-channel email campaigns',
+  'Template Creation': 'Design reusable, professional email templates for every occasion',
+  'Follow-ups': 'Never miss a follow-up with smart scheduling and reminders',
+  'Brand Identity': 'Define and refine your brand identity and visual language',
+  'Positioning': 'Craft compelling market positioning and value propositions',
+  'Messaging': 'Develop consistent, impactful brand messaging frameworks',
+  'Competitor Analysis': 'Analyze competitors\' strategies, strengths and weaknesses',
+  'Code Generation': 'Generate clean, production-ready code in any programming language',
+  'Debugging': 'Find and fix bugs with systematic debugging strategies',
+  'Code Review': 'Get thorough code reviews with actionable improvement suggestions',
+  'Technical Documentation': 'Create clear, well-structured technical documentation',
+  'Contract Analysis': 'Review contracts for risks, obligations and key terms',
+  'Compliance': 'Ensure regulatory compliance with up-to-date guidance',
+  'Legal Research': 'Research case law, statutes and legal precedents',
+  'Document Drafting': 'Draft legal documents with precise, enforceable language',
+  'Budget Planning': 'Create detailed budgets with variance tracking and alerts',
+  'Investment Analysis': 'Evaluate investment opportunities with risk-adjusted returns',
+  'Financial Forecasting': 'Build sophisticated financial models and projections',
+  'Cost Optimization': 'Identify cost savings and efficiency improvements',
+  'Market Research': 'Research market dynamics, sizing and growth opportunities',
+  'Trend Analysis': 'Identify emerging trends and their business implications',
+  'Competitive Intelligence': 'Monitor competitive landscape and strategic moves',
+  'Strategic Insights': 'Deliver data-driven strategic recommendations',
+  'Video Konzeption': 'Develop creative video concepts from brief to final vision',
+  'Storyboarding': 'Create visual storyboards for video and motion projects',
+  'Production Planning': 'Plan production schedules, resources and deliverables',
+  'Content Strategy': 'Design content strategies aligned with business goals',
+  'Logo Animation': 'Bring logos to life with professional motion design',
+  'Motion Graphics': 'Create eye-catching animated graphics and visual effects',
+  'Transitions': 'Design smooth, creative transitions for video projects',
+  'Visual Effects': 'Add stunning visual effects to elevate your content',
+  'Workflow Automation': 'Build intelligent automated workflows to save time',
+  'AI Integration': 'Integrate AI capabilities into your business processes',
+  'Process Optimization': 'Streamline and optimize business processes end-to-end',
+  'Trigger Design': 'Design event-driven triggers for automated actions',
+  'Security Audits': 'Comprehensive security assessments of systems and processes',
+  'Risk Assessment': 'Identify, evaluate and mitigate business and technical risks',
+  'Compliance Checks': 'Verify adherence to regulatory and policy requirements',
+  'Data Privacy': 'Ensure data privacy compliance and best practices',
+  'Transcription': 'Convert audio and video content to accurate text transcripts',
+  'Audio Analysis': 'Analyze audio content for insights, sentiment and quality',
+  'Podcast Production': 'Plan, produce and optimize podcast content',
+  'Voice Content': 'Create and manage voice-based content and interactions',
+  'Agent Coordination': 'Orchestrate multiple AI agents for complex tasks',
+  'Complex Tasks': 'Break down and solve multi-step problems efficiently',
+  'Multi-Step Workflows': 'Design and execute complex multi-step workflows',
+  'Task Delegation': 'Intelligently delegate tasks to the right specialist agents',
+  'Budget Monitoring': 'Track AI spending in real-time across all services',
+  'Usage Analytics': 'Analyze usage patterns and optimize resource allocation',
+  'Proactive Alerts': 'Get notified before hitting budget limits or anomalies',
+  'Limit Management': 'Set and manage spending limits across teams and projects',
+};
+
+const getSpecialtyDescription = (specialty: string): string => {
+  return specialtyDescriptions[specialty] || `Get expert help with ${specialty.toLowerCase()}`;
+};
 
 // Agent greeting messages based on personality
 const agentGreetings: Record<string, string[]> = {
@@ -237,14 +361,16 @@ export default function AgentChatPage() {
   const router = useRouter();
   const agentId = params.id as string;
 
-  // Load agent data synchronously - no loading delay needed
+  // Load agent data synchronously
   const agent = getAgentById(agentId);
 
   // Chat Sessions State
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const [showHistory, setShowHistory] = useState(true);
-  const [showControlPanel, setShowControlPanel] = useState(true);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showContextPanel, setShowContextPanel] = useState(false);
+  const [showModelConfigModal, setShowModelConfigModal] = useState(false);
+  const [showToolSuggestions, setShowToolSuggestions] = useState(false);
 
   // Current Chat State
   const [messages, setMessages] = useState<Message[]>([]);
@@ -254,7 +380,7 @@ export default function AgentChatPage() {
   const [tokenUsage, setTokenUsage] = useState({ input: 0, output: 0, total: 0 });
   const [error, setError] = useState<string | null>(null);
 
-  // Agent Action State - Tool calls and thinking indicators
+  // Agent Action State
   const [activeToolCalls, setActiveToolCalls] = useState<ToolCall[]>([]);
   const [completedToolCalls, setCompletedToolCalls] = useState<ToolCall[]>([]);
   const [currentThinking, setCurrentThinking] = useState<AgentThinking | null>(null);
@@ -264,14 +390,25 @@ export default function AgentChatPage() {
   const [handoffContext, setHandoffContext] = useState<ChatContext | null>(null);
   const consumeContext = useChatStore((state) => state.consumeContext);
 
-  // Agent Configuration State (synced with Control Panel)
+  // Agent Configuration State
   const [agentConfig, setAgentConfig] = useState<AgentConfig>(DEFAULT_AGENT_CONFIG);
+
+  // Knowledge files for context panel
+  const [knowledgeFiles] = useState([
+    { id: '1', name: 'Q3_Financials.pdf', type: 'pdf', size: '2.4 MB', addedAt: '2 hours ago' },
+    { id: '2', name: 'Brand_Guidelines.docx', type: 'doc', size: '1.1 MB', addedAt: '1 day ago' },
+    { id: '3', name: 'Product_Catalog.csv', type: 'csv', size: '456 KB', addedAt: '3 days ago' },
+  ]);
+  const fileTypeColors: Record<string, string> = { pdf: '#ef4444', doc: '#3b82f6', txt: '#6b7280', csv: '#22c55e' };
+
+  // Greeting state (client-only to avoid hydration mismatch)
+  const [greeting, setGreeting] = useState<string>('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Load chat sessions from localStorage and create new chat
+  // Load chat sessions from localStorage
   useEffect(() => {
     if (!agentId) return;
 
@@ -295,7 +432,6 @@ export default function AgentChatPage() {
       }
     }
 
-    // Always start with a new chat session
     const newSession: ChatSession = {
       id: `chat-${Date.now()}`,
       title: 'Neuer Chat',
@@ -312,47 +448,48 @@ export default function AgentChatPage() {
     setError(null);
   }, [agentId]);
 
-  // Save sessions to localStorage when they change
+  // Save sessions to localStorage
   useEffect(() => {
     if (!agentId || chatSessions.length === 0) return;
-
     const storageKey = `chat-sessions-${agentId}`;
     localStorage.setItem(storageKey, JSON.stringify(chatSessions));
   }, [chatSessions, agentId]);
 
-  // =====================================================
-  // CONTEXT-AWARE HANDOFF: Auto-detect and consume context
-  // =====================================================
+  // Context-Aware Handoff
   useEffect(() => {
-    // Check for context from store (e.g., from Budget Dashboard)
     const context = consumeContext();
     if (context) {
-      console.log('[AgentChat] Received handoff context:', context.type, 'from', context.source);
-
-      // Store context for display (ContextPill)
       setHandoffContext(context);
-
-      // Auto-populate the input with the generated prompt
       if (context.initialPrompt) {
         setInputMessage(context.initialPrompt);
       }
-
-      // Auto-send if configured
       if (context.metadata?.autoSend && context.initialPrompt) {
-        // Slight delay to allow UI to update
-        setTimeout(() => {
-          handleSendMessage();
-        }, 500);
+        setTimeout(() => { handleSendMessage(); }, 500);
       }
     }
-  }, []); // Only run once on mount
+  }, []);
 
-  // Clear handoff context after first message is sent
+  // Set greeting on client
+  useEffect(() => {
+    setGreeting(getRandomGreeting(agentId));
+  }, [agentId]);
+
+  // Escape key to close panels/modals
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showModelConfigModal) setShowModelConfigModal(false);
+        else if (showContextPanel) setShowContextPanel(false);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [showContextPanel, showModelConfigModal]);
+
   const handleDismissContext = useCallback(() => {
     setHandoffContext(null);
   }, []);
 
-  // Create a new chat session
   const createNewChat = useCallback(() => {
     const newSession: ChatSession = {
       id: `chat-${Date.now()}`,
@@ -362,7 +499,6 @@ export default function AgentChatPage() {
       updatedAt: new Date(),
       preview: ''
     };
-
     setChatSessions(prev => [newSession, ...prev]);
     setCurrentSessionId(newSession.id);
     setMessages([]);
@@ -370,7 +506,6 @@ export default function AgentChatPage() {
     setError(null);
   }, []);
 
-  // Load a chat session
   const loadChatSession = useCallback((sessionId: string) => {
     const session = chatSessions.find(s => s.id === sessionId);
     if (session) {
@@ -380,10 +515,8 @@ export default function AgentChatPage() {
     }
   }, [chatSessions]);
 
-  // Update current session with new messages
   const updateCurrentSession = useCallback((newMessages: Message[]) => {
     if (!currentSessionId) return;
-
     setChatSessions(prev => prev.map(session => {
       if (session.id === currentSessionId) {
         const firstUserMsg = newMessages.find(m => m.role === 'user');
@@ -399,7 +532,6 @@ export default function AgentChatPage() {
     }));
   }, [currentSessionId]);
 
-  // Delete a chat session
   const deleteChatSession = useCallback((sessionId: string) => {
     setChatSessions(prev => prev.filter(s => s.id !== sessionId));
     if (currentSessionId === sessionId) {
@@ -407,31 +539,27 @@ export default function AgentChatPage() {
     }
   }, [currentSessionId, createNewChat]);
 
-  // Sync messages to current session
   useEffect(() => {
     if (messages.length > 0) {
       updateCurrentSession(messages);
     }
   }, [messages, updateCurrentSession]);
 
-  // Auto-scroll to bottom when new messages arrive or tool calls change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping, streamingMessage, activeToolCalls, completedToolCalls]);
 
-  // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      abortControllerRef.current?.abort();
-    };
+    return () => { abortControllerRef.current?.abort(); };
   }, []);
 
+  // =====================================================
+  // SEND MESSAGE (SSE Streaming — UNCHANGED LOGIC)
+  // =====================================================
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isTyping) return;
 
     const userMessageContent = inputMessage.trim();
-
-    // Add user message
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: 'user',
@@ -448,8 +576,8 @@ export default function AgentChatPage() {
     setCompletedToolCalls([]);
     setCurrentThinking(null);
     setIsRecovering(false);
+    setShowToolSuggestions(false);
 
-    // Clear handoff context after first message is sent
     if (handoffContext) {
       setHandoffContext(null);
     }
@@ -466,7 +594,6 @@ export default function AgentChatPage() {
         },
         body: JSON.stringify({
           content: userMessageContent,
-          // Include agent configuration from Control Panel
           modelId: agentConfig.model,
           temperature: agentConfig.temperature,
           maxTokens: agentConfig.maxTokens,
@@ -505,22 +632,17 @@ export default function AgentChatPage() {
             try {
               const data = JSON.parse(line.slice(6));
 
-              // Handle text chunks
               if (data.chunk) {
                 accumulatedResponse += data.chunk;
                 setStreamingMessage(accumulatedResponse);
-                // Clear thinking when we start getting text
                 if (currentThinking) {
                   setCurrentThinking(null);
                 }
               }
 
-              // Handle tool call events
               if (data.toolCall) {
                 const toolData = data.toolCall;
-
                 if (toolData.status === 'start') {
-                  // New tool call starting
                   const newToolCall: ToolCall = {
                     id: `tool-${Date.now()}-${toolData.tool}`,
                     tool: toolData.tool,
@@ -532,7 +654,6 @@ export default function AgentChatPage() {
                   setActiveToolCalls(prev => [...prev, newToolCall]);
                   setCurrentThinking(getThinkingPhase(toolData.tool));
                 } else if (toolData.status === 'complete' || toolData.status === 'error') {
-                  // Tool call completed
                   setActiveToolCalls(prev => {
                     const updated = prev.filter(t => t.tool !== toolData.tool);
                     const completed = prev.find(t => t.tool === toolData.tool);
@@ -547,18 +668,14 @@ export default function AgentChatPage() {
                     }
                     return updated;
                   });
-
-                  // Clear thinking if no more active tools
                   if (activeToolCalls.length <= 1) {
                     setCurrentThinking(null);
                   }
                 }
               }
 
-              // Handle recovery attempts
               if (data.recovery) {
                 setIsRecovering(true);
-                // Auto-clear recovery status after a moment
                 setTimeout(() => setIsRecovering(false), 2000);
               }
 
@@ -612,7 +729,6 @@ export default function AgentChatPage() {
 
   const handleClearChat = () => {
     if (!confirm('Möchten Sie den Chat wirklich löschen?')) return;
-
     if (currentSessionId) {
       deleteChatSession(currentSessionId);
     }
@@ -622,7 +738,6 @@ export default function AgentChatPage() {
     const chatText = messages
       .map(m => `[${m.timestamp.toLocaleTimeString('de-DE')}] ${m.role.toUpperCase()}: ${m.content}`)
       .join('\n\n');
-
     const blob = new Blob([chatText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -652,7 +767,6 @@ export default function AgentChatPage() {
   const formatSessionDate = (date: Date) => {
     const now = new Date();
     const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-
     if (diff < 60) return 'Gerade eben';
     if (diff < 3600) return `vor ${Math.floor(diff / 60)} Min`;
     if (diff < 86400) return `vor ${Math.floor(diff / 3600)} Std`;
@@ -678,43 +792,45 @@ export default function AgentChatPage() {
     );
   }
 
-  // Get agent icon
   const AgentIcon = typeof agent.icon === 'string' ? null : agent.icon;
-
-  // Get greeting for empty state - use useState to prevent hydration mismatch
-  const [greeting, setGreeting] = useState<string>('');
-
-  useEffect(() => {
-    // Only set greeting on client to avoid hydration mismatch
-    setGreeting(getRandomGreeting(agentId));
-  }, [agentId]);
-
-  // Get sessions without current empty one for display
+  const missionTitle = agentMissionTitles[agentId] || agentMissionTitles.default;
   const displaySessions = chatSessions.filter(s => s.messages.length > 0 || s.id === currentSessionId);
 
   return (
-    <div className="h-full flex overflow-hidden">
-      {/* Main Content - Full width seamless layout */}
-      <div className="flex flex-1 min-h-0 relative">
-        {/* Error Banner - Floating at top */}
+    <div className="h-full flex overflow-hidden relative" style={{ background: '#111114' }}>
+      {/* ============================================= */}
+      {/* AMBIENT AGENT-COLOR GRADIENT                  */}
+      {/* ============================================= */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `
+            radial-gradient(ellipse 1100px 900px at 85% 95%, ${agent.color}26, transparent 65%),
+            radial-gradient(ellipse 600px 400px at 80% 90%, ${agent.color}18, transparent 50%)
+          `,
+          filter: 'blur(1px)',
+        }}
+      />
+
+      {/* Main Content */}
+      <div className="flex flex-1 min-h-0 relative z-10">
+        {/* Error Banner */}
         {error && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-red-500/10 backdrop-blur-sm rounded-xl px-4 py-2 flex items-center gap-2 text-red-500 shadow-lg">
+          <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 bg-red-500/10 backdrop-blur-sm rounded-xl px-4 py-2 flex items-center gap-2 text-red-500 shadow-lg border border-red-500/20">
             <AlertCircle className="w-4 h-4" />
             <span className="text-sm">{error}</span>
-            <button onClick={() => setError(null)} className="ml-2 text-xs hover:underline">
-              ×
-            </button>
+            <button onClick={() => setError(null)} className="ml-2 text-xs hover:underline">×</button>
           </div>
         )}
 
-        {/* Context Banner - Shows when chat was initiated from another part of the app */}
+        {/* Context Banner */}
         <AnimatePresence>
           {handoffContext && handoffContext.metadata?.showContextPill && (
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="absolute top-4 left-1/2 -translate-x-1/2 z-15"
+              className="absolute top-14 left-1/2 -translate-x-1/2 z-15"
             >
               <ContextPill
                 type={handoffContext.type}
@@ -727,61 +843,78 @@ export default function AgentChatPage() {
         </AnimatePresence>
 
         {/* Chat Area */}
-        <div className={`flex flex-col flex-1 min-w-0 relative`}>
-          {/* Floating Action Bar - Top right corner */}
-          <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-background/60 backdrop-blur-sm rounded-lg p-1">
-            <button
-              onClick={() => setShowHistory(!showHistory)}
-              className={`p-2 text-xs rounded-md transition-all flex items-center gap-1.5 ${
-                showHistory
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:bg-muted/50'
-              }`}
-              title="Chat-Verlauf"
-            >
-              <Clock className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setShowControlPanel(!showControlPanel)}
-              className={`p-2 text-xs rounded-md transition-all flex items-center gap-1.5 ${
-                showControlPanel
-                  ? 'text-white'
-                  : 'text-muted-foreground hover:bg-muted/50'
-              }`}
-              style={showControlPanel ? { backgroundColor: `${agent.color}20`, color: agent.color } : {}}
-              title="Control Panel"
-            >
-              <Settings className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={handleExportChat}
-              className="p-2 text-muted-foreground hover:bg-muted/50 rounded-md transition-colors"
-              title="Chat exportieren"
-            >
-              <Download className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={handleClearChat}
-              className="p-2 text-muted-foreground hover:bg-red-500/10 hover:text-red-500 rounded-md transition-colors"
-              title="Chat löschen"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
+        <div className="flex flex-col flex-1 min-w-0 relative">
+
+          {/* ============================================= */}
+          {/* MINIMALIST HEADER                             */}
+          {/* ============================================= */}
+          <div className="px-6 py-3 flex items-center justify-between shrink-0 border-b border-white/[0.04]">
+            <div className="flex items-center gap-3">
+              <motion.div
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: agent.color }}
+                animate={{ opacity: [1, 0.4, 1] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              />
+              <span className="text-sm font-medium text-white/90">{agent.name}</span>
+              <span className="text-[11px] text-white/25 font-light">{agent.role}</span>
+            </div>
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={() => setShowContextPanel(!showContextPanel)}
+                className={`p-2 rounded-lg transition-all ${
+                  showContextPanel ? 'text-white/80' : 'text-white/25 hover:text-white/60 hover:bg-white/[0.04]'
+                }`}
+                style={showContextPanel ? { backgroundColor: `${agent.color}15`, color: agent.color } : {}}
+                title="Context Panel"
+              >
+                <Brain className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className={`p-2 rounded-lg transition-all ${
+                  showHistory ? 'text-white/80' : 'text-white/25 hover:text-white/60 hover:bg-white/[0.04]'
+                }`}
+                style={showHistory ? { backgroundColor: `${agent.color}15`, color: agent.color } : {}}
+                title="Chat-Verlauf"
+              >
+                <Clock className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={handleExportChat}
+                className="p-2 text-white/25 hover:text-white/60 hover:bg-white/[0.04] rounded-lg transition-all"
+                title="Exportieren"
+              >
+                <Download className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={handleClearChat}
+                className="p-2 text-white/25 hover:text-red-400 hover:bg-red-500/[0.08] rounded-lg transition-all"
+                title="Löschen"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
-          {/* Messages */}
+          {/* ============================================= */}
+          {/* MESSAGES AREA                                 */}
+          {/* ============================================= */}
           <div
             ref={chatContainerRef}
             className="flex-1 overflow-y-auto px-6 py-4 space-y-5"
           >
+            {/* ============================================= */}
+            {/* MISSION CONTROL GRID (Welcome Screen)         */}
+            {/* ============================================= */}
             {messages.length === 0 && !streamingMessage && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="flex flex-col items-center justify-center h-full text-center"
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                className="flex flex-col items-center justify-center h-full text-center px-4"
               >
-                {/* Context-Aware Banner (when handoff context exists) */}
+                {/* Context-Aware Banner */}
                 {handoffContext && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -804,80 +937,106 @@ export default function AgentChatPage() {
                   </motion.div>
                 )}
 
-                {/* Agent Avatar with personality glow */}
-                <div className="relative mb-5">
+                {/* Glowing Agent Icon */}
+                <div className="relative mb-8">
                   <div
-                    className="absolute inset-0 rounded-3xl blur-xl opacity-30"
+                    className="absolute -inset-5 rounded-full blur-2xl opacity-20"
                     style={{ backgroundColor: agent.color }}
                   />
-                  <div
-                    className="relative w-20 h-20 rounded-3xl flex items-center justify-center text-3xl shadow-lg"
+                  <motion.div
+                    animate={{
+                      boxShadow: [
+                        `0 0 30px ${agent.color}15, 0 0 60px ${agent.color}08`,
+                        `0 0 50px ${agent.color}25, 0 0 80px ${agent.color}12`,
+                        `0 0 30px ${agent.color}15, 0 0 60px ${agent.color}08`,
+                      ],
+                    }}
+                    transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+                    className="relative w-24 h-24 rounded-3xl flex items-center justify-center"
                     style={{
-                      background: `linear-gradient(135deg, ${agent.color}20 0%, ${agent.color}40 100%)`,
-                      border: `2px solid ${agent.color}30`
+                      background: `linear-gradient(135deg, ${agent.color}12 0%, ${agent.color}25 100%)`,
+                      border: `1px solid ${agent.color}20`,
                     }}
                   >
-                    {AgentIcon ? <AgentIcon size={36} style={{ color: agent.color }} /> : agent.emoji || '🤖'}
-                  </div>
-                  {/* Status indicator */}
+                    {AgentIcon ? (
+                      <AgentIcon size={44} style={{ color: agent.color }} />
+                    ) : (
+                      <span className="text-4xl">{agent.emoji || '🤖'}</span>
+                    )}
+                  </motion.div>
                   <div
-                    className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-background flex items-center justify-center"
-                    style={{ backgroundColor: agent.color }}
+                    className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 flex items-center justify-center"
+                    style={{ backgroundColor: agent.color, borderColor: '#111114' }}
                   >
-                    <Sparkles className="w-3 h-3 text-white" />
+                    <Sparkles className="w-3.5 h-3.5 text-white" />
                   </div>
                 </div>
 
-                {/* Agent name with personality */}
-                <h2
-                  className="text-2xl font-bold mb-1"
-                  style={{ color: agent.color }}
-                >
-                  {agent.name}
-                </h2>
-                <p className="text-sm text-muted-foreground mb-4">{agent.role}</p>
+                {/* Mission Title */}
+                <h1 className="text-2xl font-bold text-white/90 mb-1">{missionTitle}</h1>
+                <p className="text-sm text-white/30 mb-8 max-w-md leading-relaxed">{agent.bio}</p>
 
-                {/* Greeting bubble */}
-                {greeting && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.2, duration: 0.3 }}
-                    className="max-w-md rounded-2xl px-5 py-4 mb-6"
-                    style={{
-                      backgroundColor: `${agent.color}10`,
-                      border: `1px solid ${agent.color}20`
-                    }}
-                  >
-                    <p className="text-sm leading-relaxed" style={{ color: agent.color }}>
-                      "{greeting}"
-                    </p>
-                  </motion.div>
-                )}
-
-                {/* Quick suggestions */}
-                <div className="flex flex-wrap gap-2 justify-center max-w-lg">
-                  {agent.specialties?.slice(0, 3).map((specialty, idx) => (
-                    <motion.button
-                      key={specialty}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 + idx * 0.1 }}
-                      onClick={() => setInputMessage(`Hilf mir mit ${specialty}`)}
-                      className="px-3 py-1.5 text-xs rounded-full transition-all hover:scale-105"
-                      style={{
-                        backgroundColor: `${agent.color}08`,
-                        border: `1px solid ${agent.color}20`,
-                        color: agent.color
-                      }}
-                    >
-                      {specialty}
-                    </motion.button>
-                  ))}
+                {/* Capabilities Cards (3 large cards) */}
+                <div className="grid grid-cols-3 gap-4 max-w-2xl w-full">
+                  {agent.specialties?.slice(0, 3).map((specialty, idx) => {
+                    const SpecIcon = specialtyIcons[specialty] || specialtyIcons.default;
+                    return (
+                      <motion.button
+                        key={specialty}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 + idx * 0.12, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                        onClick={() => setInputMessage(`Hilf mir mit ${specialty}`)}
+                        whileHover={{ scale: 1.03, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="flex flex-col items-start gap-4 p-6 rounded-2xl text-left group/cap transition-all cursor-pointer relative overflow-hidden"
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.02)',
+                          border: '1px solid rgba(255, 255, 255, 0.06)',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = `${agent.color}35`;
+                          e.currentTarget.style.boxShadow = `0 0 40px ${agent.color}12, inset 0 1px 0 ${agent.color}15`;
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+                          e.currentTarget.style.boxShadow = 'none';
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                        }}
+                      >
+                        {/* Shimmer line at top on hover */}
+                        <div
+                          className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover/cap:opacity-100 transition-opacity duration-500"
+                          style={{ background: `linear-gradient(90deg, transparent, ${agent.color}60, transparent)` }}
+                        />
+                        <div
+                          className="w-12 h-12 rounded-xl flex items-center justify-center"
+                          style={{
+                            backgroundColor: `${agent.color}10`,
+                            border: `1px solid ${agent.color}18`,
+                          }}
+                        >
+                          <SpecIcon className="w-6 h-6" style={{ color: agent.color }} />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-white/80 group-hover/cap:text-white transition-colors mb-1.5">
+                            {specialty}
+                          </div>
+                          <div className="text-[11px] text-white/25 group-hover/cap:text-white/40 transition-colors leading-relaxed">
+                            {getSpecialtyDescription(specialty)}
+                          </div>
+                        </div>
+                      </motion.button>
+                    );
+                  })}
                 </div>
               </motion.div>
             )}
 
+            {/* ============================================= */}
+            {/* MESSAGES                                       */}
+            {/* ============================================= */}
             <AnimatePresence initial={false}>
               {messages.map((message) => (
                 <motion.div
@@ -888,13 +1047,12 @@ export default function AgentChatPage() {
                   transition={{ duration: 0.15 }}
                   className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  {/* Agent avatar for agent messages */}
                   {message.role === 'agent' && (
                     <div
                       className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-1"
                       style={{
-                        backgroundColor: `${agent.color}15`,
-                        border: `1px solid ${agent.color}20`
+                        backgroundColor: `${agent.color}12`,
+                        border: `1px solid ${agent.color}18`
                       }}
                     >
                       {AgentIcon ? <AgentIcon size={16} style={{ color: agent.color }} /> : <span className="text-xs">{agent.emoji || '🤖'}</span>}
@@ -908,20 +1066,16 @@ export default function AgentChatPage() {
                         : 'rounded-2xl rounded-bl-md'
                     }`}
                     style={message.role === 'agent' ? {
-                      backgroundColor: `${agent.color}08`,
-                      border: `1px solid ${agent.color}15`
+                      backgroundColor: `${agent.color}06`,
+                      border: `1px solid ${agent.color}12`
                     } : {}}
                   >
                     <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
                     <div className={`flex items-center gap-2 mt-2 text-[11px] ${
-                      message.role === 'user'
-                        ? 'text-primary-foreground/60'
-                        : 'text-muted-foreground/60'
+                      message.role === 'user' ? 'text-primary-foreground/60' : 'text-white/20'
                     }`}>
                       <span>{formatTimestamp(message.timestamp)}</span>
-                      {message.tokens && (
-                        <span>• {message.tokens} tokens</span>
-                      )}
+                      {message.tokens && <span>• {message.tokens} tokens</span>}
                     </div>
                   </div>
                 </motion.div>
@@ -938,8 +1092,8 @@ export default function AgentChatPage() {
                 <div
                   className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-1"
                   style={{
-                    backgroundColor: `${agent.color}15`,
-                    border: `1px solid ${agent.color}20`
+                    backgroundColor: `${agent.color}12`,
+                    border: `1px solid ${agent.color}18`
                   }}
                 >
                   {AgentIcon ? <AgentIcon size={16} style={{ color: agent.color }} /> : <span className="text-xs">{agent.emoji || '🤖'}</span>}
@@ -947,15 +1101,12 @@ export default function AgentChatPage() {
                 <div
                   className="max-w-[70%] rounded-2xl rounded-bl-md px-4 py-3"
                   style={{
-                    backgroundColor: `${agent.color}08`,
-                    border: `1px solid ${agent.color}15`
+                    backgroundColor: `${agent.color}06`,
+                    border: `1px solid ${agent.color}12`
                   }}
                 >
                   <p className="text-sm whitespace-pre-wrap leading-relaxed">{streamingMessage}</p>
-                  <span
-                    className="inline-block ml-1 animate-pulse text-lg"
-                    style={{ color: agent.color }}
-                  >•</span>
+                  <span className="inline-block ml-1 animate-pulse text-lg" style={{ color: agent.color }}>•</span>
                 </div>
               </motion.div>
             )}
@@ -970,29 +1121,25 @@ export default function AgentChatPage() {
                 <div
                   className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-1"
                   style={{
-                    backgroundColor: `${agent.color}15`,
-                    border: `1px solid ${agent.color}20`
+                    backgroundColor: `${agent.color}12`,
+                    border: `1px solid ${agent.color}18`
                   }}
                 >
                   {AgentIcon ? <AgentIcon size={16} style={{ color: agent.color }} /> : <span className="text-xs">{agent.emoji || '🤖'}</span>}
                 </div>
 
                 <div className="flex flex-col gap-2 max-w-[70%]">
-                  {/* Current Thinking Phase */}
                   {currentThinking && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       className="flex items-center gap-2 px-3 py-2 rounded-xl"
                       style={{
-                        backgroundColor: `${agent.color}08`,
-                        border: `1px solid ${agent.color}15`
+                        backgroundColor: `${agent.color}06`,
+                        border: `1px solid ${agent.color}12`
                       }}
                     >
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                      >
+                      <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
                         <Brain className="w-4 h-4" style={{ color: agent.color }} />
                       </motion.div>
                       <span className="text-xs font-medium" style={{ color: agent.color }}>
@@ -1001,7 +1148,6 @@ export default function AgentChatPage() {
                     </motion.div>
                   )}
 
-                  {/* Active Tool Calls */}
                   <AnimatePresence mode="popLayout">
                     {activeToolCalls.map((toolCall) => {
                       const ToolIcon = getToolIcon(toolCall.tool);
@@ -1013,14 +1159,11 @@ export default function AgentChatPage() {
                           exit={{ opacity: 0, x: 10 }}
                           className="flex items-center gap-2 px-3 py-2 rounded-xl"
                           style={{
-                            backgroundColor: `${agent.color}10`,
-                            border: `1px solid ${agent.color}25`
+                            backgroundColor: `${agent.color}08`,
+                            border: `1px solid ${agent.color}18`
                           }}
                         >
-                          <motion.div
-                            animate={{ scale: [1, 1.1, 1] }}
-                            transition={{ duration: 0.8, repeat: Infinity }}
-                          >
+                          <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 0.8, repeat: Infinity }}>
                             <ToolIcon className="w-4 h-4" style={{ color: agent.color }} />
                           </motion.div>
                           <div className="flex-1 min-w-0">
@@ -1028,7 +1171,7 @@ export default function AgentChatPage() {
                               {toolCall.displayName}
                             </span>
                             {toolCall.args && Object.keys(toolCall.args).length > 0 && (
-                              <div className="text-[10px] text-muted-foreground truncate mt-0.5">
+                              <div className="text-[10px] text-white/20 truncate mt-0.5">
                                 {Object.entries(toolCall.args).slice(0, 2).map(([key, value]) => (
                                   <span key={key} className="mr-2">
                                     {key}: {String(value).slice(0, 20)}{String(value).length > 20 ? '...' : ''}
@@ -1043,7 +1186,6 @@ export default function AgentChatPage() {
                     })}
                   </AnimatePresence>
 
-                  {/* Completed Tool Calls */}
                   <AnimatePresence mode="popLayout">
                     {completedToolCalls.map((toolCall) => {
                       const ToolIcon = getToolIcon(toolCall.tool);
@@ -1056,8 +1198,8 @@ export default function AgentChatPage() {
                           exit={{ opacity: 0, scale: 0.95 }}
                           className="flex items-center gap-2 px-3 py-2 rounded-xl"
                           style={{
-                            backgroundColor: isSuccess ? 'rgba(34, 197, 94, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-                            border: `1px solid ${isSuccess ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
+                            backgroundColor: isSuccess ? 'rgba(34, 197, 94, 0.06)' : 'rgba(239, 68, 68, 0.06)',
+                            border: `1px solid ${isSuccess ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)'}`
                           }}
                         >
                           <ToolIcon className="w-4 h-4" style={{ color: isSuccess ? '#22c55e' : '#ef4444' }} />
@@ -1066,42 +1208,41 @@ export default function AgentChatPage() {
                               {toolCall.displayName}
                             </span>
                             {toolCall.result?.summary && (
-                              <div className="text-[10px] text-muted-foreground truncate mt-0.5">
+                              <div className="text-[10px] text-white/20 truncate mt-0.5">
                                 {toolCall.result.summary.slice(0, 50)}{toolCall.result.summary.length > 50 ? '...' : ''}
                               </div>
                             )}
                             {toolCall.result?.error && (
-                              <div className="text-[10px] text-red-400 truncate mt-0.5">
+                              <div className="text-[10px] text-red-400/60 truncate mt-0.5">
                                 {toolCall.result.error.slice(0, 40)}
                               </div>
                             )}
                           </div>
                           {isSuccess ? (
-                            <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                            <CheckCircle className="w-3.5 h-3.5 text-green-500/70" />
                           ) : (
-                            <XCircle className="w-3.5 h-3.5 text-red-500" />
+                            <XCircle className="w-3.5 h-3.5 text-red-500/70" />
                           )}
                         </motion.div>
                       );
                     })}
                   </AnimatePresence>
 
-                  {/* Recovery Indicator */}
                   {isRecovering && (
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20"
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/[0.06] border border-amber-500/15"
                     >
-                      <RefreshCw className="w-4 h-4 text-amber-500 animate-spin" />
-                      <span className="text-xs text-amber-500">Verbindung wird wiederhergestellt...</span>
+                      <RefreshCw className="w-4 h-4 text-amber-500/70 animate-spin" />
+                      <span className="text-xs text-amber-500/70">Verbindung wird wiederhergestellt...</span>
                     </motion.div>
                   )}
                 </div>
               </motion.div>
             )}
 
-            {/* Simple Typing Indicator (when no tool calls) */}
+            {/* Simple Typing Indicator */}
             {isTyping && !streamingMessage && activeToolCalls.length === 0 && completedToolCalls.length === 0 && !currentThinking && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
@@ -1111,8 +1252,8 @@ export default function AgentChatPage() {
                 <div
                   className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-1"
                   style={{
-                    backgroundColor: `${agent.color}15`,
-                    border: `1px solid ${agent.color}20`
+                    backgroundColor: `${agent.color}12`,
+                    border: `1px solid ${agent.color}18`
                   }}
                 >
                   {AgentIcon ? <AgentIcon size={16} style={{ color: agent.color }} /> : <span className="text-xs">{agent.emoji || '🤖'}</span>}
@@ -1120,34 +1261,25 @@ export default function AgentChatPage() {
                 <div
                   className="rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-3"
                   style={{
-                    backgroundColor: `${agent.color}08`,
-                    border: `1px solid ${agent.color}15`
+                    backgroundColor: `${agent.color}06`,
+                    border: `1px solid ${agent.color}12`
                   }}
                 >
                   <div className="flex gap-1">
-                    <motion.div
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: agent.color }}
-                      animate={{ y: [0, -4, 0], opacity: [0.4, 1, 0.4] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-                    />
-                    <motion.div
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: agent.color }}
-                      animate={{ y: [0, -4, 0], opacity: [0.4, 1, 0.4] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }}
-                    />
-                    <motion.div
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: agent.color }}
-                      animate={{ y: [0, -4, 0], opacity: [0.4, 1, 0.4] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }}
-                    />
+                    {[0, 0.15, 0.3].map((delay) => (
+                      <motion.div
+                        key={delay}
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: agent.color }}
+                        animate={{ y: [0, -4, 0], opacity: [0.4, 1, 0.4] }}
+                        transition={{ duration: 0.6, repeat: Infinity, delay }}
+                      />
+                    ))}
                   </div>
-                  <span className="text-xs" style={{ color: agent.color }}>{agent.name} denkt nach...</span>
+                  <span className="text-xs text-white/30">{agent.name} denkt nach...</span>
                   <button
                     onClick={handleAbort}
-                    className="text-xs text-muted-foreground hover:text-red-500 transition-colors"
+                    className="text-xs text-white/20 hover:text-red-400 transition-colors"
                   >
                     Stopp
                   </button>
@@ -1158,21 +1290,57 @@ export default function AgentChatPage() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Area - Integrated with agent personality */}
-          <div className="px-6 pb-5 pt-2 shrink-0">
+          {/* ============================================= */}
+          {/* FLOATING INPUT BAR                            */}
+          {/* ============================================= */}
+          <div className="px-6 pb-6 pt-3 shrink-0">
+            {/* Tool Suggestions (above input) */}
+            <AnimatePresence>
+              {showToolSuggestions && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  className="mx-auto max-w-3xl mb-2 p-3 rounded-xl flex flex-wrap gap-2"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.025)',
+                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                  }}
+                >
+                  {agent.specialties?.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => { setInputMessage(`Hilf mir mit ${s}`); setShowToolSuggestions(false); }}
+                      className="px-3 py-1.5 text-[11px] rounded-full transition-all hover:scale-105"
+                      style={{
+                        backgroundColor: `${agent.color}08`,
+                        border: `1px solid ${agent.color}18`,
+                        color: agent.color,
+                      }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Floating Glass Input */}
             <div
-              className="flex items-end gap-2 rounded-2xl p-2 transition-all"
+              className="flex items-end gap-2 rounded-[28px] p-3 px-4 transition-all mx-auto max-w-3xl"
               style={{
-                backgroundColor: `${agent.color}05`,
-                border: `1px solid ${agent.color}15`
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                backdropFilter: 'blur(60px)',
+                boxShadow: '0 -12px 40px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255,255,255,0.03), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
               }}
             >
               {/* Agent indicator */}
               <div
                 className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mb-0.5"
                 style={{
-                  backgroundColor: `${agent.color}15`,
-                  border: `1px solid ${agent.color}20`
+                  backgroundColor: `${agent.color}12`,
+                  border: `1px solid ${agent.color}18`
                 }}
                 title={agent.name}
               >
@@ -1186,12 +1354,25 @@ export default function AgentChatPage() {
                 placeholder={`Frage ${agent.name}...`}
                 rows={1}
                 disabled={isTyping}
-                className="flex-1 resize-none py-2.5 bg-transparent focus:outline-none disabled:opacity-50 placeholder:text-muted-foreground/50 text-sm"
+                className="flex-1 resize-none py-2.5 bg-transparent focus:outline-none disabled:opacity-50 placeholder:text-white/15 text-sm text-white/90"
                 style={{ minHeight: '40px', maxHeight: '120px' }}
               />
 
+              {/* Magic Button ✨ */}
               <button
-                className="p-2 hover:bg-background/50 rounded-lg transition-colors mb-0.5 text-muted-foreground/60 hover:text-muted-foreground"
+                onClick={() => setShowToolSuggestions(!showToolSuggestions)}
+                className="p-2 rounded-lg transition-all mb-0.5"
+                style={{
+                  color: showToolSuggestions ? agent.color : 'rgba(255,255,255,0.25)',
+                  backgroundColor: showToolSuggestions ? `${agent.color}12` : 'transparent',
+                }}
+                title="Tool-Vorschläge"
+              >
+                <Sparkles className="w-4 h-4" />
+              </button>
+
+              <button
+                className="p-2 hover:bg-white/[0.04] rounded-lg transition-colors mb-0.5 text-white/20 hover:text-white/50"
                 title="Datei anhängen"
               >
                 <Paperclip className="w-4 h-4" />
@@ -1200,20 +1381,23 @@ export default function AgentChatPage() {
               <button
                 onClick={handleSendMessage}
                 disabled={!inputMessage.trim() || isTyping}
-                className="p-2.5 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed text-white"
-                style={{ backgroundColor: agent.color }}
+                className="p-2.5 rounded-full transition-all disabled:opacity-30 disabled:cursor-not-allowed text-white"
+                style={{
+                  backgroundColor: agent.color,
+                  boxShadow: (!inputMessage.trim() || isTyping)
+                    ? 'none'
+                    : `0 0 20px ${agent.color}40, 0 0 40px ${agent.color}20`,
+                }}
               >
-                {isTyping ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
+                {isTyping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Chat History Sidebar */}
+        {/* ============================================= */}
+        {/* CHAT HISTORY SIDEBAR (hidden by default)      */}
+        {/* ============================================= */}
         <AnimatePresence>
           {showHistory && (
             <motion.div
@@ -1221,12 +1405,11 @@ export default function AgentChatPage() {
               animate={{ width: '30%', opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="bg-muted/10 overflow-hidden flex flex-col"
+              className="bg-white/[0.015] overflow-hidden flex flex-col border-l border-white/[0.04]"
             >
-              {/* Header */}
               <div className="p-4 flex items-center justify-between shrink-0">
-                <h3 className="text-sm font-medium flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-muted-foreground" />
+                <h3 className="text-sm font-medium flex items-center gap-2 text-white/60">
+                  <Clock className="w-4 h-4 text-white/25" />
                   Chat-Verlauf
                 </h3>
                 <button
@@ -1240,10 +1423,9 @@ export default function AgentChatPage() {
                 </button>
               </div>
 
-              {/* Sessions List */}
               <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-2">
                 {displaySessions.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-center py-8 text-white/20">
                     <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
                     <p className="text-xs">Keine Chats vorhanden</p>
                   </div>
@@ -1255,28 +1437,24 @@ export default function AgentChatPage() {
                       animate={{ opacity: 1, x: 0 }}
                       onClick={() => loadChatSession(session.id)}
                       className={`w-full text-left p-3 rounded-xl transition-all group ${
-                        session.id === currentSessionId
-                          ? ''
-                          : 'hover:bg-background/50'
+                        session.id === currentSessionId ? '' : 'hover:bg-white/[0.03]'
                       }`}
                       style={session.id === currentSessionId ? {
-                        backgroundColor: `${agent.color}10`,
-                        border: `1px solid ${agent.color}30`
+                        backgroundColor: `${agent.color}08`,
+                        border: `1px solid ${agent.color}20`
                       } : {}}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <p className={`text-sm font-medium truncate ${
-                            session.id === currentSessionId ? '' : 'text-foreground/80'
+                            session.id === currentSessionId ? '' : 'text-white/60'
                           }`} style={session.id === currentSessionId ? { color: agent.color } : {}}>
                             {session.title}
                           </p>
                           {session.preview && (
-                            <p className="text-xs text-muted-foreground truncate mt-0.5">
-                              {session.preview}
-                            </p>
+                            <p className="text-xs text-white/20 truncate mt-0.5">{session.preview}</p>
                           )}
-                          <p className="text-[10px] text-muted-foreground/60 mt-1.5 flex items-center gap-1">
+                          <p className="text-[10px] text-white/15 mt-1.5 flex items-center gap-1">
                             <Clock className="w-2.5 h-2.5" />
                             {formatSessionDate(session.updatedAt)}
                             <span className="mx-1">•</span>
@@ -1284,14 +1462,10 @@ export default function AgentChatPage() {
                           </p>
                         </div>
 
-                        {/* Delete button */}
                         {session.id !== currentSessionId && session.messages.length > 0 && (
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteChatSession(session.id);
-                            }}
-                            className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-500 transition-all"
+                            onClick={(e) => { e.stopPropagation(); deleteChatSession(session.id); }}
+                            className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400 transition-all"
                             title="Löschen"
                           >
                             <Trash2 className="w-3 h-3" />
@@ -1307,17 +1481,16 @@ export default function AgentChatPage() {
                 )}
               </div>
 
-              {/* Stats Footer */}
               {tokenUsage.total > 0 && (
                 <div
                   className="p-3 mx-3 mb-3 rounded-xl text-xs"
                   style={{
-                    backgroundColor: `${agent.color}08`,
-                    border: `1px solid ${agent.color}15`
+                    backgroundColor: `${agent.color}06`,
+                    border: `1px solid ${agent.color}12`
                   }}
                 >
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Tokens gesamt:</span>
+                    <span className="text-white/25">Tokens gesamt:</span>
                     <span className="font-mono font-medium" style={{ color: agent.color }}>
                       {tokenUsage.total.toLocaleString()}
                     </span>
@@ -1328,16 +1501,165 @@ export default function AgentChatPage() {
           )}
         </AnimatePresence>
 
-        {/* Enterprise Control Panel - Right Sidebar */}
+        {/* ============================================= */}
+        {/* CONTEXT PANEL (inline sidebar)                */}
+        {/* ============================================= */}
         <AnimatePresence>
-          {showControlPanel && (
+          {showContextPanel && (
             <motion.div
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 380, opacity: 1 }}
+              animate={{ width: '320px', opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="overflow-hidden flex-shrink-0"
+              className="overflow-hidden flex flex-col border-l border-white/[0.04] shrink-0"
+              style={{ background: 'rgba(17, 17, 20, 0.95)' }}
             >
+              {/* Panel Header */}
+              <div className="p-4 flex items-center justify-between shrink-0 border-b border-white/[0.04]">
+                <div className="flex items-center gap-2">
+                  <Brain className="w-4 h-4" style={{ color: agent.color }} />
+                  <h3 className="text-sm font-medium text-white/70">Active Context</h3>
+                </div>
+                <button
+                  onClick={() => setShowModelConfigModal(true)}
+                  className="p-1.5 rounded-lg text-white/20 hover:text-white/50 hover:bg-white/[0.04] transition-all"
+                  title="Model Configuration"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-5">
+                {/* Knowledge Files */}
+                <div>
+                  <p className="text-[10px] text-white/30 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <FileText className="w-3 h-3" />
+                    Knowledge Files
+                  </p>
+                  <div className="space-y-2">
+                    {knowledgeFiles.map(file => {
+                      const typeColor = fileTypeColors[file.type] || '#6b7280';
+                      return (
+                        <div
+                          key={file.id}
+                          className="p-3 rounded-xl group transition-all hover:scale-[1.01]"
+                          style={{
+                            background: 'rgba(255,255,255,0.025)',
+                            border: '1px solid rgba(255,255,255,0.06)',
+                          }}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold uppercase shrink-0"
+                              style={{ backgroundColor: `${typeColor}15`, color: typeColor }}
+                            >
+                              {file.type}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-white/70 truncate">{file.name}</p>
+                              <p className="text-[10px] text-white/20">{file.size} &middot; {file.addedAt}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Active Capabilities */}
+                <div>
+                  <p className="text-[10px] text-white/30 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <Zap className="w-3 h-3" />
+                    Active Capabilities
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {agentConfig.activeTools.map(toolId => (
+                      <span
+                        key={toolId}
+                        className="px-2.5 py-1 text-[11px] rounded-full"
+                        style={{
+                          backgroundColor: `${agent.color}10`,
+                          border: `1px solid ${agent.color}20`,
+                          color: agent.color,
+                        }}
+                      >
+                        {toolId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Memory Stats */}
+                <div>
+                  <p className="text-[10px] text-white/30 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <Database className="w-3 h-3" />
+                    Memory
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                      <p className="text-[9px] text-white/20">Context Window</p>
+                      <p className="text-xs font-mono text-white/50">128K tokens</p>
+                    </div>
+                    <div className="p-2.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                      <p className="text-[9px] text-white/20">Used</p>
+                      <p className="text-xs font-mono" style={{ color: agent.color }}>
+                        {tokenUsage.total > 0 ? `${(tokenUsage.total / 1000).toFixed(1)}K` : '0'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Clear Context */}
+                <button
+                  onClick={() => {
+                    setMessages([]);
+                    setTokenUsage({ input: 0, output: 0, total: 0 });
+                  }}
+                  className="w-full px-3 py-2.5 rounded-xl text-xs text-white/30 hover:text-white/60 transition-colors flex items-center justify-center gap-2"
+                  style={{
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                  }}
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Clear Context
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* ============================================= */}
+      {/* MODEL CONFIG MODAL                            */}
+      {/* ============================================= */}
+      <AnimatePresence>
+        {showModelConfigModal && (
+          <div className="fixed inset-0 z-50">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setShowModelConfigModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] max-h-[80vh] overflow-y-auto rounded-2xl shadow-2xl"
+              style={{ background: '#111114', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+                <span className="text-sm font-medium text-white/70">Model Configuration</span>
+                <button
+                  onClick={() => setShowModelConfigModal(false)}
+                  className="p-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-all"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
               <AgentControlPanel
                 agentColor={agent.color}
                 agentName={agent.name}
@@ -1347,16 +1669,14 @@ export default function AgentChatPage() {
                   setAgentConfig(newConfig);
                 }}
                 onClearContext={() => {
-                  console.log('[AgentChat] Context cleared');
-                  // Clear messages for this session
                   setMessages([]);
                   setTokenUsage({ input: 0, output: 0, total: 0 });
                 }}
               />
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

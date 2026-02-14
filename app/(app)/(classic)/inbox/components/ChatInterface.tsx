@@ -27,9 +27,14 @@ import { RoutingNotification } from './RoutingNotification';
 import { useInboxStore } from '@/lib/stores/useInboxStore';
 import { getAgentById } from '@/lib/agents/personas';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Bot, MoreHorizontal, Loader2, FileText } from 'lucide-react';
+import { ArrowLeft, Bot, MoreHorizontal, Loader2, FileText, PenLine, LayoutDashboard, BarChart3 } from 'lucide-react';
 import { EmmieCapabilityBar } from '@/components/inbox/emmie/EmmieCapabilityBar';
 import { EmmieTemplatePicker } from '@/components/inbox/emmie/EmmieTemplatePicker';
+import { EmailComposer, type EmailComposerData } from '@/components/inbox/emmie/EmailComposer';
+import { GmailStatusBadge } from '@/components/inbox/emmie/GmailStatusBadge';
+import { InboxDashboard } from '@/components/inbox/emmie/InboxDashboard';
+import { ShortcutsOverlay } from '@/components/inbox/emmie/ShortcutsOverlay';
+import { EmailAnalytics } from '@/components/inbox/emmie/EmailAnalytics';
 import type { ChatMessage } from '@/types/inbox';
 
 interface ChatInterfaceProps {
@@ -74,15 +79,17 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
       createdAt: msg.createdAt || msg.timestamp || new Date().toISOString(),
       metadata: msg.metadata,
       artifactId: msg.artifactId,
+      isStreaming: msg.isStreaming,
     }));
   }, [messagesData]);
 
   const handleSendMessage = useCallback(async (content: string) => {
     try {
+      setIsWaitingForResponse(true);
       await sendMutation.mutateAsync(content);
-      // Focus composer after sending (handled in StickyComposer now)
     } catch (error) {
       console.error('Failed to send message:', error);
+      setIsWaitingForResponse(false);
     }
   }, [sendMutation]);
 
@@ -127,9 +134,82 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
   // Processing stage for this thread
   const processingStage = processingStages[threadId];
 
+  // Optimistic "thinking" state — shows typing dots immediately on send
+  const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
+
+  // Clear optimistic thinking when real socket feedback arrives
+  useEffect(() => {
+    if (isWaitingForResponse && (isTyping || processingStage)) {
+      setIsWaitingForResponse(false);
+    }
+    // Also clear when streaming content starts appearing
+    if (isWaitingForResponse && messagesData?.some(m => m.isStreaming)) {
+      setIsWaitingForResponse(false);
+    }
+  }, [isTyping, processingStage, isWaitingForResponse, messagesData]);
+
+  // Clear when new agent message arrives
+  useEffect(() => {
+    if (!isWaitingForResponse || !messagesData?.length) return;
+    const lastMsg = messagesData[messagesData.length - 1];
+    if (lastMsg.role === 'agent') {
+      setIsWaitingForResponse(false);
+    }
+  }, [messagesData, isWaitingForResponse]);
+
+  // Effective typing state: real socket indicator OR optimistic local state
+  const showTyping = isTyping || isWaitingForResponse;
+
   // Emmie-specific state
   const isEmmie = thread?.agentId === 'emmie';
   const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [composerInitialData, setComposerInitialData] = useState<Partial<EmailComposerData>>({});
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
+
+  // Keyboard shortcut event listeners (Emmie-specific)
+  useEffect(() => {
+    if (!isEmmie) return;
+
+    const handleOpenComposer = () => { setComposerInitialData({}); setIsComposerOpen(true); };
+    const handleOpenTemplates = () => setIsTemplatePickerOpen(true);
+    const handleOpenDashboard = () => setIsDashboardOpen(true);
+    const handleShowShortcuts = () => setIsShortcutsOpen(true);
+
+    window.addEventListener('inbox-open-composer', handleOpenComposer);
+    window.addEventListener('inbox-open-templates', handleOpenTemplates);
+    window.addEventListener('inbox-open-dashboard', handleOpenDashboard);
+    window.addEventListener('inbox-show-shortcuts', handleShowShortcuts);
+
+    return () => {
+      window.removeEventListener('inbox-open-composer', handleOpenComposer);
+      window.removeEventListener('inbox-open-templates', handleOpenTemplates);
+      window.removeEventListener('inbox-open-dashboard', handleOpenDashboard);
+      window.removeEventListener('inbox-show-shortcuts', handleShowShortcuts);
+    };
+  }, [isEmmie]);
+
+  // Emmie Composer handlers
+  const handleComposerSend = useCallback(async (data: EmailComposerData) => {
+    const prompt = data.scheduledAt
+      ? `Sende folgende Email geplant am ${new Date(data.scheduledAt).toLocaleString('de-DE')}:\nAn: ${data.to}\n${data.cc ? `CC: ${data.cc}\n` : ''}Betreff: ${data.subject}\n\n${data.body}`
+      : `Sende folgende Email:\nAn: ${data.to}\n${data.cc ? `CC: ${data.cc}\n` : ''}${data.bcc ? `BCC: ${data.bcc}\n` : ''}Betreff: ${data.subject}\n\n${data.body}`;
+    await handleSendMessage(prompt);
+    setIsComposerOpen(false);
+  }, [handleSendMessage]);
+
+  const handleComposerDraft = useCallback(async (data: EmailComposerData) => {
+    const prompt = `Speichere folgende Email als Entwurf:\nAn: ${data.to}\nBetreff: ${data.subject}\n\n${data.body}`;
+    await handleSendMessage(prompt);
+    setIsComposerOpen(false);
+  }, [handleSendMessage]);
+
+  const handleAIImprove = useCallback(async (body: string): Promise<string> => {
+    await handleSendMessage(`Verbessere folgenden Email-Text professionell. Antworte NUR mit dem verbesserten Text, keine Erklaerung:\n\n${body}`);
+    return body; // AI response comes via chat, user copies back
+  }, [handleSendMessage]);
 
   // Loading state
   if (isLoadingThreads || isLoadingMessages) {
@@ -208,13 +288,54 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
               {thread.subject || agentName}
             </h2>
             <p className="text-xs text-white/40 truncate">
-              {isTyping ? (
+              {showTyping ? (
                 <span className="text-violet-400">Typing...</span>
               ) : (
                 `${messages.length} messages`
               )}
             </p>
           </div>
+
+          {/* Gmail Status (Emmie only) */}
+          {isEmmie && <GmailStatusBadge />}
+
+          {/* Emmie Action Buttons */}
+          {isEmmie && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => { setComposerInitialData({}); setIsComposerOpen(true); }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-white/50 hover:text-violet-400 hover:bg-violet-500/10 rounded-lg transition-colors"
+                title="E-Mail verfassen (C)"
+              >
+                <PenLine className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Verfassen</span>
+              </button>
+              <button
+                onClick={() => setIsDashboardOpen(!isDashboardOpen)}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg transition-colors',
+                  isDashboardOpen
+                    ? 'text-violet-400 bg-violet-500/10'
+                    : 'text-white/50 hover:text-violet-400 hover:bg-violet-500/10'
+                )}
+                title="Inbox Dashboard (D)"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setIsAnalyticsOpen(!isAnalyticsOpen)}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg transition-colors',
+                  isAnalyticsOpen
+                    ? 'text-violet-400 bg-violet-500/10'
+                    : 'text-white/50 hover:text-violet-400 hover:bg-violet-500/10'
+                )}
+                title="Email Analytics"
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
           {/* Actions */}
           <button
@@ -237,19 +358,13 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
           />
         )}
 
-        {/* Processing Stage Indicator */}
-        {processingStage && (
-          <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white/[0.03] border-b border-white/[0.06]">
-            <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" style={{ color: agentColor }} />
-            <span className="text-xs text-white/60 truncate">{processingStage.label}</span>
-          </div>
-        )}
-
         {/* Emmie Capability Bar */}
         {isEmmie && (
           <EmmieCapabilityBar
             onAction={handleSendMessage}
             onOpenTemplates={() => setIsTemplatePickerOpen(true)}
+            onOpenComposer={() => { setComposerInitialData({}); setIsComposerOpen(true); }}
+            onOpenDashboard={() => setIsDashboardOpen(true)}
             agentColor={agentColor}
           />
         )}
@@ -258,11 +373,14 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
         <MessageStream
           messages={messages}
           isLoading={isLoadingMessages}
-          isTyping={isTyping}
+          isTyping={showTyping}
           agentName={agentName}
           agentColor={agentColor}
           agentId={thread?.agentId}
+          processingStage={processingStage}
           onSuggestedPrompt={handleSendMessage}
+          onOpenComposer={isEmmie ? () => { setComposerInitialData({}); setIsComposerOpen(true); } : undefined}
+          onOpenDashboard={isEmmie ? () => setIsDashboardOpen(true) : undefined}
         />
 
         {/* Composer */}
@@ -302,7 +420,65 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
             handleSendMessage(prompt);
             setIsTemplatePickerOpen(false);
           }}
+          onOpenInComposer={(data) => {
+            setComposerInitialData({ subject: data.subject, body: data.body });
+            setIsComposerOpen(true);
+            setIsTemplatePickerOpen(false);
+          }}
           agentColor={agentColor}
+        />
+      )}
+
+      {/* Emmie Email Composer */}
+      {isEmmie && (
+        <EmailComposer
+          isOpen={isComposerOpen}
+          onClose={() => setIsComposerOpen(false)}
+          onSend={handleComposerSend}
+          onDraft={handleComposerDraft}
+          onAIImprove={handleAIImprove}
+          onOpenTemplates={() => { setIsTemplatePickerOpen(true); }}
+          initialData={composerInitialData}
+          agentColor={agentColor}
+          isSending={sendMutation.isPending}
+        />
+      )}
+
+      {/* Emmie Inbox Dashboard (slide-over) */}
+      {isEmmie && isDashboardOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setIsDashboardOpen(false)} />
+          <div className="relative ml-auto w-full max-w-md bg-[#111] border-l border-white/[0.08] shadow-2xl animate-in slide-in-from-right duration-200">
+            <InboxDashboard
+              isOpen={isDashboardOpen}
+              onClose={() => setIsDashboardOpen(false)}
+              onSendPrompt={(prompt) => { handleSendMessage(prompt); setIsDashboardOpen(false); }}
+              agentColor={agentColor}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Emmie Email Analytics (slide-over) */}
+      {isEmmie && isAnalyticsOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setIsAnalyticsOpen(false)} />
+          <div className="relative ml-auto w-full max-w-md bg-[#111] border-l border-white/[0.08] shadow-2xl animate-in slide-in-from-right duration-200">
+            <EmailAnalytics
+              isOpen={isAnalyticsOpen}
+              onClose={() => setIsAnalyticsOpen(false)}
+              onSendPrompt={(prompt) => { handleSendMessage(prompt); setIsAnalyticsOpen(false); }}
+              agentColor={agentColor}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Keyboard Shortcuts Overlay */}
+      {isEmmie && (
+        <ShortcutsOverlay
+          isOpen={isShortcutsOpen}
+          onClose={() => setIsShortcutsOpen(false)}
         />
       )}
     </div>

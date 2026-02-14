@@ -161,7 +161,7 @@ authEnhancedRouter.post('/login', loginRateLimiter, async (req: Request, res: Re
       data: {
         user: userWithoutPassword,
         accessToken, // Also include in data for consistency
-        next: '/dashboard',
+        next: '/v4',
         expiresIn: '15m'
       },
       user: userWithoutPassword, // Backward compatibility

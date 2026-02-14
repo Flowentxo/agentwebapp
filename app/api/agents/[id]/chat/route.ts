@@ -12,10 +12,23 @@ import { budgetService } from '@/server/services/BudgetService';
 import { rateLimitService } from '@/server/services/RateLimitService';
 import { AITelemetryService } from '@/server/services/AITelemetryService';
 import { withAuth, requireWorkspaceId, AuthConfigs, type RouteContext } from '@/lib/auth/jwt-middleware';
-import { getAgentSystemPrompt } from '@/lib/agents/prompts';
-import { EMMIE_ALL_TOOLS, executeGmailTool, getToolDisplay } from '@/lib/agents/emmie/tools';
+import { getAgentSystemPrompt, enhancePromptWithMemory } from '@/lib/agents/prompts';
+import { agentMemoryService } from '@/server/services/AgentMemoryService';
+import { EMMIE_ALL_TOOLS, executeGmailTool, getToolDisplay, requiresConfirmation as emmieRequiresConfirmation, getToolActionDescription as emmieGetToolDescription } from '@/lib/agents/emmie/tools';
 import { getDexterToolsForOpenAI, executeDexterTool, getToolDisplay as getDexterToolDisplay } from '@/lib/agents/dexter/tools';
 import { getBuddyToolsForOpenAI, executeBuddyTool, getBuddyToolDisplay } from '@/server/agents/buddy/executor';
+import { getKaiToolsForOpenAI, executeKaiTool, getKaiToolDisplay } from '@/lib/agents/kai/tools';
+import { getLexToolsForOpenAI, executeLexTool, getLexToolDisplay } from '@/lib/agents/lex/tools';
+import { getNovaToolsForOpenAI, executeNovaTool, getNovaToolDisplay } from '@/lib/agents/nova/tools';
+import { getOmniToolsForOpenAI, executeOmniTool, getOmniToolDisplay } from '@/lib/agents/omni/tools';
+import { getCassieToolsForOpenAI, executeCassieTool, getCassieToolDisplay } from '@/lib/agents/cassie/tools';
+import { getVeraToolsForOpenAI, executeVeraTool, getVeraToolDisplay } from '@/lib/agents/vera/tools';
+import { getAriToolsForOpenAI, executeAriTool, getAriToolDisplay } from '@/lib/agents/ari/tools';
+import { getAuraToolsForOpenAI, executeAuraTool, getAuraToolDisplay } from '@/lib/agents/aura/tools';
+import { getVinceToolsForOpenAI, executeVinceTool, getVinceToolDisplay } from '@/lib/agents/vince/tools';
+import { getMiloToolsForOpenAI, executeMiloTool, getMiloToolDisplay } from '@/lib/agents/milo/tools';
+import { getEchoToolsForOpenAI, executeEchoTool, getEchoToolDisplay } from '@/lib/agents/echo/tools';
+import { getFinnToolsForOpenAI, executeFinnTool, getFinnToolDisplay } from '@/lib/agents/finn/tools';
 import { z } from 'zod';
 import { createLogger } from '@/lib/logger';
 
@@ -32,6 +45,13 @@ const chatMessageSchema = z.object({
   temperature: z.number().min(0).max(1).optional(),
   maxTokens: z.number().min(256).max(8192).optional(),
   activeTools: z.array(z.string()).optional(),
+  // Confirmation of a pending tool action
+  confirmedAction: z.object({
+    actionId: z.string(),
+    toolName: z.string(),
+    args: z.record(z.any()),
+    approved: z.boolean(),
+  }).optional(),
 });
 
 // Sanitize user input to prevent prompt injection
@@ -166,6 +186,79 @@ export const POST = withAuth<AgentChatContext>(async (
       activeTools
     });
 
+    // Handle confirmed tool action (from approval flow)
+    if (body.confirmedAction) {
+      const { confirmedAction } = body;
+      const actionEncoder = new TextEncoder();
+
+      if (confirmedAction.approved) {
+        // Execute the approved tool
+        const toolResult = await executeGmailTool(confirmedAction.toolName, confirmedAction.args, {
+          userId: auth.userId,
+          workspaceId,
+          sessionId: req.headers.get('x-session-id') || undefined,
+        });
+
+        // Return the result as a streamed response
+        const actionStream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              actionEncoder.encode(`data: ${JSON.stringify({
+                toolCall: {
+                  id: confirmedAction.actionId,
+                  status: toolResult.success ? 'complete' : 'error',
+                  tool: confirmedAction.toolName,
+                  result: toolResult,
+                }
+              })}\n\n`)
+            );
+            controller.enqueue(
+              actionEncoder.encode(`data: ${JSON.stringify({
+                chunk: toolResult.success
+                  ? toolResult.summary || 'Aktion erfolgreich ausgefuehrt.'
+                  : `Fehler: ${toolResult.error || 'Unbekannter Fehler'}`,
+              })}\n\n`)
+            );
+            controller.enqueue(
+              actionEncoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`)
+            );
+            controller.close();
+          }
+        });
+
+        return new Response(actionStream, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+          },
+        });
+      } else {
+        // User rejected — return a message explaining rejection
+        const rejectStream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              actionEncoder.encode(`data: ${JSON.stringify({
+                chunk: 'Verstanden, die Aktion wurde abgebrochen. Wie kann ich dir anders helfen?',
+              })}\n\n`)
+            );
+            controller.enqueue(
+              actionEncoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`)
+            );
+            controller.close();
+          }
+        });
+
+        return new Response(rejectStream, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+          },
+        });
+      }
+    }
+
     // Check rate limits before processing
     const rateLimitConfig = await budgetService.getRateLimitConfig(auth.userId);
     const rateLimitResult = await rateLimitService.checkRateLimit(auth.userId, rateLimitConfig);
@@ -271,11 +364,41 @@ export const POST = withAuth<AgentChatContext>(async (
         content: msg.content
       }));
 
+    // ──── Memory Retrieval: search for relevant past memories ────
+    let memoryContext = '';
+    try {
+      const memories = await agentMemoryService.searchMemories(agentId, auth.userId, content, 5);
+      if (memories.length > 0) {
+        memoryContext = '\n\n## Relevant Memories from Past Interactions:\n' +
+          memories.map(m => `- [${m.category}] ${m.content}`).join('\n');
+        // Increment access counts (fire-and-forget)
+        memories.forEach(m => agentMemoryService.incrementAccessCount(m.id).catch(() => {}));
+        logger.debug('Memory context loaded', { agentId, memoriesFound: memories.length });
+      }
+    } catch (memErr) {
+      logger.warn('Memory retrieval failed (non-blocking)', { error: memErr });
+    }
+
     // Determine if this is an agentic agent with tools
     const isEmmieAgent = agentId === 'emmie';
     const isDexterAgent = agentId === 'dexter';
     const isBuddyAgent = agentId === 'buddy';
-    const isAgenticAgent = isEmmieAgent || isDexterAgent || isBuddyAgent;
+    const isKaiAgent = agentId === 'kai';
+    const isLexAgent = agentId === 'lex';
+    const isNovaAgent = agentId === 'nova';
+    const isOmniAgent = agentId === 'omni';
+    const isCassieAgent = agentId === 'cassie';
+    const isVeraAgent = agentId === 'vera';
+    const isAriAgent = agentId === 'ari';
+    const isAuraAgent = agentId === 'aura';
+    const isVinceAgent = agentId === 'vince';
+    const isMiloAgent = agentId === 'milo';
+    const isEchoAgent = agentId === 'echo';
+    const isFinnAgent = agentId === 'finn';
+    const isAgenticAgent = isEmmieAgent || isDexterAgent || isBuddyAgent
+      || isKaiAgent || isLexAgent || isNovaAgent || isOmniAgent
+      || isCassieAgent || isVeraAgent || isAriAgent || isAuraAgent
+      || isVinceAgent || isMiloAgent || isEchoAgent || isFinnAgent;
 
     // Stream response
     const startTime = Date.now();
@@ -285,11 +408,13 @@ export const POST = withAuth<AgentChatContext>(async (
         let success = false;
         let errorType: string | undefined;
         let totalToolCalls = 0;
+        const toolCallDetails: Array<{ id: string; name: string; status: string; args?: any; result?: any; displayName?: string }> = [];
 
         try {
           if (isAgenticAgent) {
             // Use streamWithTools for agentic agents (Emmie, Dexter)
-            const systemPrompt = await getAgentSystemPrompt(agent, auth.userId);
+            const baseSystemPrompt = await getAgentSystemPrompt(agent, auth.userId);
+            const systemPrompt = enhancePromptWithMemory(baseSystemPrompt, memoryContext);
             const toolErrors: Array<{ tool: string; error: string }> = [];
             let recoveryAttempts = 0;
 
@@ -298,7 +423,33 @@ export const POST = withAuth<AgentChatContext>(async (
               ? EMMIE_ALL_TOOLS
               : isDexterAgent
                 ? getDexterToolsForOpenAI()
-                : getBuddyToolsForOpenAI();
+                : isBuddyAgent
+                  ? getBuddyToolsForOpenAI()
+                  : isKaiAgent
+                    ? getKaiToolsForOpenAI()
+                    : isLexAgent
+                      ? getLexToolsForOpenAI()
+                      : isNovaAgent
+                        ? getNovaToolsForOpenAI()
+                        : isOmniAgent
+                          ? getOmniToolsForOpenAI()
+                          : isCassieAgent
+                            ? getCassieToolsForOpenAI()
+                            : isVeraAgent
+                              ? getVeraToolsForOpenAI()
+                              : isAriAgent
+                                ? getAriToolsForOpenAI()
+                                : isAuraAgent
+                                  ? getAuraToolsForOpenAI()
+                                  : isVinceAgent
+                                    ? getVinceToolsForOpenAI()
+                                    : isMiloAgent
+                                      ? getMiloToolsForOpenAI()
+                                      : isEchoAgent
+                                        ? getEchoToolsForOpenAI()
+                                        : isFinnAgent
+                                          ? getFinnToolsForOpenAI()
+                                          : [];
 
             // Apply tool gating based on activeTools from Control Panel
             const agentTools = allAgentTools.filter(tool => {
@@ -343,7 +494,11 @@ export const POST = withAuth<AgentChatContext>(async (
               activeCapabilities: activeTools
             });
 
-            const agentName = isEmmieAgent ? 'EMMIE' : isDexterAgent ? 'DEXTER' : 'BUDDY';
+            const agentName = isEmmieAgent ? 'EMMIE' : isDexterAgent ? 'DEXTER' : isBuddyAgent ? 'BUDDY'
+              : isKaiAgent ? 'KAI' : isLexAgent ? 'LEX' : isNovaAgent ? 'NOVA' : isOmniAgent ? 'OMNI'
+              : isCassieAgent ? 'CASSIE' : isVeraAgent ? 'VERA' : isAriAgent ? 'ARI'
+              : isAuraAgent ? 'AURA' : isVinceAgent ? 'VINCE' : isMiloAgent ? 'MILO'
+              : isEchoAgent ? 'ECHO' : 'FINN';
 
             const toolExecutor = async (toolName: string, args: Record<string, any>) => {
               logger.debug('Executing tool', { agentName, toolName, args });
@@ -362,14 +517,85 @@ export const POST = withAuth<AgentChatContext>(async (
                   workspaceId,
                   sessionId: req.headers.get('x-session-id') || undefined,
                 });
-              } else {
+              } else if (isBuddyAgent) {
                 // Buddy tool execution (budget + action tools)
                 return executeBuddyTool(toolName, args, {
                   userId: auth.userId,
                   workspaceId,
                   sessionId: req.headers.get('x-session-id') || undefined,
                   agentId,
-                  // TODO: Add Socket.IO emitter when available
+                });
+              } else if (isKaiAgent) {
+                return executeKaiTool(toolName, args, {
+                  userId: auth.userId,
+                  workspaceId,
+                  sessionId: req.headers.get('x-session-id') || undefined,
+                });
+              } else if (isLexAgent) {
+                return executeLexTool(toolName, args, {
+                  userId: auth.userId,
+                  workspaceId,
+                  sessionId: req.headers.get('x-session-id') || undefined,
+                });
+              } else if (isNovaAgent) {
+                return executeNovaTool(toolName, args, {
+                  userId: auth.userId,
+                  workspaceId,
+                  sessionId: req.headers.get('x-session-id') || undefined,
+                });
+              } else if (isOmniAgent) {
+                return executeOmniTool(toolName, args, {
+                  userId: auth.userId,
+                  workspaceId,
+                  sessionId: req.headers.get('x-session-id') || undefined,
+                });
+              } else if (isCassieAgent) {
+                return executeCassieTool(toolName, args, {
+                  userId: auth.userId,
+                  workspaceId,
+                  sessionId: req.headers.get('x-session-id') || undefined,
+                });
+              } else if (isVeraAgent) {
+                return executeVeraTool(toolName, args, {
+                  userId: auth.userId,
+                  workspaceId,
+                  sessionId: req.headers.get('x-session-id') || undefined,
+                });
+              } else if (isAriAgent) {
+                return executeAriTool(toolName, args, {
+                  userId: auth.userId,
+                  workspaceId,
+                  sessionId: req.headers.get('x-session-id') || undefined,
+                });
+              } else if (isAuraAgent) {
+                return executeAuraTool(toolName, args, {
+                  userId: auth.userId,
+                  workspaceId,
+                  sessionId: req.headers.get('x-session-id') || undefined,
+                });
+              } else if (isVinceAgent) {
+                return executeVinceTool(toolName, args, {
+                  userId: auth.userId,
+                  workspaceId,
+                  sessionId: req.headers.get('x-session-id') || undefined,
+                });
+              } else if (isMiloAgent) {
+                return executeMiloTool(toolName, args, {
+                  userId: auth.userId,
+                  workspaceId,
+                  sessionId: req.headers.get('x-session-id') || undefined,
+                });
+              } else if (isEchoAgent) {
+                return executeEchoTool(toolName, args, {
+                  userId: auth.userId,
+                  workspaceId,
+                  sessionId: req.headers.get('x-session-id') || undefined,
+                });
+              } else {
+                return executeFinnTool(toolName, args, {
+                  userId: auth.userId,
+                  workspaceId,
+                  sessionId: req.headers.get('x-session-id') || undefined,
                 });
               }
             };
@@ -377,7 +603,20 @@ export const POST = withAuth<AgentChatContext>(async (
             const getDisplayName = (toolName: string) => {
               if (isEmmieAgent) return getToolDisplay(toolName);
               if (isDexterAgent) return getDexterToolDisplay(toolName);
-              return getBuddyToolDisplay(toolName);
+              if (isBuddyAgent) return getBuddyToolDisplay(toolName);
+              if (isKaiAgent) return getKaiToolDisplay(toolName);
+              if (isLexAgent) return getLexToolDisplay(toolName);
+              if (isNovaAgent) return getNovaToolDisplay(toolName);
+              if (isOmniAgent) return getOmniToolDisplay(toolName);
+              if (isCassieAgent) return getCassieToolDisplay(toolName);
+              if (isVeraAgent) return getVeraToolDisplay(toolName);
+              if (isAriAgent) return getAriToolDisplay(toolName);
+              if (isAuraAgent) return getAuraToolDisplay(toolName);
+              if (isVinceAgent) return getVinceToolDisplay(toolName);
+              if (isMiloAgent) return getMiloToolDisplay(toolName);
+              if (isEchoAgent) return getEchoToolDisplay(toolName);
+              if (isFinnAgent) return getFinnToolDisplay(toolName);
+              return toolName;
             };
 
             const toolGenerator = streamWithTools({
@@ -389,8 +628,12 @@ export const POST = withAuth<AgentChatContext>(async (
               model: selectedModel,
               temperature, // Use Control Panel value
               maxTokens, // Use Control Panel value
-              maxToolCalls: isEmmieAgent ? 10 : 5, // Dexter needs fewer tool calls
+              maxToolCalls: isEmmieAgent ? 10 : isOmniAgent ? 15 : 5,
               maxRetries: 3,
+              userId: auth.userId, // Memory: auto-log tool results
+              agentId, // Memory: auto-log tool results
+              requiresConfirmation: isEmmieAgent ? emmieRequiresConfirmation : undefined,
+              getToolDescription: isEmmieAgent ? emmieGetToolDescription : undefined,
               onRecovery: (error, attempt) => {
                 recoveryAttempts++;
                 logger.info('Recovering from error', { agentName, attempt, error: error.message });
@@ -420,16 +663,27 @@ export const POST = withAuth<AgentChatContext>(async (
 
                 case 'tool_call_start':
                   totalToolCalls++;
-                  controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({
-                      toolCall: {
-                        status: 'start',
-                        tool: event.tool,
-                        displayName: getDisplayName(event.tool || ''),
-                        args: event.args,
-                      }
-                    })}\n\n`)
-                  );
+                  {
+                    const toolId = `tool-${Date.now()}-${event.tool}`;
+                    toolCallDetails.push({
+                      id: toolId,
+                      name: event.tool || '',
+                      status: 'running',
+                      args: event.args,
+                      displayName: getDisplayName(event.tool || ''),
+                    });
+                    controller.enqueue(
+                      encoder.encode(`data: ${JSON.stringify({
+                        toolCall: {
+                          id: toolId,
+                          status: 'start',
+                          tool: event.tool,
+                          displayName: getDisplayName(event.tool || ''),
+                          args: event.args,
+                        }
+                      })}\n\n`)
+                    );
+                  }
                   break;
 
                 case 'tool_call_result':
@@ -441,13 +695,40 @@ export const POST = withAuth<AgentChatContext>(async (
                     });
                   }
 
+                  {
+                    // Update the matching toolCallDetails entry with result
+                    const existingIdx = toolCallDetails.findIndex(t => t.name === event.tool && t.status === 'running');
+                    const finalStatus = event.result?.success ? 'completed' : 'failed';
+                    if (existingIdx >= 0) {
+                      toolCallDetails[existingIdx].status = finalStatus;
+                      toolCallDetails[existingIdx].result = event.result;
+                    }
+                    const toolId = existingIdx >= 0 ? toolCallDetails[existingIdx].id : `tool-${Date.now()}-${event.tool}`;
+
+                    controller.enqueue(
+                      encoder.encode(`data: ${JSON.stringify({
+                        toolCall: {
+                          id: toolId,
+                          status: event.result?.success ? 'complete' : 'error',
+                          tool: event.tool,
+                          displayName: getDisplayName(event.tool || ''),
+                          result: event.result,
+                        }
+                      })}\n\n`)
+                    );
+                  }
+                  break;
+
+                case 'confirmation_required':
                   controller.enqueue(
                     encoder.encode(`data: ${JSON.stringify({
-                      toolCall: {
-                        status: event.result?.success ? 'complete' : 'error',
+                      confirmationRequired: {
+                        actionId: event.confirmation?.actionId,
                         tool: event.tool,
                         displayName: getDisplayName(event.tool || ''),
-                        result: event.result,
+                        description: event.confirmation?.description,
+                        details: event.confirmation?.details,
+                        reasoning: fullResponse, // Model's text reasoning before the tool call
                       }
                     })}\n\n`)
                   );
@@ -507,7 +788,8 @@ export const POST = withAuth<AgentChatContext>(async (
               selectedModel,
               auth.userId,
               temperature, // Pass Control Panel temperature
-              maxTokens // Pass Control Panel maxTokens
+              maxTokens, // Pass Control Panel maxTokens
+              memoryContext // Pass memory context for prompt enhancement
             );
 
             // Iterate through chunks
@@ -569,7 +851,7 @@ export const POST = withAuth<AgentChatContext>(async (
               tokens: totalTokens,
               costUsd: costUsd.toFixed(6),
               latencyMs: responseTimeMs,
-              ...(isAgenticAgent && totalToolCalls > 0 ? { toolCalls: totalToolCalls } : {}),
+              ...(isAgenticAgent && totalToolCalls > 0 ? { toolCalls: toolCallDetails } : {}),
             }
           });
 
@@ -578,6 +860,19 @@ export const POST = withAuth<AgentChatContext>(async (
 
           // Check cost-based alerts
           await budgetService.checkCostAlerts(auth.userId, costUsd);
+
+          // ──── Memory: Save conversation insight (fire-and-forget) ────
+          if (fullResponse.length > 100) {
+            agentMemoryService.saveMemory(
+              agentId,
+              auth.userId,
+              `User asked: ${content.slice(0, 200)}. Key outcome: ${fullResponse.slice(0, 300)}`,
+              'conversation_insight',
+              'auto_conversation',
+              [agentId],
+              { messageLength: fullResponse.length, tokens: totalTokens }
+            ).catch(err => logger.warn('Memory insight save failed', { error: err }));
+          }
 
           // Send completion signal with trace ID
           controller.enqueue(

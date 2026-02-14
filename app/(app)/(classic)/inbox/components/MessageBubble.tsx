@@ -24,6 +24,7 @@ import { format, parseISO } from 'date-fns';
 import { Bot, User, Copy, Check, FileCode, FileText, ExternalLink, Loader2 } from 'lucide-react';
 import { DecisionCard } from './chat/DecisionCard';
 import { InlineToolActions, type ToolAction } from './chat/ToolSuggestionCard';
+import { SmartReplySuggestions } from '@/components/inbox/emmie/SmartReplySuggestions';
 import { useInboxStore } from '@/lib/stores/useInboxStore';
 import { useWorkflowActions } from '@/lib/hooks/useWorkflowActions';
 import { useToolActions } from '@/lib/hooks/useToolActions';
@@ -34,6 +35,9 @@ interface MessageBubbleProps {
   isStreaming?: boolean;
   agentName?: string;
   agentColor?: string;
+  agentId?: string;
+  onSendReply?: (prompt: string) => void;
+  isLastAgentMessage?: boolean;
 }
 
 // Icon mapping for artifact types
@@ -104,6 +108,9 @@ export const MessageBubble = memo(function MessageBubble({
   isStreaming = false,
   agentName = 'AI Assistant',
   agentColor = '#8b5cf6',
+  agentId,
+  onSendReply,
+  isLastAgentMessage = false,
 }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
   const [showActions, setShowActions] = useState(false);
@@ -515,6 +522,15 @@ export const MessageBubble = memo(function MessageBubble({
             </button>
           )}
         </div>
+
+        {/* Smart Reply Suggestions (Emmie only, last agent message) */}
+        {!isUser && !isStreaming && agentId === 'emmie' && isLastAgentMessage && onSendReply && (
+          <SmartReplySuggestions
+            onSelectReply={onSendReply}
+            agentColor={agentColor}
+            messageContent={message.content}
+          />
+        )}
       </div>
     </div>
   );

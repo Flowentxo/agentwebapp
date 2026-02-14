@@ -20,3 +20,6 @@ export * from './schema-admin-audit';
 
 // Integrations v2 - Unified CRM/Customers/Tickets
 export * from './schema-integrations-v2';
+
+// Agent Memory - pgvector embeddings
+export * from './schema-agent-memory';

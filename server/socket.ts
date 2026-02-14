@@ -93,6 +93,7 @@ export interface InboxMessagePayload {
     reason?: string;
     details?: string;
     priority?: string;
+    toolCalls?: Array<{ id: string; name: string; status: string; args?: any; result?: any; displayName?: string }>;
   };
   timestamp: string;
   isStreaming?: boolean;
@@ -115,20 +116,23 @@ export function initializeSocketIO(server: HttpServer) {
     cors: {
       origin: [
         'http://localhost:3000',
-        'http://localhost:3001',
+        'http://127.0.0.1:3000',
         'http://localhost:3002',
         'http://localhost:3003',
         'http://localhost:3004',
         'http://localhost:4000',
+        'http://127.0.0.1:4000',
         'https://sintra.ai',
         process.env.FRONTEND_URL || ''
       ].filter(Boolean),
       credentials: true,
-      methods: ['GET', 'POST']
+      methods: ['GET', 'POST'],
+      allowedHeaders: ['Authorization', 'x-user-id', 'Content-Type'],
     },
     path: '/socket.io/',
     pingTimeout: 60000,
     pingInterval: 25000,
+    transports: ['websocket', 'polling'],
   })
 
   // ============================================
@@ -1224,6 +1228,24 @@ export function emitInboxMessageComplete(threadId: string, messageId: string) {
 
   const inbox = io.of('/inbox');
   inbox.to(`thread:${threadId}`).emit('message:complete', messageId);
+}
+
+/**
+ * Emit tool call event for real-time Glass Cockpit updates
+ */
+export function emitInboxToolCall(threadId: string, toolCall: {
+  messageId: string;
+  id: string;
+  status: 'start' | 'complete' | 'error';
+  tool: string;
+  displayName: string;
+  args?: any;
+  result?: any;
+}) {
+  if (!io) return;
+
+  const inbox = io.of('/inbox');
+  inbox.to(`thread:${threadId}`).emit('toolCall', toolCall);
 }
 
 /**

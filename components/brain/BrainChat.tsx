@@ -68,6 +68,7 @@ interface BrainChatProps {
   workspaceId?: string;
   initialQuery?: string;
   initialAction?: string;
+  compact?: boolean;
 }
 
 // ============================================
@@ -78,6 +79,7 @@ export function BrainChat({
   workspaceId = 'default-workspace',
   initialQuery,
   initialAction,
+  compact = false,
 }: BrainChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState(initialQuery || '');
@@ -258,20 +260,56 @@ export function BrainChat({
   // Feedback
   const handleFeedback = useCallback((messageId: string, isPositive: boolean) => {
     console.log(`[BRAIN_CHAT] Feedback for ${messageId}: ${isPositive ? 'positive' : 'negative'}`);
-    // TODO: Send feedback to backend
   }, []);
 
+  // Export chat as Markdown
+  const handleExportChat = useCallback(() => {
+    if (messages.length === 0) return;
+    const md = messages.map(m => {
+      const role = m.role === 'user' ? '**You**' : '**Brain AI**';
+      return `${role} (${m.timestamp.toLocaleString('de-DE')}):\n\n${m.content}`;
+    }).join('\n\n---\n\n');
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `brain-chat-${new Date().toISOString().slice(0, 10)}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [messages]);
+
+  // Slash commands
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const slashCommands = [
+    { cmd: '/export', label: 'Export Chat', desc: 'Als Markdown exportieren', action: () => { handleExportChat(); setInput(''); setShowSlashMenu(false); } },
+    { cmd: '/clear', label: 'Clear Chat', desc: 'Chatverlauf löschen', action: () => { setMessages([]); setInput(''); setShowSlashMenu(false); } },
+    { cmd: '/summarize', label: 'Summarize', desc: 'Bisherige Konversation zusammenfassen', action: () => { setInput('Fasse die bisherige Konversation in 3 Bullet-Points zusammen.'); setShowSlashMenu(false); } },
+  ];
+
+  // Detect slash command
+  useEffect(() => {
+    if (input.startsWith('/') && input.length < 20) {
+      setShowSlashMenu(true);
+    } else {
+      setShowSlashMenu(false);
+    }
+  }, [input]);
+
   return (
-    <div className="brain-chat">
+    <div className={`brain-chat ${compact ? 'brain-chat-compact' : ''}`}>
       {/* Messages */}
-      <div className="brain-chat-messages">
+      <div className="brain-chat-messages" style={compact ? { maxHeight: '320px' } : undefined}>
         {messages.length === 0 && !streamingContent && (
           <div className="brain-chat-welcome">
-            <div className="brain-chat-welcome-icon">
-              <Brain className="w-12 h-12" />
-            </div>
-            <h2>Brain AI</h2>
-            <p>Ask me anything about your workspace. I can search documents, analyze data, and help you write.</p>
+            {!compact && (
+              <>
+                <div className="brain-chat-welcome-icon">
+                  <Brain className="w-12 h-12" />
+                </div>
+                <h2>Brain AI</h2>
+              </>
+            )}
+            <p>{compact ? 'Frag dein Gehirn – Konversation bleibt erhalten.' : 'Ask me anything about your workspace. I can search documents, analyze data, and help you write.'}</p>
             <div className="brain-chat-suggestions">
               <button onClick={() => setInput('What were the key decisions from last week?')}>
                 Key decisions from last week
@@ -279,9 +317,11 @@ export function BrainChat({
               <button onClick={() => setInput('Summarize the current project status')}>
                 Summarize project status
               </button>
-              <button onClick={() => setInput('Help me write a project update email')}>
-                Write project update
-              </button>
+              {!compact && (
+                <button onClick={() => setInput('Help me write a project update email')}>
+                  Write project update
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -329,9 +369,39 @@ export function BrainChat({
         </div>
       )}
 
+      {/* Slash Command Menu */}
+      {showSlashMenu && (
+        <div className="brain-chat-slash-menu">
+          {slashCommands
+            .filter(c => c.cmd.startsWith(input.toLowerCase()) || input === '/')
+            .map(cmd => (
+              <button
+                key={cmd.cmd}
+                onClick={cmd.action}
+                className="brain-chat-slash-item"
+              >
+                <span className="brain-chat-slash-cmd">{cmd.cmd}</span>
+                <span className="brain-chat-slash-desc">{cmd.desc}</span>
+              </button>
+            ))}
+        </div>
+      )}
+
       {/* Input */}
       <form onSubmit={handleSubmit} className="brain-chat-input-container">
         <div className="brain-chat-input-wrapper">
+          {/* Export button */}
+          {messages.length > 0 && !compact && (
+            <button
+              type="button"
+              className="brain-chat-context-button"
+              onClick={handleExportChat}
+              title="Export chat"
+            >
+              <Hash className="w-4 h-4" />
+            </button>
+          )}
+
           <button
             type="button"
             className="brain-chat-context-button"
@@ -659,6 +729,55 @@ export function BrainChat({
           text-align: center;
           font-size: 11px;
           color: var(--text-tertiary, #666);
+        }
+
+        .brain-chat-slash-menu {
+          padding: 4px 16px;
+          border-top: 1px solid var(--border-color, #2a2a4a);
+          background: var(--bg-secondary, #1e1e3a);
+          display: flex;
+          flex-direction: column;
+        }
+
+        .brain-chat-slash-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 8px 12px;
+          border-radius: 8px;
+          text-align: left;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+
+        .brain-chat-slash-item:hover {
+          background: var(--bg-tertiary, #2a2a4a);
+        }
+
+        .brain-chat-slash-cmd {
+          font-size: 13px;
+          font-weight: 600;
+          color: #a855f7;
+          font-family: monospace;
+          min-width: 80px;
+        }
+
+        .brain-chat-slash-desc {
+          font-size: 12px;
+          color: var(--text-tertiary, #666);
+        }
+
+        .brain-chat-compact .brain-chat-messages {
+          padding: 12px;
+          gap: 12px;
+        }
+
+        .brain-chat-compact .brain-chat-welcome {
+          padding: 16px;
+        }
+
+        .brain-chat-compact .brain-chat-input-container {
+          padding: 8px 12px;
         }
       `}</style>
     </div>

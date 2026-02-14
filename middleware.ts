@@ -118,6 +118,7 @@ const styleSrc = [
   "'self'",
   "'unsafe-inline'",
   "https://fonts.googleapis.com",
+  "https://cdn.mathpix.com",
 ];
 
 const connectSrc = [
@@ -140,6 +141,7 @@ const fontSrc = [
   "'self'",
   "data:",
   "https://fonts.gstatic.com",
+  "https://cdn.mathpix.com",
 ];
 
 const frameSrc = [

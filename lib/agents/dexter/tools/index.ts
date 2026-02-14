@@ -65,6 +65,22 @@ export {
   type BalanceSheetResult,
 } from './balance-sheet-generator';
 
+// Stripe Transactions
+export {
+  fetchTransactions,
+  STRIPE_FETCH_TOOL,
+  type StripeFetchInput,
+  type StripeFetchResult,
+} from './stripe-fetch';
+
+// Chart Renderer
+export {
+  renderChart,
+  CHART_RENDER_TOOL,
+  type ChartRenderInput,
+  type ChartRenderResult,
+} from './chart-render';
+
 // All tools for OpenAI function calling
 import { ROI_CALCULATOR_TOOL } from './roi-calculator';
 import { SALES_FORECASTER_TOOL } from './sales-forecaster';
@@ -72,6 +88,8 @@ import { PNL_CALCULATOR_TOOL } from './pnl-calculator';
 import { BREAK_EVEN_CALCULATOR_TOOL } from './break-even-calculator';
 import { CASH_FLOW_CALCULATOR_TOOL } from './cash-flow-calculator';
 import { BALANCE_SHEET_GENERATOR_TOOL } from './balance-sheet-generator';
+import { STRIPE_FETCH_TOOL } from './stripe-fetch';
+import { CHART_RENDER_TOOL } from './chart-render';
 
 /**
  * All Dexter tools in Anthropic/OpenAI-compatible format
@@ -83,6 +101,8 @@ export const DEXTER_TOOLS = [
   BREAK_EVEN_CALCULATOR_TOOL,
   CASH_FLOW_CALCULATOR_TOOL,
   BALANCE_SHEET_GENERATOR_TOOL,
+  STRIPE_FETCH_TOOL,
+  CHART_RENDER_TOOL,
 ];
 
 /**

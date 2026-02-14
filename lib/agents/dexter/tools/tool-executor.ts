@@ -11,6 +11,8 @@ import { calculatePnL, PnLInput, PnLResult } from './pnl-calculator';
 import { calculateBreakEven, BreakEvenInput, BreakEvenResult } from './break-even-calculator';
 import { calculateCashFlow, CashFlowInput, CashFlowResult } from './cash-flow-calculator';
 import { generateBalanceSheet, BalanceSheetInput, BalanceSheetResult } from './balance-sheet-generator';
+import { fetchTransactions, StripeFetchInput, StripeFetchResult } from './stripe-fetch';
+import { renderChart, ChartRenderInput, ChartRenderResult, validateChartConfig } from './chart-render';
 import { toolLoggingService } from '@/server/services/ToolLoggingService';
 
 export interface ToolResult {
@@ -46,6 +48,8 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   calculate_break_even: 'Break-Even-Analyse',
   calculate_cash_flow: 'Cashflow-Analyse',
   generate_balance_sheet: 'Bilanz-Erstellung',
+  fetch_transactions: '💳 Stripe-Transaktionen',
+  render_chart: '📊 Chart-Erstellung',
 };
 
 /**
@@ -188,6 +192,58 @@ export async function executeDexterTool(
           data: balanceSheetResult,
           summary: `Bilanzsumme: ${balanceSheetResult.metrics.total_assets} (${balanceSheetResult.health_status})`,
         };
+        break;
+      }
+
+      // ============================================================
+      // Stripe Transactions
+      // ============================================================
+      case 'fetch_transactions': {
+        const stripeInput: StripeFetchInput = {
+          limit: args.limit,
+          status: args.status,
+          date_from: args.date_from,
+          date_to: args.date_to,
+          currency: args.currency,
+        };
+        const stripeResult = await fetchTransactions(stripeInput);
+        result = {
+          success: true,
+          data: stripeResult,
+          summary: `${stripeResult.total_count} Transaktionen, Umsatz: ${(stripeResult.total_amount / 100).toLocaleString('de-DE')} ${stripeResult.currency.toUpperCase()}`,
+        };
+        break;
+      }
+
+      // ============================================================
+      // Chart Renderer
+      // ============================================================
+      case 'render_chart': {
+        const chartInput: ChartRenderInput = {
+          chart_type: args.chart_type,
+          title: args.title,
+          data: args.data,
+          options: args.options,
+        };
+        const chartResult = await renderChart(chartInput);
+        const validation = validateChartConfig(chartResult.chart_config);
+        if (!validation.valid) {
+          result = {
+            success: false,
+            error: `Chart-Validierung fehlgeschlagen: ${validation.errors.join('; ')}`,
+            data: { validation_errors: validation.errors, original_input: args },
+            summary: `Chart-Validierung fehlgeschlagen: ${validation.errors.length} Fehler`,
+          };
+        } else {
+          result = {
+            success: true,
+            data: {
+              ...chartResult,
+              ...(validation.warnings.length > 0 ? { validation_warnings: validation.warnings } : {}),
+            },
+            summary: chartResult.summary,
+          };
+        }
         break;
       }
 
@@ -380,6 +436,28 @@ export function validateToolArgs(
         return { valid: false, error: 'equity ist erforderlich' };
       }
       break;
+
+    case 'fetch_transactions':
+      // All parameters optional, no strict validation needed
+      if (args.limit && (typeof args.limit !== 'number' || args.limit < 1)) {
+        return { valid: false, error: 'limit muss eine positive Zahl sein' };
+      }
+      break;
+
+    case 'render_chart':
+      if (!args.chart_type) {
+        return { valid: false, error: 'chart_type ist erforderlich' };
+      }
+      if (!args.title) {
+        return { valid: false, error: 'title ist erforderlich' };
+      }
+      if (!args.data?.labels || !Array.isArray(args.data.labels)) {
+        return { valid: false, error: 'data.labels ist erforderlich (Array)' };
+      }
+      if (!args.data?.datasets || !Array.isArray(args.data.datasets)) {
+        return { valid: false, error: 'data.datasets ist erforderlich (Array)' };
+      }
+      break;
   }
 
   return {
@@ -409,6 +487,10 @@ export function getToolActionDescription(
       return `Analysiere Cashflow mit operativem CF von ${args.operating_cash_flow}€`;
     case 'generate_balance_sheet':
       return `Erstelle Bilanz mit Aktiva von ${args.assets?.current_assets + args.assets?.non_current_assets}€`;
+    case 'fetch_transactions':
+      return `Lade Stripe-Transaktionen${args.date_from ? ` ab ${args.date_from}` : ''}${args.status ? ` (${args.status})` : ''}`;
+    case 'render_chart':
+      return `Erstelle ${args.chart_type}-Chart: "${args.title}"`;
     default:
       return `Führe ${toolName} aus`;
   }

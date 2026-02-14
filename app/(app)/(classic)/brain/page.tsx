@@ -1,23 +1,16 @@
 'use client';
 
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Brain,
-  Search,
   Upload,
   Lightbulb,
   GraduationCap,
   Zap,
   Database,
   TrendingUp,
-  FileText,
-  Sparkles,
-  ArrowRight,
-  ChevronRight,
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { useToast } from '@/hooks/useToast';
 
 // --- COMPONENTS (shared with Budget page style) ---
@@ -29,8 +22,11 @@ import { InteractiveKnowledgeGraph } from '@/components/brain/InteractiveKnowled
 import { KnowledgeUploadModal } from '@/components/brain/KnowledgeUploadModal';
 import { FocusedChatModal } from '@/components/brain/FocusedChatModal';
 import { KnowledgeLibrary } from '@/components/brain/KnowledgeLibrary';
+import { BrainChat } from '@/components/brain/BrainChat';
+import { PipelineWizard } from '@/components/pipelines/wizard/PipelineWizard';
 import { getKnowledgeStorageStats, type StorageStats, type GraphNode } from '@/actions/brain-actions';
-import { HardDrive, List, Network } from 'lucide-react';
+import { HardDrive, List, Network, Keyboard } from 'lucide-react';
+import { Omnibar } from '@/components/brain/Omnibar';
 
 // --- PREMIUM DESIGN TOKENS (matching Budget page) ---
 const tokens = {
@@ -83,21 +79,76 @@ function Badge({ text, color = 'indigo' }: { text: string, color?: 'indigo' | 't
 
 // --- MAIN PAGE COMPONENT ---
 export default function BrainPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResult, setSearchResult] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [showResults, setShowResults] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'knowledge' | 'meetings' | 'ideas' | 'learning'>('overview');
   const [knowledgeSubTab, setKnowledgeSubTab] = useState<'library' | 'graph'>('library');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showFocusedChatModal, setShowFocusedChatModal] = useState(false);
   const [selectedGraphNodes, setSelectedGraphNodes] = useState<GraphNode[]>([]);
   const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
   const { showToast } = useToast();
 
-  // Load storage stats on mount
+  // Live metrics state
+  const [brainMetrics, setBrainMetrics] = useState<{
+    activeMemory: number;
+    indexedPercent: number;
+    ideaCount: number;
+  } | null>(null);
+  const [recentActivity, setRecentActivity] = useState<{ type: string; title: string; time: string }[]>([]);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showPipelineWizard, setShowPipelineWizard] = useState(false);
+  const [pipelineInitialData, setPipelineInitialData] = useState<{ title?: string; description?: string } | null>(null);
+
+  // Keyboard shortcuts for Brain page
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept when typing in inputs
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
+
+      // Tab switching with number keys 1-5
+      const tabKeys: Record<string, typeof activeTab> = {
+        '1': 'overview', '2': 'knowledge', '3': 'meetings', '4': 'ideas', '5': 'learning',
+      };
+      if (tabKeys[e.key]) {
+        e.preventDefault();
+        setActiveTab(tabKeys[e.key]);
+        return;
+      }
+
+      // '/' → Open Omnibar (Ctrl+K equivalent)
+      if (e.key === '/') {
+        e.preventDefault();
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }));
+        return;
+      }
+
+      // 'u' → Open upload modal
+      if (e.key === 'u') {
+        e.preventDefault();
+        setShowUploadModal(true);
+        return;
+      }
+
+      // 'c' → Open focused chat modal
+      if (e.key === 'c') {
+        e.preventDefault();
+        setShowFocusedChatModal(true);
+        return;
+      }
+
+      // '?' → Toggle shortcuts overlay
+      if (e.key === '?') {
+        e.preventDefault();
+        setShowShortcuts(prev => !prev);
+        return;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Load storage stats and live metrics on mount
   useEffect(() => {
     async function loadStorageStats() {
       try {
@@ -112,6 +163,65 @@ export default function BrainPage() {
     loadStorageStats();
   }, []);
 
+  // Load live brain metrics
+  useEffect(() => {
+    async function loadMetrics() {
+      try {
+        const [analyticsRes, ideasRes] = await Promise.all([
+          fetch('/api/brain/analytics?period=30d', { headers: { 'x-workspace-id': 'default-workspace' } }),
+          fetch('/api/business-ideas?status=new').catch(() => null),
+        ]);
+
+        let activeMemory = 0;
+        let indexedPercent = 0;
+        if (analyticsRes.ok) {
+          const json = await analyticsRes.json();
+          const data = json.data;
+          activeMemory = data?.usage?.totalDocuments || 0;
+          const successRate = data?.quality?.searchSuccessRate || 0;
+          indexedPercent = Math.round(successRate * 100);
+        }
+
+        let ideaCount = 0;
+        if (ideasRes && ideasRes.ok) {
+          const ideasJson = await ideasRes.json();
+          ideaCount = Array.isArray(ideasJson.data) ? ideasJson.data.length : (ideasJson.count || 0);
+        }
+
+        setBrainMetrics({ activeMemory, indexedPercent: indexedPercent || 0, ideaCount });
+
+        // Load recent activity from knowledge items
+        try {
+          const knowledgeRes = await fetch('/api/brain/knowledge/list?limit=3&sort=newest', {
+            headers: { 'x-workspace-id': 'default-workspace' },
+          });
+          if (knowledgeRes.ok) {
+            const kJson = await knowledgeRes.json();
+            const items = kJson.data || kJson.documents || [];
+            if (Array.isArray(items)) {
+              const now = Date.now();
+              setRecentActivity(items.slice(0, 3).map((doc: any) => {
+                const created = new Date(doc.createdAt || doc.created_at || now);
+                const diffH = Math.max(1, Math.round((now - created.getTime()) / (1000 * 60 * 60)));
+                const timeStr = diffH < 24 ? `${diffH}h` : `${Math.round(diffH / 24)}d`;
+                return {
+                  type: doc.category || doc.type || 'Doc',
+                  title: doc.title || doc.name || 'Unnamed',
+                  time: timeStr,
+                };
+              }));
+            }
+          }
+        } catch {
+          // silently fail - feed stays empty
+        }
+      } catch (error) {
+        console.warn('[Brain] Failed to load metrics:', error);
+      }
+    }
+    loadMetrics();
+  }, []);
+
   // Tab configuration
   const tabs = useMemo(() => [
     { id: 'overview' as const, label: 'Übersicht', icon: <Brain className="h-4 w-4" /> },
@@ -120,69 +230,6 @@ export default function BrainPage() {
     { id: 'ideas' as const, label: 'Ideen', icon: <Lightbulb className="h-4 w-4" /> },
     { id: 'learning' as const, label: 'Learning', icon: <GraduationCap className="h-4 w-4" /> },
   ], []);
-
-  // Handle search
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
-
-    setIsSearching(true);
-    setShowResults(true);
-    setSearchResult('');
-
-    try {
-      const response = await fetch('/api/brain/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: searchQuery, useSemanticSearch: true }),
-        signal: abortControllerRef.current.signal,
-      });
-
-      if (!response.ok) throw new Error('Query failed');
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const text = decoder.decode(value, { stream: true });
-          setSearchResult(prev => prev + text);
-        }
-      }
-    } catch (error: unknown) {
-      const err = error as Error;
-      if (err.name === 'AbortError') return;
-      showToast({
-        type: 'error',
-        title: 'Fehler bei der Suche',
-        message: err.message || 'Ein unerwarteter Fehler ist aufgetreten.',
-      });
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  // Quick actions for the query card
-  const quickActions = [
-    { id: 'insights', label: 'Wichtige Insights', icon: <Sparkles className="h-4 w-4" />, query: 'Was sind die wichtigsten Insights aus meinen letzten Dokumenten?' },
-    { id: 'docs', label: 'Dokumente durchsuchen', icon: <FileText className="h-4 w-4" />, query: 'Zeig mir meine letzten Dokumente und deren Kernaussagen.' },
-    { id: 'ideas', label: 'Business-Ideen', icon: <Lightbulb className="h-4 w-4" />, query: 'Generiere Business-Ideen basierend auf meinem aktuellen Wissen.' },
-  ];
-
-  const handleQuickAction = (query: string) => {
-    setSearchQuery(query);
-    setTimeout(() => {
-      const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-      handleSearch(fakeEvent);
-    }, 100);
-  };
 
   return (
     <div className="min-h-screen px-6 py-12 lg:px-12" style={{ background: tokens.bgPage, fontFamily: tokens.fontFamily }}>
@@ -254,6 +301,43 @@ export default function BrainPage() {
           ))}
         </div>
 
+        {/* TAB STATS BAR */}
+        {brainMetrics && (
+          <div className="flex items-center gap-6 px-4 py-2 rounded-xl bg-card/[0.03] border border-white/5 text-xs">
+            {activeTab === 'overview' && (
+              <>
+                <span className="text-white/40">Total Docs: <span className="text-white/70 font-medium">{brainMetrics.activeMemory}</span></span>
+                <span className="text-white/10">|</span>
+                <span className="text-white/40">Indexed: <span className="text-white/70 font-medium">{brainMetrics.indexedPercent}%</span></span>
+                <span className="text-white/10">|</span>
+                <span className="text-white/40">Ideas: <span className="text-white/70 font-medium">{brainMetrics.ideaCount}</span></span>
+              </>
+            )}
+            {activeTab === 'knowledge' && (
+              <>
+                <span className="text-white/40">Dokumente: <span className="text-white/70 font-medium">{brainMetrics.activeMemory}</span></span>
+                <span className="text-white/10">|</span>
+                <span className="text-white/40">Storage: <span className="text-white/70 font-medium">{storageStats?.storageUsedMB || '—'} MB</span></span>
+              </>
+            )}
+            {activeTab === 'meetings' && (
+              <>
+                <span className="text-white/40">Context Engine: <span className="text-white/70 font-medium">Active</span></span>
+              </>
+            )}
+            {activeTab === 'ideas' && (
+              <>
+                <span className="text-white/40">Ideas: <span className="text-white/70 font-medium">{brainMetrics.ideaCount}</span></span>
+              </>
+            )}
+            {activeTab === 'learning' && (
+              <>
+                <span className="text-white/40">Learning Module: <span className="text-white/70 font-medium">Active</span></span>
+              </>
+            )}
+          </div>
+        )}
+
         {/* OVERVIEW TAB CONTENT */}
         {activeTab === 'overview' && (
           <>
@@ -271,99 +355,25 @@ export default function BrainPage() {
                       <Badge text="Brain Query" />
                       <div className="text-right">
                         <p className="text-[10px] uppercase tracking-widest text-white/30">Knowledge Density</p>
-                        <p className="text-sm font-bold text-indigo-400">84% Indexed</p>
+                        <p className="text-sm font-bold text-indigo-400">{brainMetrics ? `${brainMetrics.indexedPercent}% Indexed` : '—'}</p>
                       </div>
                     </div>
 
-                    {/* Search Input */}
-                    <form onSubmit={handleSearch} className="space-y-4">
-                      <div className="relative">
-                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30" />
-                        <input
-                          ref={searchRef}
-                          type="text"
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          placeholder="Frag dein Gehirn..."
-                          className="w-full bg-card/5 border border-white/10 rounded-[24px] py-4 pl-14 pr-14 text-sm font-medium placeholder:text-white/30 focus:border-indigo-500/50 focus:bg-card/[0.08] outline-none transition-all"
-                        />
-                        <AnimatePresence>
-                          {searchQuery && (
-                            <motion.button
-                              type="submit"
-                              initial={{ opacity: 0, scale: 0.8 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.8 }}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 h-9 w-9 flex items-center justify-center rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg"
-                            >
-                              <ArrowRight className="h-4 w-4" />
-                            </motion.button>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    </form>
-
-                    {/* Results or Quick Actions */}
-                    <AnimatePresence mode="wait">
-                      {showResults ? (
-                        <motion.div
-                          key="results"
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          className="p-6 bg-card/5 rounded-[24px] border border-white/5 max-h-[300px] overflow-y-auto"
-                        >
-                          <div className="flex justify-between items-center mb-4">
-                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">AI Response</span>
-                            <button onClick={() => { setShowResults(false); setSearchResult(''); }} className="text-white/30 hover:text-white">
-                              <Zap className="h-4 w-4" />
-                            </button>
-                          </div>
-                          <div className="text-sm leading-relaxed text-white/70 prose prose-invert prose-sm max-w-none">
-                            {isSearching ? (
-                              <span className="animate-pulse">Analysiere Daten...</span>
-                            ) : (
-                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                {searchResult}
-                              </ReactMarkdown>
-                            )}
-                          </div>
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          key="actions"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          className="space-y-3"
-                        >
-                          {quickActions.map((action) => (
-                            <button
-                              key={action.id}
-                              onClick={() => handleQuickAction(action.query)}
-                              className="w-full flex items-center gap-4 p-4 bg-card/[0.02] hover:bg-card/5 border border-white/5 hover:border-white/10 rounded-[20px] text-left transition-all group"
-                            >
-                              <div className="p-2.5 bg-indigo-500/10 rounded-xl border border-indigo-500/20 group-hover:bg-indigo-500/20 transition-colors">
-                                {action.icon}
-                              </div>
-                              <span className="text-sm font-medium text-white/70 group-hover:text-white">{action.label}</span>
-                              <ChevronRight className="h-4 w-4 text-white/20 ml-auto group-hover:text-white/40 group-hover:translate-x-1 transition-all" />
-                            </button>
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    {/* Persistent Chat (replaces one-shot search) */}
+                    <div className="rounded-[24px] border border-white/5 bg-card/[0.02] overflow-hidden">
+                      <BrainChat compact />
+                    </div>
                   </div>
 
                   {/* Bottom Stats */}
                   <div className="grid grid-cols-2 gap-4 mt-8">
                     <div className="p-5 bg-card/5 rounded-[32px] border border-white/5 group-hover:bg-card/[0.08] transition-colors">
                       <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">Active Memory</p>
-                      <p className="text-2xl font-bold">1,248</p>
+                      <p className="text-2xl font-bold">{brainMetrics ? brainMetrics.activeMemory.toLocaleString('de-DE') : '—'}</p>
                     </div>
                     <div className="p-5 bg-card/5 rounded-[32px] border border-white/5 group-hover:bg-card/[0.08] transition-colors">
                       <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">AI Context</p>
-                      <p className="text-2xl font-bold text-green-400">Tier 3</p>
+                      <p className="text-2xl font-bold text-green-400">{brainMetrics ? `${brainMetrics.indexedPercent}%` : '—'}</p>
                     </div>
                   </div>
                 </div>
@@ -390,10 +400,7 @@ export default function BrainPage() {
                 </div>
                 <p className="text-sm text-white/40 mb-2">Intelligence Feed</p>
                 <div className="space-y-3 flex-1">
-                  {[
-                    { type: 'Meeting', title: 'Q4 Forecast', time: '2h' },
-                    { type: 'Doc', title: 'Competitor Analysis', time: '4h' },
-                  ].map((item, i) => (
+                  {recentActivity.length > 0 ? recentActivity.map((item, i) => (
                     <div key={i} className="p-3 bg-card/5 rounded-xl border border-white/5">
                       <div className="flex justify-between text-[10px] mb-1">
                         <span className="text-indigo-400 font-bold uppercase">{item.type}</span>
@@ -401,7 +408,11 @@ export default function BrainPage() {
                       </div>
                       <p className="text-xs font-medium text-white/70">{item.title}</p>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="p-3 bg-card/5 rounded-xl border border-white/5">
+                      <p className="text-xs text-white/40">Noch keine Aktivitäten</p>
+                    </div>
+                  )}
                 </div>
               </BentoCard>
 
@@ -411,7 +422,7 @@ export default function BrainPage() {
                   <Lightbulb className="h-5 w-5 text-teal-400" />
                 </div>
                 <p className="text-sm text-white/40 mb-2">Strategy Forge</p>
-                <p className="text-2xl font-bold">3 Ideas</p>
+                <p className="text-2xl font-bold">{brainMetrics ? `${brainMetrics.ideaCount} Ideas` : '— Ideas'}</p>
                 <p className="text-xs text-white/30 mt-1">Ready for review</p>
                 <div className="mt-auto pt-4">
                   <button 
@@ -464,7 +475,15 @@ export default function BrainPage() {
               <h2 className="text-2xl font-bold text-white mb-2">Business-Ideen Generator</h2>
               <p className="text-white/40 text-sm">AI-generierte, datenbasierte Business-Ideen</p>
             </div>
-            <BusinessIdeas />
+            <BusinessIdeas
+              onConvertToPipeline={(idea) => {
+                setPipelineInitialData({
+                  title: idea.title,
+                  description: `${idea.description}\n\nSteps: ${idea.steps?.join(', ') || ''}\nMetrics: ${idea.metrics?.join(', ') || ''}`,
+                });
+                setShowPipelineWizard(true);
+              }}
+            />
           </BentoCard>
         )}
 
@@ -595,6 +614,62 @@ export default function BrainPage() {
         selectedDocuments={selectedGraphNodes}
         workspaceId="default-workspace"
       />
+
+      {/* Pipeline Wizard (triggered from Ideas→Pipeline bridge) */}
+      <PipelineWizard
+        isOpen={showPipelineWizard}
+        onClose={() => {
+          setShowPipelineWizard(false);
+          setPipelineInitialData(null);
+        }}
+        initialPrompt={pipelineInitialData ? `${pipelineInitialData.title}: ${pipelineInitialData.description}` : undefined}
+      />
+
+      {/* Omnibar (Ctrl+K / Cmd+K) */}
+      <Omnibar />
+
+      {/* Keyboard Shortcuts Overlay */}
+      <AnimatePresence>
+        {showShortcuts && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9998] flex items-center justify-center"
+            onClick={() => setShowShortcuts(false)}
+          >
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative bg-[#1A1D24] border border-white/10 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <Keyboard className="h-5 w-5 text-indigo-400" />
+                <h3 className="text-lg font-bold text-white">Keyboard Shortcuts</h3>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { keys: '1-5', desc: 'Switch tabs (Overview → Learning)' },
+                  { keys: '/', desc: 'Focus search input' },
+                  { keys: 'U', desc: 'Open upload modal' },
+                  { keys: 'C', desc: 'Open chat modal' },
+                  { keys: 'Ctrl+K', desc: 'Open command palette' },
+                  { keys: '?', desc: 'Toggle this overlay' },
+                ].map((shortcut) => (
+                  <div key={shortcut.keys} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                    <span className="text-sm text-white/70">{shortcut.desc}</span>
+                    <kbd className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-lg text-xs font-mono text-white/60">{shortcut.keys}</kbd>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-white/30 mt-4 text-center">Press ? or Esc to close</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

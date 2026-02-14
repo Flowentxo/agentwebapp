@@ -4,6 +4,8 @@ import { Mail, PenLine, LayoutTemplate, Search, BarChart3 } from 'lucide-react';
 
 interface EmmieWelcomeScreenProps {
   onSendPrompt: (prompt: string) => void;
+  onOpenComposer?: () => void;
+  onOpenDashboard?: () => void;
   agentColor: string;
 }
 
@@ -40,7 +42,7 @@ const suggestedPrompts = [
   'Erstelle eine Email Kampagne für...',
 ];
 
-export function EmmieWelcomeScreen({ onSendPrompt, agentColor }: EmmieWelcomeScreenProps) {
+export function EmmieWelcomeScreen({ onSendPrompt, onOpenComposer, onOpenDashboard, agentColor }: EmmieWelcomeScreenProps) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-8">
       {/* Avatar */}
@@ -64,7 +66,15 @@ export function EmmieWelcomeScreen({ onSendPrompt, agentColor }: EmmieWelcomeScr
           return (
             <button
               key={action.label}
-              onClick={() => onSendPrompt(action.prompt)}
+              onClick={() => {
+                if (action.label === 'E-Mail verfassen' && onOpenComposer) {
+                  onOpenComposer();
+                } else if (action.label === 'Inbox Analyse' && onOpenDashboard) {
+                  onOpenDashboard();
+                } else {
+                  onSendPrompt(action.prompt);
+                }
+              }}
               className="flex flex-col items-start gap-2 p-3.5 bg-white/[0.04] border border-white/[0.08] rounded-xl
                          hover:bg-white/[0.08] hover:border-white/[0.12] transition-all text-left group"
             >

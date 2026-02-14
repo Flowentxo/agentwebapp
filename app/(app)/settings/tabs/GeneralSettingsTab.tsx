@@ -28,6 +28,7 @@ import {
   Info,
   Loader2,
   Palette,
+  LogOut,
 } from 'lucide-react';
 import { ThemeSelector } from '@/components/settings/ThemeSelector';
 
@@ -76,6 +77,7 @@ export default function GeneralSettingsTab({
 
   // Form State
   const [saving, setSaving] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Calculate dirty state
   const isDirty = useMemo(() => {
@@ -204,6 +206,20 @@ export default function GeneralSettingsTab({
       setAvatarPreview(null);
     }
     setAvatarFile(null);
+  };
+
+  // Logout
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {
+      // Redirect even if API call fails
+    }
+    window.location.href = '/login';
   };
 
   // Get initials for avatar fallback
@@ -420,6 +436,37 @@ export default function GeneralSettingsTab({
           iconColor="text-violet-400"
         >
           <ThemeSelector />
+        </SettingsCard>
+      </SettingsSection>
+
+      {/* Logout Section */}
+      <SettingsSection
+        title="Sitzung"
+        description="Melde dich von deinem Konto ab."
+      >
+        <SettingsCard
+          title="Abmelden"
+          description="Du wirst zur Login-Seite weitergeleitet."
+          icon={LogOut}
+          iconColor="text-red-400"
+        >
+          <button
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-medium hover:bg-red-500/20 disabled:opacity-40 transition-all"
+          >
+            {isLoggingOut ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Abmelden...
+              </>
+            ) : (
+              <>
+                <LogOut className="w-4 h-4" />
+                Abmelden
+              </>
+            )}
+          </button>
         </SettingsCard>
       </SettingsSection>
 

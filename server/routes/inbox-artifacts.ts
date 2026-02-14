@@ -20,6 +20,26 @@ import { UnifiedAIService } from '../services/UnifiedAIService';
 import { routingService, type RoutingResult } from '../services/RoutingService';
 import { extractMentionedAgent, stripMention } from '../utils/extract-mention';
 
+// --- Glass Cockpit: Agentic tool-calling imports ---
+import { streamWithTools, type ChatMessage } from '../../lib/ai/openai-service';
+import { MAX_TOKENS } from '../../lib/ai/config';
+import { getDexterToolsForOpenAI, executeDexterTool, getToolDisplay as getDexterToolDisplay } from '../../lib/agents/dexter/tools';
+import { EMMIE_ALL_TOOLS, executeGmailTool, getToolDisplay as getEmmieToolDisplay } from '../../lib/agents/emmie/tools';
+import { getBuddyToolsForOpenAI, executeBuddyTool, getBuddyToolDisplay } from '../agents/buddy/executor';
+import { getKaiToolsForOpenAI, executeKaiTool, getKaiToolDisplay } from '../../lib/agents/kai/tools';
+import { getLexToolsForOpenAI, executeLexTool, getLexToolDisplay } from '../../lib/agents/lex/tools';
+import { getNovaToolsForOpenAI, executeNovaTool, getNovaToolDisplay } from '../../lib/agents/nova/tools';
+import { getOmniToolsForOpenAI, executeOmniTool, getOmniToolDisplay } from '../../lib/agents/omni/tools';
+import { getCassieToolsForOpenAI, executeCassieTool, getCassieToolDisplay } from '../../lib/agents/cassie/tools';
+import { getVeraToolsForOpenAI, executeVeraTool, getVeraToolDisplay } from '../../lib/agents/vera/tools';
+import { getAriToolsForOpenAI, executeAriTool, getAriToolDisplay } from '../../lib/agents/ari/tools';
+import { getAuraToolsForOpenAI, executeAuraTool, getAuraToolDisplay } from '../../lib/agents/aura/tools';
+import { getVinceToolsForOpenAI, executeVinceTool, getVinceToolDisplay } from '../../lib/agents/vince/tools';
+import { getMiloToolsForOpenAI, executeMiloTool, getMiloToolDisplay } from '../../lib/agents/milo/tools';
+import { getEchoToolsForOpenAI, executeEchoTool, getEchoToolDisplay } from '../../lib/agents/echo/tools';
+import { getFinnToolsForOpenAI, executeFinnTool, getFinnToolDisplay } from '../../lib/agents/finn/tools';
+import { emitInboxToolCall } from '../socket';
+
 const router = Router();
 
 // Initialize AI service for agent responses
@@ -786,22 +806,168 @@ async function generateAgentResponse(
       timestamp: new Date().toISOString(),
     });
 
-    // 8. Stream AI response token-by-token
+    // 8. Determine if this agent supports tool calling (Glass Cockpit)
+    const AGENTIC_AGENTS = ['dexter', 'emmie', 'buddy', 'kai', 'lex', 'nova', 'omni', 'cassie', 'vera', 'ari', 'aura', 'vince', 'milo', 'echo', 'finn'];
+    const isAgenticAgent = AGENTIC_AGENTS.includes(effectiveAgentId);
+
     let fullResponse = '';
-    for await (const chunk of aiService.generateStreamingCompletion(messages, {
-      temperature: 0.7,
-      maxTokens: 2000,
-    })) {
-      fullResponse += chunk;
-      emitInboxMessageStream(threadId, { messageId: agentMessage.id, content: chunk });
+    const toolCallDetails: Array<{ id: string; name: string; status: string; args?: any; result?: any; displayName?: string }> = [];
+
+    if (isAgenticAgent) {
+      // --- AGENTIC PATH: Use streamWithTools for tool-calling agents ---
+      logger.info(`[INBOX_AI] Using agentic path (streamWithTools) for ${effectiveAgentId}`);
+
+      // Load tools for the agent
+      const agentTools = effectiveAgentId === 'emmie' ? EMMIE_ALL_TOOLS
+        : effectiveAgentId === 'dexter' ? getDexterToolsForOpenAI()
+        : effectiveAgentId === 'buddy' ? getBuddyToolsForOpenAI()
+        : effectiveAgentId === 'kai' ? getKaiToolsForOpenAI()
+        : effectiveAgentId === 'lex' ? getLexToolsForOpenAI()
+        : effectiveAgentId === 'nova' ? getNovaToolsForOpenAI()
+        : effectiveAgentId === 'omni' ? getOmniToolsForOpenAI()
+        : effectiveAgentId === 'cassie' ? getCassieToolsForOpenAI()
+        : effectiveAgentId === 'vera' ? getVeraToolsForOpenAI()
+        : effectiveAgentId === 'ari' ? getAriToolsForOpenAI()
+        : effectiveAgentId === 'aura' ? getAuraToolsForOpenAI()
+        : effectiveAgentId === 'vince' ? getVinceToolsForOpenAI()
+        : effectiveAgentId === 'milo' ? getMiloToolsForOpenAI()
+        : effectiveAgentId === 'echo' ? getEchoToolsForOpenAI()
+        : effectiveAgentId === 'finn' ? getFinnToolsForOpenAI()
+        : [];
+
+      // Build tool executor
+      const toolExecutor = async (toolName: string, args: Record<string, any>) => {
+        const context = { userId, workspaceId: undefined as string | undefined, sessionId: undefined as string | undefined };
+        if (effectiveAgentId === 'emmie') return executeGmailTool(toolName, args, context);
+        if (effectiveAgentId === 'dexter') return executeDexterTool(toolName, args, { ...context, agentId: effectiveAgentId });
+        if (effectiveAgentId === 'buddy') return executeBuddyTool(toolName, args, { ...context, agentId: effectiveAgentId });
+        if (effectiveAgentId === 'kai') return executeKaiTool(toolName, args, context);
+        if (effectiveAgentId === 'lex') return executeLexTool(toolName, args, context);
+        if (effectiveAgentId === 'nova') return executeNovaTool(toolName, args, context);
+        if (effectiveAgentId === 'omni') return executeOmniTool(toolName, args, context);
+        if (effectiveAgentId === 'cassie') return executeCassieTool(toolName, args, context);
+        if (effectiveAgentId === 'vera') return executeVeraTool(toolName, args, context);
+        if (effectiveAgentId === 'ari') return executeAriTool(toolName, args, context);
+        if (effectiveAgentId === 'aura') return executeAuraTool(toolName, args, context);
+        if (effectiveAgentId === 'vince') return executeVinceTool(toolName, args, context);
+        if (effectiveAgentId === 'milo') return executeMiloTool(toolName, args, context);
+        if (effectiveAgentId === 'echo') return executeEchoTool(toolName, args, context);
+        if (effectiveAgentId === 'finn') return executeFinnTool(toolName, args, context);
+        return { success: false, error: 'Unknown agent' };
+      };
+
+      // Build display name resolver
+      const getDisplayName = (toolName: string) => {
+        if (effectiveAgentId === 'emmie') return getEmmieToolDisplay(toolName);
+        if (effectiveAgentId === 'dexter') return getDexterToolDisplay(toolName);
+        if (effectiveAgentId === 'buddy') return getBuddyToolDisplay(toolName);
+        if (effectiveAgentId === 'kai') return getKaiToolDisplay(toolName);
+        if (effectiveAgentId === 'lex') return getLexToolDisplay(toolName);
+        if (effectiveAgentId === 'nova') return getNovaToolDisplay(toolName);
+        if (effectiveAgentId === 'omni') return getOmniToolDisplay(toolName);
+        if (effectiveAgentId === 'cassie') return getCassieToolDisplay(toolName);
+        if (effectiveAgentId === 'vera') return getVeraToolDisplay(toolName);
+        if (effectiveAgentId === 'ari') return getAriToolDisplay(toolName);
+        if (effectiveAgentId === 'aura') return getAuraToolDisplay(toolName);
+        if (effectiveAgentId === 'vince') return getVinceToolDisplay(toolName);
+        if (effectiveAgentId === 'milo') return getMiloToolDisplay(toolName);
+        if (effectiveAgentId === 'echo') return getEchoToolDisplay(toolName);
+        if (effectiveAgentId === 'finn') return getFinnToolDisplay(toolName);
+        return toolName;
+      };
+
+      // Stream with tools
+      const toolGenerator = streamWithTools({
+        systemPrompt,
+        userMessage: processedMessage,
+        conversationHistory: conversationHistory as ChatMessage[],
+        tools: agentTools,
+        toolExecutor,
+        maxTokens: MAX_TOKENS,
+        maxToolCalls: effectiveAgentId === 'omni' ? 15 : effectiveAgentId === 'emmie' ? 10 : 5,
+      });
+
+      // Process events from the tool-calling stream
+      for await (const event of toolGenerator) {
+        switch (event.type) {
+          case 'text_chunk':
+            if (event.chunk) {
+              fullResponse += event.chunk;
+              emitInboxMessageStream(threadId, { messageId: agentMessage.id, content: event.chunk });
+            }
+            break;
+
+          case 'tool_call_start': {
+            const toolId = `tool-${Date.now()}-${event.tool}`;
+            toolCallDetails.push({
+              id: toolId,
+              name: event.tool || '',
+              status: 'running',
+              args: event.args,
+              displayName: getDisplayName(event.tool || ''),
+            });
+            emitInboxToolCall(threadId, {
+              messageId: agentMessage.id,
+              id: toolId,
+              status: 'start',
+              tool: event.tool || '',
+              displayName: getDisplayName(event.tool || ''),
+              args: event.args,
+            });
+            break;
+          }
+
+          case 'tool_call_result': {
+            const existingIdx = toolCallDetails.findIndex(t => t.name === event.tool && t.status === 'running');
+            const finalStatus = event.result?.success ? 'completed' : 'failed';
+            if (existingIdx >= 0) {
+              toolCallDetails[existingIdx].status = finalStatus;
+              toolCallDetails[existingIdx].result = event.result;
+            }
+            const toolId = existingIdx >= 0 ? toolCallDetails[existingIdx].id : `tool-${Date.now()}-${event.tool}`;
+            emitInboxToolCall(threadId, {
+              messageId: agentMessage.id,
+              id: toolId,
+              status: event.result?.success ? 'complete' : 'error',
+              tool: event.tool || '',
+              displayName: getDisplayName(event.tool || ''),
+              result: event.result,
+            });
+            break;
+          }
+
+          case 'error':
+            logger.error(`[INBOX_AI] Tool error for ${effectiveAgentId}:`, event.error);
+            break;
+
+          case 'done':
+            break;
+        }
+      }
+
+    } else {
+      // --- NON-AGENTIC PATH: Keep existing text-only streaming ---
+      logger.info(`[INBOX_AI] Using text-only path for ${effectiveAgentId}`);
+      for await (const chunk of aiService.generateStreamingCompletion(messages, {
+        temperature: 0.7,
+        maxTokens: MAX_TOKENS,
+      })) {
+        fullResponse += chunk;
+        emitInboxMessageStream(threadId, { messageId: agentMessage.id, content: chunk });
+      }
     }
 
-    logger.info(`[INBOX_AI] AI response streamed: ${fullResponse.substring(0, 100)}...`);
+    logger.info(`[INBOX_AI] AI response streamed: ${fullResponse.substring(0, 100)}... (tools: ${toolCallDetails.length})`);
 
-    // 9. Update DB with full response content
+    // 9. Update DB with full response content + tool metadata
     await db
       .update(inboxMessages)
-      .set({ content: fullResponse })
+      .set({
+        content: fullResponse,
+        ...(toolCallDetails.length > 0 ? {
+          metadata: { toolCalls: toolCallDetails }
+        } : {}),
+      })
       .where(eq(inboxMessages.id, agentMessage.id));
 
     // 10. Emit stream completion
@@ -858,6 +1024,9 @@ async function generateAgentResponse(
       agentId: effectiveAgentId,
       agentName: effectiveAgentName,
       timestamp: agentMessage.createdAt?.toISOString() || new Date().toISOString(),
+      ...(toolCallDetails.length > 0 ? {
+        metadata: { toolCalls: toolCallDetails }
+      } : {}),
     });
 
     // 15. Emit thread update to sidebar

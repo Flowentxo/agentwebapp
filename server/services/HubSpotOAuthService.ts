@@ -54,7 +54,7 @@ export class HubSpotOAuthService {
       return {
         clientId: process.env.HUBSPOT_CLIENT_ID,
         clientSecret: process.env.HUBSPOT_CLIENT_SECRET,
-        redirectUri: process.env.HUBSPOT_REDIRECT_URI || 'http://localhost:3001/api/integrations/hubspot/callback',
+        redirectUri: process.env.HUBSPOT_REDIRECT_URI || 'http://localhost:3000/api/integrations/hubspot/callback',
         provider: 'hubspot'
       };
     }

@@ -499,12 +499,43 @@ export function useThreadMessages(threadId: string | null, options?: UseThreadMe
       });
     };
 
+    // Glass Cockpit: Real-time tool call updates
+    const handleToolCall = (data: { messageId: string; id: string; status: string; tool: string; displayName: string; args?: any; result?: any }) => {
+      queryClient.setQueryData<InboxMessage[]>(inboxKeys.messages(threadId), (oldData) => {
+        if (!oldData) return oldData;
+        return oldData.map((msg) => {
+          if (msg.id !== data.messageId) return msg;
+          const existingToolCalls = (msg.metadata?.toolCalls as any[]) || [];
+          const toolIdx = existingToolCalls.findIndex((t: any) => t.id === data.id);
+
+          const toolEntry = {
+            id: data.id,
+            name: data.tool,
+            status: data.status === 'start' ? 'running' : data.status === 'complete' ? 'completed' : 'failed',
+            args: data.args,
+            result: data.result,
+            displayName: data.displayName,
+          };
+
+          const updatedToolCalls = toolIdx >= 0
+            ? existingToolCalls.map((t: any, i: number) => i === toolIdx ? { ...t, ...toolEntry } : t)
+            : [...existingToolCalls, toolEntry];
+
+          return {
+            ...msg,
+            metadata: { ...msg.metadata, toolCalls: updatedToolCalls },
+          };
+        });
+      });
+    };
+
     socket.on('message:new', handleNewMessage);
     socket.on('message:stream', handleMessageStream);
     socket.on('message:complete', handleMessageComplete);
     socket.on('approval:update', handleApprovalUpdate);
     socket.on('artifact:created', handleArtifactCreated);
     socket.on('system:event', handleSystemEvent);
+    socket.on('toolCall', handleToolCall);
 
     return () => {
       socket.off('message:new', handleNewMessage);
@@ -513,6 +544,7 @@ export function useThreadMessages(threadId: string | null, options?: UseThreadMe
       socket.off('approval:update', handleApprovalUpdate);
       socket.off('artifact:created', handleArtifactCreated);
       socket.off('system:event', handleSystemEvent);
+      socket.off('toolCall', handleToolCall);
     };
   }, [threadId, queryClient, socket, options]);
 
@@ -877,11 +909,47 @@ export function useThreadMessagesInfinite(
       );
     };
 
+    // Glass Cockpit: Real-time tool call updates (infinite scroll variant)
+    const handleToolCall = (data: { messageId: string; id: string; status: string; tool: string; displayName: string; args?: any; result?: any }) => {
+      queryClient.setQueryData(
+        inboxKeys.messagesInfinite(threadId),
+        (oldData: { pages: MessagesPageResponse[]; pageParams: (string | undefined)[] } | undefined) => {
+          if (!oldData) return oldData;
+
+          const toolEntry = {
+            id: data.id,
+            name: data.tool,
+            status: data.status === 'start' ? 'running' : data.status === 'complete' ? 'completed' : 'failed',
+            args: data.args,
+            result: data.result,
+            displayName: data.displayName,
+          };
+
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page) => ({
+              ...page,
+              messages: page.messages.map((msg) => {
+                if (msg.id !== data.messageId) return msg;
+                const existingToolCalls = (msg.metadata?.toolCalls as any[]) || [];
+                const toolIdx = existingToolCalls.findIndex((t: any) => t.id === data.id);
+                const updatedToolCalls = toolIdx >= 0
+                  ? existingToolCalls.map((t: any, i: number) => i === toolIdx ? { ...t, ...toolEntry } : t)
+                  : [...existingToolCalls, toolEntry];
+                return { ...msg, metadata: { ...msg.metadata, toolCalls: updatedToolCalls } };
+              }),
+            })),
+          };
+        }
+      );
+    };
+
     socket.on('message:new', handleNewMessage);
     socket.on('message:stream', handleMessageStream);
     socket.on('message:complete', handleMessageComplete);
     socket.on('approval:update', handleApprovalUpdate);
     socket.on('system:event', handleSystemEvent);
+    socket.on('toolCall', handleToolCall);
 
     return () => {
       socket.off('message:new', handleNewMessage);
@@ -889,6 +957,7 @@ export function useThreadMessagesInfinite(
       socket.off('message:complete', handleMessageComplete);
       socket.off('approval:update', handleApprovalUpdate);
       socket.off('system:event', handleSystemEvent);
+      socket.off('toolCall', handleToolCall);
     };
   }, [threadId, queryClient, socket, options]);
 
@@ -1080,8 +1149,20 @@ export function useSendMessage(threadId: string) {
       });
     },
     onSettled: () => {
-      // Invalidate to ensure consistency
+      // Immediate invalidation (picks up any already-saved response)
       queryClient.invalidateQueries({ queryKey: inboxKeys.messages(threadId) });
+
+      // Delayed fallback invalidations for when socket is disconnected
+      // At 6s: Agent response should be saved by now for most requests
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: inboxKeys.messages(threadId) });
+      }, 6000);
+
+      // At 20s: Catches slow tool-calling agents (Omni delegation, multi-step)
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: inboxKeys.messages(threadId) });
+        queryClient.invalidateQueries({ queryKey: inboxKeys.threads() });
+      }, 20000);
     },
   });
 }

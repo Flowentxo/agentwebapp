@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { format, parseISO, isToday, isYesterday, isValid, isSameDay } from 'date-fns';
 import { MessageBubble } from './MessageBubble';
 import { WorkflowPipelineCard, type PipelineStep } from './chat/WorkflowPipelineCard';
+import { ThinkingBlock } from './chat/ThinkingBlock';
 import { Bot, Loader2 } from 'lucide-react';
 import type { ChatMessage } from '@/types/inbox';
 import { getAgentById } from '@/lib/agents/personas';
@@ -33,6 +34,9 @@ interface MessageStreamProps {
   onLoadMore?: () => void;
   hasMoreMessages?: boolean;
   onSuggestedPrompt?: (prompt: string) => void;
+  onOpenComposer?: () => void;
+  onOpenDashboard?: () => void;
+  processingStage?: { stage: string; agentName: string; label: string } | null;
 }
 
 // Date separator helper
@@ -131,6 +135,9 @@ export function MessageStream({
   onLoadMore,
   hasMoreMessages = false,
   onSuggestedPrompt,
+  onOpenComposer,
+  onOpenDashboard,
+  processingStage,
 }: MessageStreamProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -142,12 +149,29 @@ export function MessageStream({
   // Extract workflow pipeline steps (if any)
   const workflowSteps = useMemo(() => extractWorkflowSteps(messages), [messages]);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Track streaming message content length for auto-scroll
+  const streamingFingerprint = useMemo(() => {
+    const streaming = messages.find(m => m.isStreaming);
+    return streaming ? streaming.content.length : 0;
+  }, [messages]);
+
+  // Extract active tool calls from the last agent message (for ThinkingBlock)
+  const activeToolCalls = useMemo(() => {
+    if (!messages.length) return [];
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.role === 'user') return [];
+    return (lastMsg.metadata?.toolCalls as any[]) || [];
+  }, [messages]);
+
+  // ThinkingBlock visibility: show when processing or tool calls running
+  const isThinkingVisible = !!(processingStage || activeToolCalls.some((t: any) => t.status === 'running'));
+
+  // Auto-scroll to bottom when new messages arrive or streaming content grows
   useEffect(() => {
     if (shouldAutoScroll.current && bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, streamingContent]);
+  }, [messages, streamingContent, streamingFingerprint, isThinkingVisible]);
 
   // Track scroll position for auto-scroll
   const handleScroll = () => {
@@ -195,7 +219,7 @@ export function MessageStream({
   if (!isLoading && messages.length === 0) {
     // Emmie-specific welcome screen
     if (agentId === 'emmie' && onSuggestedPrompt) {
-      return <EmmieWelcomeScreen onSendPrompt={onSuggestedPrompt} agentColor={agentColor} />;
+      return <EmmieWelcomeScreen onSendPrompt={onSuggestedPrompt} onOpenComposer={onOpenComposer} onOpenDashboard={onOpenDashboard} agentColor={agentColor} />;
     }
 
     return (
@@ -249,28 +273,42 @@ export function MessageStream({
       {workflowSteps && <WorkflowPipelineCard steps={workflowSteps} />}
 
       {/* Message groups with date separators */}
-      {messageGroups.map((group) => (
-        <div key={group.date}>
-          {/* Date Separator */}
-          <div className="flex items-center justify-center my-4 px-4">
-            <div className="h-px flex-1 bg-white/[0.06]" />
-            <span className="px-4 text-xs text-zinc-400 font-medium">
-              {formatDateSeparator(group.date)}
-            </span>
-            <div className="h-px flex-1 bg-white/[0.06]" />
-          </div>
+      {messageGroups.map((group) => {
+        // Find the last agent message ID across all messages for SmartReply
+        const lastAgentMsgId = (() => {
+          for (let i = messages.length - 1; i >= 0; i--) {
+            if (messages[i].role === 'agent' || messages[i].role === 'assistant') return messages[i].id;
+          }
+          return null;
+        })();
 
-          {/* Messages */}
-          {group.messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              agentName={agentName}
-              agentColor={agentColor}
-            />
-          ))}
-        </div>
-      ))}
+        return (
+          <div key={group.date}>
+            {/* Date Separator */}
+            <div className="flex items-center justify-center my-4 px-4">
+              <div className="h-px flex-1 bg-white/[0.06]" />
+              <span className="px-4 text-xs text-zinc-400 font-medium">
+                {formatDateSeparator(group.date)}
+              </span>
+              <div className="h-px flex-1 bg-white/[0.06]" />
+            </div>
+
+            {/* Messages */}
+            {group.messages.map((message) => (
+              <MessageBubble
+                key={message.id}
+                message={message}
+                isStreaming={message.isStreaming}
+                agentName={agentName}
+                agentColor={agentColor}
+                agentId={agentId}
+                onSendReply={onSuggestedPrompt}
+                isLastAgentMessage={message.id === lastAgentMsgId}
+              />
+            ))}
+          </div>
+        );
+      })}
 
       {/* Streaming message */}
       {streamingContent && (
@@ -288,8 +326,19 @@ export function MessageStream({
         />
       )}
 
+      {/* Thinking Block - Gemini-like processing UI */}
+      {isThinkingVisible && !messages.some(m => m.isStreaming) && (
+        <ThinkingBlock
+          agentName={agentName}
+          agentColor={agentColor}
+          processingStage={processingStage}
+          toolCalls={activeToolCalls}
+          isVisible={isThinkingVisible}
+        />
+      )}
+
       {/* Typing indicator */}
-      {isTyping && !streamingContent && (
+      {isTyping && !streamingContent && !messages.some(m => m.isStreaming) && !isThinkingVisible && (
         <div className="flex gap-3 px-4 py-3">
           <div
             className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"

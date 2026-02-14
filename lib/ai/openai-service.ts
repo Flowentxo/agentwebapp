@@ -14,6 +14,7 @@ import { classifyOpenAIError } from './error-handler';
 import { getModelConfig, calculateCost as calculateModelCost } from './model-config';
 import { createLogger } from '@/lib/logger';
 import { AITelemetryService } from '@/server/services/AITelemetryService';
+import { agentMemoryService } from '@/server/services/AgentMemoryService';
 
 // Import centralized client and config
 import { openai } from './openai-client';
@@ -143,13 +144,13 @@ export async function generateAgentResponse(
         const response = await openai.chat.completions.create({
           model,
           messages,
-          temperature: AI_TEMPERATURE,
+          ...(model.includes('gpt-5') ? {} : { temperature: AI_TEMPERATURE }),
           [maxTokensKey]: Math.min(
             MAX_TOKENS,
             modelConfig?.capabilities.maxTokens || MAX_TOKENS
           ),
-          presence_penalty: PRESENCE_PENALTY,
-          frequency_penalty: FREQUENCY_PENALTY,
+          ...(model.includes('gpt-5') ? {} : { presence_penalty: PRESENCE_PENALTY }),
+          ...(model.includes('gpt-5') ? {} : { frequency_penalty: FREQUENCY_PENALTY }),
         } as any);
 
         const choice = response.choices[0];
@@ -226,9 +227,12 @@ export async function* generateAgentResponseStream(
   modelId?: string,
   userId?: string,
   temperature?: number,
-  maxTokensOverride?: number
+  maxTokensOverride?: number,
+  memoryContext?: string
 ): AsyncGenerator<string, { model: string }, unknown> {
-  const systemPrompt = await getAgentSystemPrompt(agent, userId);
+  const { enhancePromptWithMemory } = await import('@/lib/agents/prompts');
+  const baseSystemPrompt = await getAgentSystemPrompt(agent, userId);
+  const systemPrompt = enhancePromptWithMemory(baseSystemPrompt, memoryContext || '');
 
   const messages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },
@@ -255,7 +259,7 @@ export async function* generateAgentResponseStream(
       return await openai.chat.completions.create({
         model,
         messages,
-        temperature: effectiveTemperature,
+        ...(model.includes('gpt-5') ? {} : { temperature: effectiveTemperature }),
         [maxTokensKey]: Math.min(
           effectiveMaxTokens,
           modelConfig?.capabilities.maxTokens || effectiveMaxTokens
@@ -354,6 +358,10 @@ export interface StreamWithToolsOptions {
   getToolDescription?: (toolName: string, args: Record<string, any>) => string;
   /** Pending confirmations map - key is actionId, value indicates if confirmed */
   pendingConfirmations?: Map<string, { confirmed: boolean; cancelled: boolean }>;
+  /** User ID for memory auto-logging */
+  userId?: string;
+  /** Agent ID for memory auto-logging */
+  agentId?: string;
 }
 
 export async function* streamWithTools(
@@ -410,7 +418,7 @@ export async function* streamWithTools(
           messages,
           tools: tools.length > 0 ? tools : undefined,
           tool_choice: tools.length > 0 ? 'auto' : undefined,
-          temperature,
+          ...(model.includes('gpt-5') ? {} : { temperature }),
           [maxTokensKey]: Math.min(
             maxTokens || MAX_TOKENS,
             modelConfig?.capabilities.maxTokens || MAX_TOKENS
@@ -474,10 +482,10 @@ export async function* streamWithTools(
           }
 
           // Handle finish
-          if (finishReason === 'stop') {
+          if (finishReason === 'stop' && currentToolCalls.length === 0) {
             continueLoop = false;
             streamSuccess = true;
-          } else if (finishReason === 'tool_calls') {
+          } else if (finishReason === 'tool_calls' || (finishReason === 'stop' && currentToolCalls.length > 0)) {
             // Execute tool calls with error isolation
             let hasToolError = false;
 
@@ -494,6 +502,38 @@ export async function* streamWithTools(
               } catch (e) {
                 logger.error('Failed to parse tool arguments', { error: e, toolName: toolCall.function.name });
                 parseError = true;
+              }
+
+              // Check if this tool requires user confirmation before execution
+              if (!parseError && options.requiresConfirmation?.(toolCall.function.name)) {
+                yield {
+                  type: 'confirmation_required',
+                  tool: toolCall.function.name,
+                  args,
+                  confirmation: {
+                    actionId: `confirm-${Date.now()}-${toolCall.function.name}`,
+                    description: options.getToolDescription
+                      ? options.getToolDescription(toolCall.function.name, args)
+                      : `Execute ${toolCall.function.name}`,
+                    details: args,
+                  },
+                };
+
+                // Push assistant message with accumulated reasoning
+                if (currentContent) {
+                  messages.push({ role: 'assistant', content: currentContent } as any);
+                }
+                // Push placeholder tool result so conversation stays valid
+                messages.push({ role: 'assistant', content: null, tool_calls: [toolCall] } as any);
+                messages.push({
+                  role: 'tool',
+                  tool_call_id: toolCall.id,
+                  content: JSON.stringify({ pending_approval: true, tool: toolCall.function.name }),
+                } as any);
+
+                continueLoop = false;
+                streamSuccess = true;
+                break; // Stop processing remaining tool calls
               }
 
               // Notify start
@@ -514,11 +554,11 @@ export async function* streamWithTools(
                 hasToolError = true;
               } else {
                 try {
-                  // Execute with timeout (30 seconds)
+                  // Execute with timeout (90 seconds - needs to be long enough for sub-agent delegation)
                   result = await Promise.race([
                     toolExecutor(toolCall.function.name, args),
                     new Promise<ToolResult>((_, reject) =>
-                      setTimeout(() => reject(new Error('Tool execution timeout (30s)')), 30000)
+                      setTimeout(() => reject(new Error('Tool execution timeout (90s)')), 90000)
                     ),
                   ]);
 
@@ -551,6 +591,20 @@ export async function* streamWithTools(
                 result,
               };
 
+              // Auto-log tool result to agent memory (fire-and-forget)
+              if (options.userId && options.agentId && result) {
+                const toolSummary = result.summary || JSON.stringify(result).slice(0, 500);
+                agentMemoryService.saveMemory(
+                  options.agentId,
+                  options.userId,
+                  `Tool "${toolCall.function.name}": ${toolSummary}`,
+                  'tool_result',
+                  'auto_tool_log',
+                  [toolCall.function.name],
+                  { args, success: result.success }
+                ).catch(err => console.error('[MEMORY] Tool log failed:', err));
+              }
+
               // Add assistant message with tool calls
               messages.push({
                 role: 'assistant',
@@ -558,11 +612,23 @@ export async function* streamWithTools(
                 tool_calls: [toolCall],
               } as any);
 
-              // Add tool result message
+              // Add tool result message — enrich with self-correction hint on failure
+              const toolResultContent = !result.success
+                ? JSON.stringify({
+                    ...result,
+                    _self_correction: {
+                      instruction: `Tool "${toolCall.function.name}" failed: "${result.error}". Analyze the error. Then: (1) retry with corrected parameters if fixable, (2) try an alternative approach, or (3) explain the issue to the user if unrecoverable.`,
+                      failed_args: args,
+                      attempt: consecutiveErrors,
+                      max_attempts: MAX_CONSECUTIVE_ERRORS,
+                    },
+                  })
+                : JSON.stringify(result);
+
               messages.push({
                 role: 'tool',
                 tool_call_id: toolCall.id,
-                content: JSON.stringify(result),
+                content: toolResultContent,
               } as any);
             }
 

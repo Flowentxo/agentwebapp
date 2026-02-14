@@ -43,15 +43,15 @@ function clientIp(req: NextRequest): string {
 
 function validateNext(next?: string): string {
   if (!next || typeof next !== 'string') {
-    return '/dashboard';
+    return '/v4';
   }
   // Only allow internal paths starting with /
   if (!next.startsWith('/')) {
-    return '/dashboard';
+    return '/v4';
   }
   // Don't allow redirect back to auth pages
   if (next.startsWith('/login') || next.startsWith('/register')) {
-    return '/dashboard';
+    return '/v4';
   }
   return next;
 }

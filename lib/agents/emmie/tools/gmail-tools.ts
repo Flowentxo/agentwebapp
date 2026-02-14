@@ -472,10 +472,15 @@ export const EMMIE_ALL_TOOLS: ChatCompletionTool[] = [
   ...EMMIE_BATCH_TOOLS,
   EMAIL_USE_TEMPLATE_TOOL,
   EMAIL_LIST_TEMPLATES_TOOL,
+  ...EMMIE_CRM_TOOLS.map(t => ({ type: 'function' as const, function: { name: t.name, description: t.description, parameters: t.input_schema } })),
+  ...EMMIE_CALENDAR_TOOLS.map(t => ({ type: 'function' as const, function: { name: t.name, description: t.description, parameters: t.input_schema } })),
 ];
 
 // Import AI tools for complete collection
 import { EMMIE_AI_TOOLS } from './ai-tools';
+// Import CRM and Calendar tools
+import { EMMIE_CRM_TOOLS } from './crm-tools';
+import { EMMIE_CALENDAR_TOOLS } from './calendar-tools';
 
 /**
  * Complete tool set for Emmie (All tools including AI-powered)
@@ -520,6 +525,11 @@ export const TOOL_DISPLAY_NAMES: Record<string, string> = {
   gmail_unsubscribe_suggestions: 'Abmelde-Vorschläge',
   gmail_translate: 'E-Mail übersetzen',
   gmail_snooze: 'E-Mail verschieben',
+  // CRM tools
+  crm_check_contact: 'Kontakt prüfen',
+  crm_create_contact: 'Kontakt erstellen',
+  // Calendar tools
+  calendar_check_availability: 'Verfügbarkeit prüfen',
 };
 
 /**

@@ -171,15 +171,59 @@ export function useInboxShortcuts({
       // G then I: Go to inbox (vim-like)
       // This would require a key sequence handler
 
-      // ? : Show keyboard shortcuts help (optional)
+      // ? : Show keyboard shortcuts overlay
       if (e.key === '?') {
-        // Could show a modal with all shortcuts
-        console.log('[SHORTCUTS] Available shortcuts:');
-        console.log('  Cmd/Ctrl+K: Focus search');
-        console.log('  Escape: Close artifact panel');
-        console.log('  Arrow Up/Down or j/k: Navigate threads');
-        console.log('  Enter: Open thread');
-        console.log('  1-4: Quick filters (All, Unread, Mentions, Approvals)');
+        e.preventDefault();
+        window.dispatchEvent(new Event('inbox-show-shortcuts'));
+        return;
+      }
+
+      // C : Open email composer (Emmie)
+      if (e.key === 'c' || e.key === 'C') {
+        e.preventDefault();
+        window.dispatchEvent(new Event('inbox-open-composer'));
+        return;
+      }
+
+      // T : Open templates (Emmie)
+      if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        window.dispatchEvent(new Event('inbox-open-templates'));
+        return;
+      }
+
+      // D : Open dashboard (Emmie)
+      if (e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        window.dispatchEvent(new Event('inbox-open-dashboard'));
+        return;
+      }
+
+      // E : Archive current thread
+      if (e.key === 'e' || e.key === 'E') {
+        e.preventDefault();
+        window.dispatchEvent(new Event('inbox-archive-thread'));
+        return;
+      }
+
+      // U : Mark unread
+      if (e.key === 'u' || e.key === 'U') {
+        e.preventDefault();
+        window.dispatchEvent(new Event('inbox-mark-unread'));
+        return;
+      }
+
+      // # : Delete/trash
+      if (e.key === '#') {
+        e.preventDefault();
+        window.dispatchEvent(new Event('inbox-delete-thread'));
+        return;
+      }
+
+      // / : Focus search
+      if (e.key === '/') {
+        e.preventDefault();
+        searchInputRef?.current?.focus();
         return;
       }
     },
@@ -216,4 +260,12 @@ export const INBOX_SHORTCUTS = [
   { keys: ['Enter'], action: 'Open thread' },
   { keys: ['Esc'], action: 'Close panel' },
   { keys: ['1-4'], action: 'Quick filters' },
+  { keys: ['C'], action: 'Compose email' },
+  { keys: ['T'], action: 'Open templates' },
+  { keys: ['D'], action: 'Open dashboard' },
+  { keys: ['E'], action: 'Archive thread' },
+  { keys: ['U'], action: 'Mark unread' },
+  { keys: ['#'], action: 'Delete thread' },
+  { keys: ['/'], action: 'Focus search' },
+  { keys: ['?'], action: 'Show shortcuts' },
 ] as const;

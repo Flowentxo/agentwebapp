@@ -12,6 +12,9 @@ import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import { Check, CheckCheck, Clock, AlertCircle, Copy, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ChatMessage } from '@/types/inbox';
+import { DelegationCard } from './DelegationCard';
+import { InlineChart } from './InlineChart';
+import { DocumentCard } from './DocumentCard';
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -224,28 +227,43 @@ function MessageBubbleComponent({
           </div>
         )}
 
-        {/* Tool calls (if any) */}
+        {/* Tool calls — Glass Cockpit rich rendering */}
         {message.metadata?.toolCalls && message.metadata.toolCalls.length > 0 && (
           <div className="mt-2 space-y-1">
-            {message.metadata.toolCalls.map((tool) => (
-              <div
-                key={tool.id}
-                className="flex items-center gap-2 px-3 py-2 bg-zinc-900/50 rounded-lg border border-white/5"
-              >
-                {tool.status === 'running' ? (
-                  <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin" />
-                ) : tool.status === 'completed' ? (
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                ) : tool.status === 'failed' ? (
-                  <AlertCircle className="w-3.5 h-3.5 text-red-400" />
-                ) : (
-                  <Clock className="w-3.5 h-3.5 text-zinc-500" />
-                )}
-                <span className="text-xs text-zinc-400 font-mono">
-                  {tool.name}
-                </span>
-              </div>
-            ))}
+            {message.metadata.toolCalls.map((tool: any) => {
+              // Delegation → Rich DelegationCard
+              if (tool.name === 'delegate_to_agent') {
+                return <DelegationCard key={tool.id} tool={tool} />;
+              }
+              // Chart → Inline Chart.js rendering
+              if (tool.name === 'render_chart' && tool.status === 'completed' && tool.result?.data?.chart_config) {
+                return <InlineChart key={tool.id} tool={tool} />;
+              }
+              // Document → Rich Document Card
+              if ((tool.name === 'draft_document' || tool.name === 'document_draft') && tool.status === 'completed' && (tool.result?.data?.document || tool.result?.data?.formatted_output)) {
+                return <DocumentCard key={tool.id} tool={tool} />;
+              }
+              // Default → simple status line
+              return (
+                <div
+                  key={tool.id}
+                  className="flex items-center gap-2 px-3 py-2 bg-zinc-900/50 rounded-lg border border-white/5"
+                >
+                  {tool.status === 'running' ? (
+                    <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+                  ) : tool.status === 'completed' ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  ) : tool.status === 'failed' ? (
+                    <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+                  ) : (
+                    <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                  )}
+                  <span className="text-xs text-zinc-400 font-mono">
+                    {tool.displayName || tool.name}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

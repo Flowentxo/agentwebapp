@@ -107,16 +107,16 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               // Scripts: self + inline (for Next.js) + Vercel Analytics
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live https://va.vercel-scripts.com",
+              `script-src 'self' 'unsafe-inline' ${isProduction ? '' : "'unsafe-eval'"} https://vercel.live https://va.vercel-scripts.com`,
               // Styles: self + inline (for CSS-in-JS)
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.mathpix.com",
               // Fonts
-              "font-src 'self' https://fonts.gstatic.com",
+              "font-src 'self' data: https://fonts.gstatic.com https://cdn.mathpix.com",
               // Images: self + data URIs + common image providers
               "img-src 'self' data: blob: https://*.googleusercontent.com https://*.githubusercontent.com https://images.unsplash.com",
               // API connections: OpenAI, Resend, Slack, Tavily, Vercel Analytics, Backend Server
               // Include both localhost and 127.0.0.1 to handle IPv6/IPv4 resolution differences
-              "connect-src 'self' http://localhost:4000 http://127.0.0.1:4000 http://localhost:3000 http://127.0.0.1:3000 ws://localhost:4000 ws://127.0.0.1:4000 wss://localhost:4000 wss://127.0.0.1:4000 https://api.openai.com https://api.resend.com https://hooks.slack.com https://api.tavily.com https://vercel.live https://vitals.vercel-insights.com wss://*.pusher.com",
+              `connect-src 'self' ${isProduction ? '' : 'http://localhost:4000 http://127.0.0.1:4000 http://localhost:3000 http://127.0.0.1:3000 ws://localhost:4000 ws://127.0.0.1:4000 wss://localhost:4000 wss://127.0.0.1:4000'} https://api.openai.com https://api.resend.com https://hooks.slack.com https://api.tavily.com https://vercel.live https://vitals.vercel-insights.com wss://*.pusher.com`,
               // Frames: none except Vercel preview
               "frame-src 'self' https://vercel.live",
               // Object embeds
