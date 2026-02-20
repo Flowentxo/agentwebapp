@@ -158,7 +158,7 @@ export default function CostTrendChart({ data, isLoading }: CostTrendChartProps)
               activeDot={{
                 r: 6,
                 fill: '#10b981',
-                stroke: '#0a0a0a',
+                stroke: '#030712',
                 strokeWidth: 2,
               }}
             />

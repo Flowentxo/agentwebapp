@@ -217,7 +217,7 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
       <div className="flex-1 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
-          <p className="text-sm text-white/40">Loading conversation...</p>
+          <p className="text-sm text-white/40">Gespräch wird geladen...</p>
         </div>
       </div>
     );
@@ -228,12 +228,12 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center px-4">
-          <p className="text-white/40 mb-2">Conversation not found</p>
+          <p className="text-white/40 mb-2">Gespräch nicht gefunden</p>
           <button
             onClick={handleBack}
             className="text-sm text-violet-400 hover:text-violet-300"
           >
-            Go back to inbox
+            Zurück zum Posteingang
           </button>
         </div>
       </div>
@@ -245,12 +245,12 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center px-4">
-          <p className="text-red-400 mb-2">Failed to load messages</p>
+          <p className="text-red-400 mb-2">Nachrichten konnten nicht geladen werden</p>
           <button
             onClick={handleBack}
             className="text-sm text-violet-400 hover:text-violet-300"
           >
-            Go back to inbox
+            Zurück zum Posteingang
           </button>
         </div>
       </div>
@@ -258,14 +258,14 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
   }
 
   return (
-    <div className="flex h-full bg-[#0a0a0a]">
+    <div className="flex h-full" style={{ backgroundColor: 'var(--vicy-bg)' }}>
       {/* Main Chat Area */}
       <div className={cn(
-        'flex flex-col flex-1 min-w-0 transition-all duration-300',
+        'flex flex-col flex-1 min-w-0 transition-all duration-300 relative',
         isArtifactPanelOpen && 'lg:w-[60%]'
       )}>
         {/* Header */}
-        <header className="flex-shrink-0 flex items-center gap-4 px-4 py-3 border-b border-white/[0.06] bg-[#0a0a0a]/95 backdrop-blur-sm">
+        <header className="flex-shrink-0 flex items-center gap-4 px-4 py-3 border-b border-white/[0.06] backdrop-blur-sm" style={{ backgroundColor: 'rgba(10, 10, 10, 0.95)' }}>
           {/* Back button (mobile) */}
           <button
             onClick={handleBack}
@@ -276,7 +276,10 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
 
           {/* Agent Avatar */}
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center"
+            className={cn(
+              "w-10 h-10 rounded-full flex items-center justify-center",
+              showTyping && "animate-pulse"
+            )}
             style={{ backgroundColor: `${agentColor}20` }}
           >
             <Bot className="w-5 h-5" style={{ color: agentColor }} />
@@ -289,9 +292,9 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
             </h2>
             <p className="text-xs text-white/40 truncate">
               {showTyping ? (
-                <span className="text-violet-400">Typing...</span>
+                <span className="text-violet-400 animate-pulse">Denkt nach...</span>
               ) : (
-                `${messages.length} messages`
+                `${messages.length} Nachrichten`
               )}
             </p>
           </div>
@@ -387,7 +390,7 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
         <StickyComposer
           onSend={handleSendMessage}
           isLoading={sendMutation.isPending}
-          placeholder={`Message ${agentName}...`}
+          placeholder={`Nachricht an ${agentName}...`}
         />
       </div>
 
@@ -400,7 +403,7 @@ export function ChatInterface({ threadId }: ChatInterfaceProps) {
                      hover:bg-white/[0.04] transition-colors cursor-pointer"
         >
           <FileText className="w-4 h-4 text-white/30 mb-2" />
-          <span className="text-[9px] text-white/30 writing-mode-vertical">Results</span>
+          <span className="text-[9px] text-white/30 writing-mode-vertical">Ergebnisse</span>
         </button>
       )}
 

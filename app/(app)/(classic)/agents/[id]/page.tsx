@@ -23,6 +23,7 @@ import {
   FileText,
   Workflow
 } from 'lucide-react';
+import { getAgentById } from '@/lib/agents/personas';
 
 // Lazy load heavy components
 const MotionDiv = dynamic(
@@ -417,8 +418,9 @@ export default function AgentDetailPage() {
         return;
       }
 
-      if (!isValidUUID(agentId)) {
-        console.log(`[AGENT_DETAIL] Skipping API call for invalid UUID: ${agentId}`);
+      const builtInAgent = getAgentById(agentId);
+      if (builtInAgent || !isValidUUID(agentId)) {
+        // Built-in agents use slug IDs (e.g. 'property-sentinel'), not UUIDs
         setIsPageLoading(false);
         return;
       }

@@ -43,6 +43,109 @@ import {
 import { usePipelineStore, useSelectedNode, PipelineNodeData, PipelineNode, PipelineEdge, NodeExecutionOutput } from '../store/usePipelineStore';
 import { NodeSettingsPanel } from '../../studio/panels/NodeSettingsPanel';
 import { NodeSettings } from '@/types/workflow';
+import { useRef } from 'react';
+
+// ============================================
+// VARIABLE INSERT BUTTON
+// ============================================
+
+function VariableInsertButton({ onInsert }: { onInsert: (variable: string) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedNode = useSelectedNode();
+  const nodes = usePipelineStore((s) => s.nodes);
+  const edges = usePipelineStore((s) => s.edges);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const predecessorNodes = useMemo(() => {
+    if (!selectedNode) return [];
+    const predecessors = new Set<string>();
+    const visited = new Set<string>();
+    const queue = [selectedNode.id];
+    while (queue.length > 0) {
+      const currentId = queue.shift()!;
+      if (visited.has(currentId)) continue;
+      visited.add(currentId);
+      const incomingEdges = edges.filter((e) => e.target === currentId);
+      for (const edge of incomingEdges) {
+        if (!visited.has(edge.source)) {
+          predecessors.add(edge.source);
+          queue.push(edge.source);
+        }
+      }
+    }
+    return nodes.filter((n) => predecessors.has(n.id));
+  }, [selectedNode, nodes, edges]);
+
+  if (predecessorNodes.length === 0) return null;
+
+  return (
+    <div className="relative">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="p-1 rounded hover:bg-violet-500/20 text-white/40 hover:text-violet-400 transition-colors"
+        title="Insert variable reference"
+      >
+        <Code2 className="w-3.5 h-3.5" />
+      </button>
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setIsOpen(false)} />
+          <div
+            className="absolute right-0 top-full mt-1 z-40 w-56 rounded-xl overflow-hidden"
+            style={{
+              backgroundColor: 'rgba(24, 24, 27, 0.95)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(255, 255, 255, 0.10)',
+              boxShadow: '0 12px 40px rgba(0, 0, 0, 0.5)',
+            }}
+          >
+            <div className="px-3 py-2 border-b border-white/[0.06]">
+              <p className="text-[10px] font-medium text-white/40 uppercase tracking-wider">Insert Reference</p>
+            </div>
+            <div className="max-h-40 overflow-y-auto py-1">
+              {predecessorNodes.map((node) => (
+                <button
+                  key={node.id}
+                  type="button"
+                  onClick={() => {
+                    onInsert(`{{${node.id}}}`);
+                    setIsOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-white/[0.05] transition-colors"
+                >
+                  <div
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: node.data.color || '#6366F1' }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-white truncate">{node.data.label}</p>
+                    <code className="text-[9px] font-mono text-white/30">{`{{${node.id}}}`}</code>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="px-3 py-1.5 border-t border-white/[0.06]">
+              <button
+                type="button"
+                onClick={() => {
+                  onInsert('{{trigger}}');
+                  setIsOpen(false);
+                }}
+                className="w-full flex items-center gap-2 py-1 text-left hover:text-violet-400 transition-colors"
+              >
+                <Zap className="w-3 h-3 text-emerald-400" />
+                <span className="text-xs text-white/60">Trigger Data</span>
+                <code className="text-[9px] font-mono text-white/30 ml-auto">{`{{trigger}}`}</code>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 // ============================================
 // AVAILABLE AGENTS
@@ -95,12 +198,18 @@ interface InputFieldProps {
   placeholder?: string;
   type?: 'text' | 'textarea' | 'url';
   hint?: string;
+  showVariables?: boolean;
 }
 
-function InputField({ label, value, onChange, placeholder, type = 'text', hint }: InputFieldProps) {
+function InputField({ label, value, onChange, placeholder, type = 'text', hint, showVariables }: InputFieldProps) {
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-medium text-white/60">{label}</label>
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-medium text-white/60">{label}</label>
+        {showVariables && (
+          <VariableInsertButton onInsert={(v) => onChange(value + v)} />
+        )}
+      </div>
       {type === 'textarea' ? (
         <textarea
           value={value}
@@ -109,7 +218,7 @@ function InputField({ label, value, onChange, placeholder, type = 'text', hint }
           rows={3}
           className="w-full px-3 py-2 text-sm rounded-lg bg-card/5 border border-white/10
             text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50
-            focus:ring-1 focus:ring-violet-500/50 transition-all resize-none"
+            focus:ring-1 focus:ring-violet-500/50 transition-all resize-none font-mono"
         />
       ) : (
         <input
@@ -284,6 +393,7 @@ function ActionConfigForm({ config, onUpdate, nodeId }: ActionConfigFormProps) {
             onChange={(v) => onUpdate({ ...config, url: v })}
             placeholder="https://api.example.com/endpoint"
             type="url"
+            showVariables
           />
         </CollapsibleSection>
         <CollapsibleSection title="Headers" defaultOpen={false}>
@@ -293,6 +403,7 @@ function ActionConfigForm({ config, onUpdate, nodeId }: ActionConfigFormProps) {
             onChange={(v) => onUpdate({ ...config, headers: v })}
             type="textarea"
             placeholder='{"Authorization": "Bearer token"}'
+            showVariables
           />
         </CollapsibleSection>
         <CollapsibleSection title="Body" defaultOpen={false}>
@@ -302,6 +413,7 @@ function ActionConfigForm({ config, onUpdate, nodeId }: ActionConfigFormProps) {
             onChange={(v) => onUpdate({ ...config, body: v })}
             type="textarea"
             placeholder='{"key": "value"}'
+            showVariables
           />
         </CollapsibleSection>
       </>
@@ -317,12 +429,14 @@ function ActionConfigForm({ config, onUpdate, nodeId }: ActionConfigFormProps) {
           value={(config.to as string) || ''}
           onChange={(v) => onUpdate({ ...config, to: v })}
           placeholder="recipient@example.com"
+          showVariables
         />
         <InputField
           label="Subject"
           value={(config.subject as string) || ''}
           onChange={(v) => onUpdate({ ...config, subject: v })}
           placeholder="Email subject"
+          showVariables
         />
         <InputField
           label="Body"
@@ -330,6 +444,7 @@ function ActionConfigForm({ config, onUpdate, nodeId }: ActionConfigFormProps) {
           onChange={(v) => onUpdate({ ...config, body: v })}
           type="textarea"
           placeholder="Email content..."
+          showVariables
         />
       </CollapsibleSection>
     );
@@ -356,6 +471,7 @@ function ActionConfigForm({ config, onUpdate, nodeId }: ActionConfigFormProps) {
           onChange={(v) => onUpdate({ ...config, query: v })}
           type="textarea"
           placeholder="SELECT * FROM users WHERE id = $1"
+          showVariables
         />
       </CollapsibleSection>
     );
@@ -381,6 +497,7 @@ function ActionConfigForm({ config, onUpdate, nodeId }: ActionConfigFormProps) {
           onChange={(v) => onUpdate({ ...config, code: v })}
           type="textarea"
           placeholder="// Your code here..."
+          showVariables
         />
       </CollapsibleSection>
     );
@@ -449,6 +566,7 @@ function AgentConfigForm({ config, onUpdate, nodeId }: AgentConfigFormProps) {
           type="textarea"
           placeholder="Optional: Override the default agent prompt..."
           hint="Leave empty to use default agent behavior"
+          showVariables
         />
         <InputField
           label="User Message Template"
@@ -457,6 +575,7 @@ function AgentConfigForm({ config, onUpdate, nodeId }: AgentConfigFormProps) {
           type="textarea"
           placeholder="{{input}}"
           hint="Use {{input}} to insert the incoming data"
+          showVariables
         />
       </CollapsibleSection>
 
@@ -748,6 +867,7 @@ function ConditionConfigForm({ config, onUpdate, nodeId }: ConditionConfigFormPr
           onChange={(v) => onUpdate({ ...config, field: v })}
           placeholder="data.status"
           hint="The field to check"
+          showVariables
         />
         <SelectField
           label="Operator"
@@ -768,6 +888,7 @@ function ConditionConfigForm({ config, onUpdate, nodeId }: ConditionConfigFormPr
           value={(config.value as string) || ''}
           onChange={(v) => onUpdate({ ...config, value: v })}
           placeholder="success"
+          showVariables
         />
       </CollapsibleSection>
     );
@@ -783,6 +904,7 @@ function ConditionConfigForm({ config, onUpdate, nodeId }: ConditionConfigFormPr
         type="textarea"
         placeholder="item.status === 'active'"
         hint="JavaScript expression that returns true/false"
+        showVariables
       />
     </CollapsibleSection>
   );
@@ -817,6 +939,7 @@ function OutputConfigForm({ config, onUpdate }: OutputConfigFormProps) {
         type="textarea"
         placeholder='{"success": true, "data": {{result}}}'
         hint="Use {{result}} to insert the pipeline result"
+        showVariables
       />
     </CollapsibleSection>
   );
@@ -1780,7 +1903,10 @@ export function NodeInspector() {
   const color = nodeData.color || '#6366F1';
 
   return (
-    <aside className="w-80 h-full flex flex-col bg-[#0F0F12]/95 backdrop-blur-xl border-l border-white/10 overflow-hidden">
+    <aside
+      className="w-80 h-full flex flex-col backdrop-blur-xl border-l border-white/[0.05] overflow-hidden animate-fade-in-up"
+      style={{ backgroundColor: 'rgba(9, 9, 11, 0.80)' }}
+    >
       {/* Header */}
       <div className="flex-shrink-0 border-b border-white/10">
         <div

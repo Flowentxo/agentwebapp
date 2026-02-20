@@ -199,6 +199,20 @@ export class ErrorBoundary extends Component<Props, State> {
       errorInfo,
     });
 
+    // Auth errors: immediate stealth redirect to /login
+    const msg = error.message.toLowerCase();
+    if (msg.includes('auth') || msg.includes('unauthorized') || msg.includes('token') || msg.includes('401')) {
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('token');
+        document.cookie = 'sintra.sid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        document.cookie = 'accessToken=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        window.location.href = '/login';
+        return;
+      }
+    }
+
     // Log error for debugging
     console.group('🚨 Error Boundary Caught Error');
     console.error('Error ID:', this.state.errorId);
@@ -337,6 +351,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      // Stealth mode: auth errors → blank screen while redirecting (no flash)
+      const errorType = this.getErrorType();
+      if (errorType === 'auth') {
+        return <div style={{ minHeight: '100vh', backgroundColor: '#030712' }} />;
+      }
+
       // Custom fallback UI
       if (this.props.fallback) {
         return this.props.fallback;

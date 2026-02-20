@@ -234,7 +234,7 @@ export function ArtifactPanel({ isMobile = false }: ArtifactPanelProps) {
   // Mobile: Full screen overlay
   if (isMobile) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#0a0a0a] flex flex-col animate-in slide-in-from-bottom duration-300">
+      <div className="fixed inset-0 z-50 flex flex-col animate-in slide-in-from-bottom duration-300" style={{ backgroundColor: 'var(--vicy-bg)' }}>
         {/* Mobile Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-black/30 border-b border-white/10">
           <div className="flex items-center gap-3 min-w-0">

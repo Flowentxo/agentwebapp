@@ -22,6 +22,7 @@ import {
   Briefcase,
   Play,
   Loader2,
+  FileOutput,
   type LucideIcon,
 } from 'lucide-react';
 import { PipelineNodeData, usePipelineStore } from '../store/usePipelineStore';
@@ -137,6 +138,30 @@ function truncate(str: string, maxLength: number): string {
   return str.length > maxLength ? str.slice(0, maxLength) + '...' : str;
 }
 
+// Node type → header background tint
+function getNodeTypeHeaderClasses(nodeType: string): string {
+  switch (nodeType) {
+    case 'trigger': return 'bg-emerald-500/15';
+    case 'agent': return 'bg-purple-500/15';
+    case 'action': return 'bg-blue-500/15';
+    case 'condition': return 'bg-amber-500/15';
+    case 'output': return 'bg-pink-500/15';
+    default: return 'bg-white/5';
+  }
+}
+
+// Node type → footer badge colors
+function getNodeTypeBadgeClasses(nodeType: string): string {
+  switch (nodeType) {
+    case 'trigger': return 'bg-emerald-500/20 text-emerald-400';
+    case 'agent': return 'bg-purple-500/20 text-purple-400';
+    case 'action': return 'bg-blue-500/20 text-blue-400';
+    case 'condition': return 'bg-amber-500/20 text-amber-400';
+    case 'output': return 'bg-pink-500/20 text-pink-400';
+    default: return 'bg-white/10 text-white/60';
+  }
+}
+
 // Validation: Check if required fields are missing
 function getValidationStatus(data: PipelineNodeData): { isValid: boolean; message?: string } {
   const config = data.config as Record<string, unknown> | undefined;
@@ -234,6 +259,9 @@ function CustomNodeInner({ data, selected, id }: NodeProps<PipelineNodeData>) {
   // Get store state
   const pipelineId = usePipelineStore((s) => s.pipelineId);
   const updateNodeStatus = usePipelineStore((s) => s.updateNodeStatus);
+  const nodeOutput = usePipelineStore((s) => s.nodeOutputs[id]);
+  const nodeStatus = usePipelineStore((s) => s.nodeStatus[id]);
+  const setSelectedNode = usePipelineStore((s) => s.setSelectedNode);
 
   // Local state for single node execution
   const [isExecutingNode, setIsExecutingNode] = useState(false);
@@ -326,7 +354,7 @@ function CustomNodeInner({ data, selected, id }: NodeProps<PipelineNodeData>) {
 
   // Extract display info based on node type
   const displayInfo = useMemo(() => {
-    const info: { method?: string; badge?: string; subtitle?: string } = {};
+    const info: { method?: string; badge?: string; subtitle?: string; monoDetail?: string } = {};
 
     switch (data.type) {
       case 'trigger':
@@ -339,6 +367,7 @@ function CustomNodeInner({ data, selected, id }: NodeProps<PipelineNodeData>) {
         if (config.interval) {
           info.subtitle = `Every ${config.interval}`;
         }
+        info.monoDetail = `${(config.method as string) || 'POST'} /webhook/${id.slice(0, 6)}`;
         break;
 
       case 'action':
@@ -354,6 +383,7 @@ function CustomNodeInner({ data, selected, id }: NodeProps<PipelineNodeData>) {
         if (config.operation) {
           info.badge = (config.operation as string).toUpperCase();
         }
+        info.monoDetail = `action:${(data.label || 'exec').toLowerCase().replace(/\s+/g, '-')}`;
         break;
 
       case 'agent':
@@ -363,35 +393,45 @@ function CustomNodeInner({ data, selected, id }: NodeProps<PipelineNodeData>) {
         if (config.model) {
           info.badge = truncate(config.model as string, 15);
         }
+        info.monoDetail = `agent:${agentConfig?.id || agentId}`;
         break;
 
       case 'condition':
         if (config.field && config.operator) {
           info.subtitle = `${config.field} ${config.operator} ${config.value || '?'}`;
         }
+        info.monoDetail = `condition:${id.slice(0, 8)}`;
         break;
 
       case 'output':
         if (config.responseType) {
           info.badge = (config.responseType as string).toUpperCase();
         }
+        info.monoDetail = `output:${((config.responseType as string) || 'json').toLowerCase()}`;
         break;
     }
 
     return info;
-  }, [data.type, config, agentConfig]);
+  }, [data.type, data.label, config, agentConfig, agentId, id]);
 
   return (
     <div
       className={`
-        relative min-w-[200px] max-w-[240px] rounded-xl overflow-hidden transition-all duration-200
+        group/node relative min-w-[220px] max-w-[260px] rounded-2xl overflow-visible transition-all duration-200
+        backdrop-blur-xl
         ${selected
-          ? 'ring-2 ring-violet-500/30 shadow-[0_0_20px_rgba(139,92,246,0.15)]'
-          : 'hover:border-white/15'
+          ? 'ring-2 ring-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.4)]'
+          : 'hover:border-white/[0.15] hover:shadow-lg'
         }
         ${!validation.isValid ? 'ring-2 ring-red-500/40' : ''}
       `}
-      style={{ backgroundColor: '#111111', border: '1px solid rgba(255, 255, 255, 0.1)' }}
+      style={{
+        backgroundColor: 'rgba(24, 24, 27, 0.80)',
+        border: '1px solid rgba(255, 255, 255, 0.10)',
+        boxShadow: selected
+          ? '0 0 20px rgba(168, 85, 247, 0.4), 0 8px 32px rgba(0,0,0,0.3)'
+          : '0 8px 32px rgba(0,0,0,0.3)',
+      }}
     >
       {/* Run Node Button (top-right corner) - hidden in cockpit read-only mode */}
       {!data.isActiveInCockpit && (
@@ -432,23 +472,35 @@ function CustomNodeInner({ data, selected, id }: NodeProps<PipelineNodeData>) {
         <Handle
           type="target"
           position={Position.Left}
-          className="!w-3.5 !h-3.5 !bg-[#1A1A1A] !border-[1.5px] !border-white/20 hover:!bg-violet-500 hover:!border-violet-500 transition-colors !-left-[7px]"
+          className="!w-4 !h-4 !rounded-full !bg-zinc-800 !border-2 !border-white/20 hover:!bg-violet-500 hover:!border-violet-500 hover:!shadow-[0_0_8px_rgba(139,92,246,0.5)] transition-all !-left-[8px]"
         />
       )}
 
       {/* Header */}
       <div
-        className="flex items-center gap-2.5 px-3 py-2.5"
-        style={{ backgroundColor: data.type === 'agent' && agentConfig ? agentConfig.bgColor : bgColor }}
+        className={`flex items-center gap-2.5 px-3.5 py-3 ${getNodeTypeHeaderClasses(data.type)}`}
       >
-        <div
-          className="flex items-center justify-center w-8 h-8 rounded-lg"
-          style={{ backgroundColor: `${color}30` }}
-        >
-          <Icon
-            className="w-4.5 h-4.5"
+        <div className="flex flex-col items-center gap-0.5">
+          <div
+            className={`flex items-center justify-center w-10 h-10 rounded-xl border border-white/10 transition-all duration-200 node-icon-badge ${selected ? 'node-icon-selected' : ''}`}
+            style={{
+              background: 'linear-gradient(to bottom right, rgba(63,63,70,0.8), rgba(24,24,27,0.9))',
+              boxShadow: `inset 0 0 12px ${color}25, 0 0 12px ${color}20`,
+              '--node-glow-color': `${color}50`,
+              '--node-selected-glow': `0 0 16px ${color}60`,
+            } as React.CSSProperties}
+          >
+            <Icon
+              className="w-4.5 h-4.5"
+              style={{ color, filter: `drop-shadow(0 0 6px ${color}80)` }}
+            />
+          </div>
+          <span
+            className="text-[7px] font-mono font-bold uppercase tracking-wider opacity-50"
             style={{ color }}
-          />
+          >
+            {data.type}
+          </span>
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold truncate text-white">
@@ -457,6 +509,11 @@ function CustomNodeInner({ data, selected, id }: NodeProps<PipelineNodeData>) {
           {displayInfo.subtitle && (
             <p className="text-[10px] truncate text-white/50">
               {displayInfo.subtitle}
+            </p>
+          )}
+          {displayInfo.monoDetail && (
+            <p className="font-mono text-[9px] text-white/25 truncate">
+              {displayInfo.monoDetail}
             </p>
           )}
         </div>
@@ -470,7 +527,7 @@ function CustomNodeInner({ data, selected, id }: NodeProps<PipelineNodeData>) {
 
       {/* Info Row - Method Badge & Info Badge */}
       {(displayInfo.method || displayInfo.badge) && (
-        <div className="px-3 py-2 border-t border-white/[0.06] flex items-center gap-2 flex-wrap">
+        <div className="px-3 py-2 border-t border-white/[0.08] flex items-center gap-2 flex-wrap">
           {displayInfo.method && <MethodBadge method={displayInfo.method} />}
           {displayInfo.badge && <InfoBadge text={displayInfo.badge} color={color} />}
         </div>
@@ -478,40 +535,57 @@ function CustomNodeInner({ data, selected, id }: NodeProps<PipelineNodeData>) {
 
       {/* Description */}
       {data.description && (
-        <div className="px-3 py-2 border-t border-white/[0.06]">
+        <div className="px-3 py-2 border-t border-white/[0.08]">
           <p className="text-[11px] text-white/40 line-clamp-2">{data.description}</p>
         </div>
       )}
 
       {/* Footer - Type Badge */}
-      <div className="px-3 py-2 border-t border-white/[0.06] flex items-center justify-between">
+      <div className="px-3 py-2 border-t border-white/[0.08] flex items-center justify-between">
         <span
-          className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-          style={{ backgroundColor: `${color}20`, color }}
+          className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${getNodeTypeBadgeClasses(data.type)}`}
         >
           {data.type}
         </span>
 
-        {/* Agent-specific indicator */}
-        {data.type === 'agent' && agentConfig && (
-          <span className="text-[9px] text-white/30 font-medium">
-            {agentConfig.name}
-          </span>
-        )}
+        <div className="flex items-center gap-1.5">
+          {/* Output available badge */}
+          {nodeOutput?.data && nodeStatus === 'success' && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedNode(id);
+              }}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors cursor-pointer"
+              title="Click to view output"
+            >
+              <FileOutput className="w-2.5 h-2.5" />
+              <span className="text-[8px] font-semibold">Output</span>
+            </button>
+          )}
 
-        {/* Click hint when selected (hidden in cockpit read-only mode) */}
-        {selected && !data.isActiveInCockpit && (
-          <span className="text-[9px] text-violet-400 font-medium">
-            Editing...
-          </span>
-        )}
+          {/* Agent-specific indicator */}
+          {data.type === 'agent' && agentConfig && (
+            <span className="text-[9px] text-white/30 font-medium">
+              {agentConfig.name}
+            </span>
+          )}
 
-        {/* Validation message */}
-        {!validation.isValid && validation.message && (
-          <span className="text-[9px] text-red-600 font-medium">
-            {validation.message}
-          </span>
-        )}
+          {/* Click hint when selected (hidden in cockpit read-only mode) */}
+          {selected && !data.isActiveInCockpit && (
+            <span className="text-[9px] text-violet-400 font-medium">
+              Editing...
+            </span>
+          )}
+
+          {/* Validation message */}
+          {!validation.isValid && validation.message && (
+            <span className="text-[9px] text-red-600 font-medium">
+              {validation.message}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Output Handle */}
@@ -519,7 +593,7 @@ function CustomNodeInner({ data, selected, id }: NodeProps<PipelineNodeData>) {
         <Handle
           type="source"
           position={Position.Right}
-          className="!w-3.5 !h-3.5 !bg-[#1A1A1A] !border-[1.5px] !border-white/20 hover:!bg-violet-500 hover:!border-violet-500 transition-colors !-right-[7px]"
+          className="!w-4 !h-4 !rounded-full !bg-zinc-800 !border-2 !border-white/20 hover:!bg-violet-500 hover:!border-violet-500 hover:!shadow-[0_0_8px_rgba(139,92,246,0.5)] transition-all !-right-[8px]"
         />
       )}
 
@@ -550,6 +624,45 @@ function CustomNodeInner({ data, selected, id }: NodeProps<PipelineNodeData>) {
             <span className="text-[8px] text-red-400 ml-1 font-bold">FALSE</span>
           </div>
         </>
+      )}
+
+      {/* Output Peek Tooltip on Hover */}
+      {nodeOutput?.data && nodeStatus === 'success' && (
+        <div
+          className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 pointer-events-none
+            opacity-0 group-hover/node:opacity-100 transition-opacity duration-200 z-50"
+        >
+          <div
+            className="rounded-xl px-3 py-2.5 overflow-hidden"
+            style={{
+              backgroundColor: 'rgba(9, 9, 11, 0.95)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
+            }}
+          >
+            <p className="text-[9px] font-semibold text-emerald-400 uppercase tracking-wider mb-1.5">
+              Output Preview
+            </p>
+            <pre className="text-[10px] font-mono text-white/60 whitespace-pre-wrap break-all max-h-24 overflow-hidden leading-relaxed">
+              {typeof nodeOutput.data === 'string'
+                ? nodeOutput.data.slice(0, 200)
+                : JSON.stringify(nodeOutput.data, null, 2).slice(0, 200)}
+              {((typeof nodeOutput.data === 'string' ? nodeOutput.data : JSON.stringify(nodeOutput.data)).length > 200) && (
+                <span className="text-white/30">...</span>
+              )}
+            </pre>
+            {nodeOutput.duration && (
+              <p className="text-[9px] text-white/30 mt-1.5 border-t border-white/[0.06] pt-1.5">
+                {nodeOutput.duration}ms
+              </p>
+            )}
+          </div>
+          {/* Arrow */}
+          <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px]"
+            style={{ borderTopColor: 'rgba(9, 9, 11, 0.95)' }}
+          />
+        </div>
       )}
     </div>
   );

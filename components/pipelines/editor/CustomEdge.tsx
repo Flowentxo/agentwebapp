@@ -129,22 +129,42 @@ function CustomEdgeComponent({
         }}
       />
 
-      {/* Animated flow particles */}
+      {/* Animated flow particles — comet trail effect */}
       {isAnimated && (
         <g>
-          <circle r="4" fill={edgeColor} opacity="0.8">
+          {/* Leading bright particle with glow */}
+          <circle r="4" fill={edgeColor} opacity="0.9" style={{ filter: `drop-shadow(0 0 5px ${edgeColor})` }}>
             <animateMotion
-              dur="1s"
+              dur="1.2s"
               repeatCount="indefinite"
               path={edgePath}
             />
           </circle>
-          <circle r="3" fill="white" opacity="0.6">
+          {/* Trailing dim particle (comet tail) */}
+          <circle r="5" fill={edgeColor} opacity="0.25" className="data-pulse-trail">
             <animateMotion
-              dur="1s"
+              dur="1.2s"
               repeatCount="indefinite"
               path={edgePath}
-              begin="0.5s"
+              begin="0.15s"
+            />
+          </circle>
+          {/* Second wave — offset bright dot */}
+          <circle r="3" fill="white" opacity="0.6" style={{ filter: `drop-shadow(0 0 3px ${edgeColor})` }}>
+            <animateMotion
+              dur="1.2s"
+              repeatCount="indefinite"
+              path={edgePath}
+              begin="0.6s"
+            />
+          </circle>
+          {/* Second wave trailing */}
+          <circle r="4" fill={edgeColor} opacity="0.15" className="data-pulse-trail">
+            <animateMotion
+              dur="1.2s"
+              repeatCount="indefinite"
+              path={edgePath}
+              begin="0.75s"
             />
           </circle>
         </g>

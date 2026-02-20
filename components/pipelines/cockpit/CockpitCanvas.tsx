@@ -6,7 +6,7 @@
  * Read-only workflow visualization for the Pipeline Cockpit.
  * Shows the workflow graph with active node glow during execution.
  *
- * Vicy-Style: Deep Black (#050505) + Violet Glow
+ * Vicy-Style: Deep Black (#0f172a) + Violet Glow
  */
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
@@ -106,7 +106,8 @@ function CockpitCanvasInner({
         fitView({ padding: 0.2, duration: 500 });
       }, 100);
     }
-  }, [nodes.length, fitView]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes.length]);
 
   // Sync cockpit nodeStatuses into the pipeline store so NodeStatusWrapper can read them.
   // Uses a ref to track last-synced values and avoid triggering infinite re-render loops.
@@ -202,7 +203,7 @@ function CockpitCanvasInner({
         minZoom={0.1}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
-        className="!bg-[#050505]"
+        className="!bg-[#0f172a]"
       >
         {/* Background Grid */}
         <Background
@@ -210,7 +211,7 @@ function CockpitCanvasInner({
           gap={24}
           size={1}
           color="rgba(255,255,255,0.03)"
-          className="!bg-[#050505]"
+          className="!bg-[#0f172a]"
         />
 
       </ReactFlow>

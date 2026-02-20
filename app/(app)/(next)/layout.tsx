@@ -19,19 +19,19 @@ export default function VicyLayout({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     if (!isLoading && !isAuthenticated && !redirectingRef.current) {
       redirectingRef.current = true;
-      // Clear stale session so middleware won't redirect /login back to /v4
-      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
-        .finally(() => {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('token');
-          window.location.replace('/login?next=/v4');
-        });
+      // Clear everything synchronously so middleware won't bounce /login back to /v4
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('token');
+      document.cookie = 'sintra.sid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      document.cookie = 'accessToken=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      window.location.replace('/login?next=/v4');
     }
   }, [isLoading, isAuthenticated]);
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#0a0a0a]">
+      <div className="flex h-screen items-center justify-center" style={{ backgroundColor: 'var(--vicy-bg)' }}>
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
           <p className="text-sm text-white/40">Loading...</p>

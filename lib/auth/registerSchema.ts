@@ -8,6 +8,7 @@ import { z } from 'zod';
 export const registerSchema = z
   .object({
     displayName: z.string().min(2, 'Name muss mindestens 2 Zeichen lang sein'),
+    companyName: z.string().min(2, 'Firmenname muss mindestens 2 Zeichen lang sein'),
     email: z.string().email('Ungültige E-Mail-Adresse'),
     password: z
       .string()

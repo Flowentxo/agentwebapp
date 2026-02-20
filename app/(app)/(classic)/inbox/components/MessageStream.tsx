@@ -42,10 +42,10 @@ interface MessageStreamProps {
 // Date separator helper
 function formatDateSeparator(date: Date | string): string {
   const d = typeof date === 'string' ? parseISO(date) : date;
-  if (!isValid(d)) return 'Today';
-  if (isToday(d)) return 'Today';
-  if (isYesterday(d)) return 'Yesterday';
-  return format(d, 'MMMM d, yyyy');
+  if (!isValid(d)) return 'Heute';
+  if (isToday(d)) return 'Heute';
+  if (isYesterday(d)) return 'Gestern';
+  return format(d, 'd. MMMM yyyy');
 }
 
 // Group messages by date
@@ -143,8 +143,16 @@ export function MessageStream({
   const bottomRef = useRef<HTMLDivElement>(null);
   const shouldAutoScroll = useRef(true);
 
+  // Filter out old technical Omni greeting messages persisted in DB
+  const cleanMessages = useMemo(() => messages.filter(m => {
+    if (m.role !== 'agent' && m.role !== 'assistant') return true;
+    if (m.content?.includes('Multi-Agent-Orchestrator') || m.content?.includes('Multi-Agent Orchestrator')) return false;
+    if (m.content?.includes('decompose_task') || m.content?.includes('delegate_to_agent')) return false;
+    return true;
+  }), [messages]);
+
   // Group messages by date
-  const messageGroups = useMemo(() => groupMessagesByDate(messages), [messages]);
+  const messageGroups = useMemo(() => groupMessagesByDate(cleanMessages), [cleanMessages]);
 
   // Extract workflow pipeline steps (if any)
   const workflowSteps = useMemo(() => extractWorkflowSteps(messages), [messages]);
@@ -215,34 +223,50 @@ export function MessageStream({
     );
   }
 
-  // Empty state
-  if (!isLoading && messages.length === 0) {
+  // Empty state (also triggers when all messages were filtered out)
+  if (!isLoading && cleanMessages.length === 0) {
     // Emmie-specific welcome screen
     if (agentId === 'emmie' && onSuggestedPrompt) {
       return <EmmieWelcomeScreen onSendPrompt={onSuggestedPrompt} onOpenComposer={onOpenComposer} onOpenDashboard={onOpenDashboard} agentColor={agentColor} />;
     }
 
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
-        <div
-          className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-          style={{ backgroundColor: `${agentColor}20` }}
-        >
-          <Bot className="w-8 h-8" style={{ color: agentColor }} />
+      <div className="flex-1 flex flex-col items-center justify-center text-center px-4 relative">
+        {/* Animated mesh gradient background */}
+        <div className="mesh-bg" />
+        {/* Agent Avatar with Aura */}
+        <div className="relative flex items-center justify-center mb-5">
+          <div className="absolute w-40 h-40 rounded-full blur-[80px]" style={{ background: `radial-gradient(circle, ${agentColor}15, transparent 70%)` }} />
+          <div
+            className="relative w-16 h-16 rounded-2xl flex items-center justify-center"
+            style={{ backgroundColor: `${agentColor}15`, border: `1px solid ${agentColor}20` }}
+          >
+            <Bot className="w-8 h-8" style={{ color: agentColor, filter: `drop-shadow(0 0 20px ${agentColor}40)` }} />
+          </div>
         </div>
-        <h3 className="text-lg font-medium text-zinc-100 mb-2">{agentName}</h3>
-        <p className="text-sm text-zinc-400 max-w-md mb-6">
-          Start a conversation. Ask questions, get help with tasks, or just chat.
+
+        {/* Greeting */}
+        <h2 className="text-lg font-semibold text-zinc-400 tracking-tight mb-2">Hallo! Was steht an?</h2>
+        <p className="text-sm text-zinc-500 max-w-sm mb-6">
+          Schreib einfach los — {agentName} hilft dir sofort.
         </p>
+
+        {/* Quick Action Pills */}
         {onSuggestedPrompt && (
-          <div className="flex flex-wrap justify-center gap-2 max-w-md">
-            {['What can you help me with?', 'Summarize my recent activity', 'Help me draft a message'].map((prompt) => (
+          <div className="flex flex-wrap items-center justify-center gap-2 max-w-md">
+            {[
+              { emoji: '\u{1F4B0}', label: 'ROI berechnen', prompt: 'Berechne die Rendite fuer ein Objekt mit Kaufpreis 250.000 EUR' },
+              { emoji: '\u{1F4DD}', label: 'Angebot prüfen', prompt: 'Pruefe dieses Angebot auf versteckte Kosten und Risiken:' },
+              { emoji: '\u{1F50D}', label: 'Markt analysieren', prompt: 'Wie entwickeln sich die Immobilienpreise in meiner Region?' },
+              { emoji: '\u{1F4CA}', label: 'Bericht erstellen', prompt: 'Erstelle einen kurzen Bericht ueber die wichtigsten Kennzahlen' },
+            ].map((pill) => (
               <button
-                key={prompt}
-                onClick={() => onSuggestedPrompt(prompt)}
-                className="px-3 py-1.5 text-xs text-white/60 bg-white/[0.04] border border-white/[0.08] rounded-full hover:bg-white/[0.08] hover:text-white/80 transition-all"
+                key={pill.label}
+                onClick={() => onSuggestedPrompt(pill.prompt)}
+                className="pill-hover flex items-center gap-1.5 bg-zinc-800/50 border border-white/[0.10] hover:border-purple-500/30 rounded-full px-4 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-all"
               >
-                {prompt}
+                <span>{pill.emoji}</span>
+                <span>{pill.label}</span>
               </button>
             ))}
           </div>
@@ -254,7 +278,7 @@ export function MessageStream({
   return (
     <div
       ref={containerRef}
-      className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent"
+      className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent pb-28"
       onScroll={handleScroll}
     >
       {/* Load more indicator */}
@@ -264,7 +288,7 @@ export function MessageStream({
             onClick={onLoadMore}
             className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
           >
-            Load earlier messages
+            Ältere Nachrichten laden
           </button>
         </div>
       )}
@@ -276,8 +300,8 @@ export function MessageStream({
       {messageGroups.map((group) => {
         // Find the last agent message ID across all messages for SmartReply
         const lastAgentMsgId = (() => {
-          for (let i = messages.length - 1; i >= 0; i--) {
-            if (messages[i].role === 'agent' || messages[i].role === 'assistant') return messages[i].id;
+          for (let i = cleanMessages.length - 1; i >= 0; i--) {
+            if (cleanMessages[i].role === 'agent' || cleanMessages[i].role === 'assistant') return cleanMessages[i].id;
           }
           return null;
         })();

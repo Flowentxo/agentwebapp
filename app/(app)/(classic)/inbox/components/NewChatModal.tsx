@@ -47,15 +47,15 @@ interface NewChatModalProps {
 
 // Category definitions
 const CATEGORIES = [
-  { id: 'all', label: 'All' },
-  { id: 'data', label: 'Data' },
+  { id: 'all', label: 'Alle' },
+  { id: 'data', label: 'Daten' },
   { id: 'support', label: 'Support' },
   { id: 'marketing', label: 'Marketing' },
-  { id: 'technical', label: 'Technical' },
-  { id: 'operations', label: 'Operations' },
-  { id: 'creative', label: 'Creative' },
+  { id: 'technical', label: 'Technik' },
+  { id: 'operations', label: 'Betrieb' },
+  { id: 'creative', label: 'Kreativ' },
   { id: 'motion', label: 'Motion' },
-  { id: 'AI & Automation', label: 'AI' },
+  { id: 'AI & Automation', label: 'KI' },
 ] as const;
 
 export function NewChatModal({
@@ -203,7 +203,7 @@ export function NewChatModal({
                 'flex flex-col overflow-hidden',
                 // Grok-style dark aesthetic
                 'rounded-2xl border border-zinc-800',
-                'bg-[#09090b]',
+                'bg-[#030712]',
                 'shadow-2xl shadow-black/60',
                 'focus:outline-none'
               )}
@@ -216,10 +216,10 @@ export function NewChatModal({
                 </div>
                 <div>
                   <DialogTitle className="text-lg font-semibold text-white">
-                    New Conversation
+                    Neues Gespräch
                   </DialogTitle>
                   <DialogDescription className="text-sm text-zinc-500">
-                    Choose an AI agent to start chatting
+                    Wähle einen Agenten für dein Anliegen
                   </DialogDescription>
                 </div>
               </div>
@@ -246,7 +246,7 @@ export function NewChatModal({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search agents by name, role, or specialty..."
+                  placeholder="Agent suchen..."
                   className={cn(
                     'w-full pl-10 pr-4 py-2.5 rounded-xl',
                     'bg-zinc-900/80 border border-zinc-800',
@@ -293,7 +293,7 @@ export function NewChatModal({
                 <div className="flex flex-col items-center justify-center h-48 text-center">
                   <Sparkles className="h-12 w-12 text-zinc-700 mb-3" />
                   <p className="text-zinc-500 text-sm">
-                    No agents found matching your search
+                    Keine Agenten gefunden
                   </p>
                 </div>
               ) : (
@@ -385,25 +385,25 @@ export function NewChatModal({
             {/* Footer - Grok Dark Style */}
             <div className="px-6 py-4 border-t border-zinc-800 bg-zinc-900/50">
               <div className="flex items-center justify-between text-xs text-zinc-500">
-                <span>{filteredAgents.length} agents available</span>
+                <span>{filteredAgents.length} Agenten verfügbar</span>
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1">
                     <kbd className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 font-mono text-[10px] text-zinc-400">
                       ↑↓←→
                     </kbd>
-                    Navigate
+                    Navigieren
                   </span>
                   <span className="flex items-center gap-1">
                     <kbd className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 font-mono text-[10px] text-zinc-400">
                       Enter
                     </kbd>
-                    Select
+                    Auswählen
                   </span>
                   <span className="flex items-center gap-1">
                     <kbd className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 font-mono text-[10px] text-zinc-400">
                       Esc
                     </kbd>
-                    Close
+                    Schließen
                   </span>
                 </div>
               </div>

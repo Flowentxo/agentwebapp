@@ -101,8 +101,7 @@ function DelegationCardComponent({ tool }: DelegationCardProps) {
     <div
       className={cn(
         'rounded-xl overflow-hidden bg-zinc-900/60 backdrop-blur-sm mt-2',
-        statusConfig.borderClass,
-        statusConfig.pulseClass
+        statusConfig.borderClass
       )}
       style={{ borderLeftColor: meta.color }}
     >

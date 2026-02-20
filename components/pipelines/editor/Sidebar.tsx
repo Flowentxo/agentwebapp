@@ -178,18 +178,34 @@ function DraggableItem({ item }: DraggableItemProps) {
   const onDragStart = (event: DragEvent<HTMLDivElement>) => {
     event.dataTransfer.setData('application/reactflow', JSON.stringify(item));
     event.dataTransfer.effectAllowed = 'move';
+    // Apply drag ghost styling
+    const el = event.currentTarget;
+    el.style.opacity = '0.7';
+    el.style.boxShadow = `0 8px 32px rgba(0,0,0,0.4), 0 0 16px ${item.color}30`;
+    requestAnimationFrame(() => {
+      // Reset after browser captures the drag image
+      setTimeout(() => {
+        el.style.opacity = '';
+        el.style.boxShadow = '';
+      }, 0);
+    });
   };
 
   return (
     <div
       draggable
       onDragStart={onDragStart}
-      className="group flex items-center gap-3 p-3 rounded-xl cursor-grab active:cursor-grabbing
-        hover:bg-white/[0.04] border border-white/[0.06] hover:border-white/10
-        transition-all duration-200"
+      className="group flex items-center gap-3 p-2.5 rounded-xl cursor-grab active:cursor-grabbing
+        hover:bg-white/[0.05] border border-transparent hover:border-white/[0.08]
+        transition-all duration-200 active:scale-[0.97]"
+      style={{
+        '--sidebar-glow': `0 0 12px ${item.color}25`,
+      } as React.CSSProperties}
+      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = `0 0 12px ${item.color}25`; }}
+      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = ''; }}
     >
       <div
-        className="flex items-center justify-center w-9 h-9 rounded-lg"
+        className="flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200 group-hover:scale-105"
         style={{ backgroundColor: `${item.color}15` }}
       >
         <Icon className="w-5 h-5" style={{ color: item.color }} />
@@ -215,10 +231,10 @@ export function PipelineSidebar({ onClose }: PipelineSidebarProps) {
     <aside
       className="w-64 h-full flex flex-col overflow-hidden"
       style={{
-        backgroundColor: 'rgba(17, 17, 17, 0.95)',
+        backgroundColor: 'rgba(9, 9, 11, 0.80)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        borderRight: '1px solid rgba(255, 255, 255, 0.06)',
+        borderRight: '1px solid rgba(255, 255, 255, 0.05)',
       }}
     >
       {/* Header */}
@@ -241,10 +257,10 @@ export function PipelineSidebar({ onClose }: PipelineSidebarProps) {
       <div className="flex-shrink-0 p-3">
         <input
           type="text"
-          placeholder="Search nodes..."
-          className="w-full px-3 py-2 text-sm rounded-lg bg-white/[0.03] border border-white/[0.06]
-            text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50
-            focus:ring-1 focus:ring-violet-500/50 transition-all"
+          placeholder="Search components..."
+          className="w-full px-3 py-1.5 text-xs rounded-lg bg-white/[0.04] border border-white/[0.08]
+            text-white placeholder-white/25 focus:outline-none focus:border-violet-500/40
+            focus:ring-1 focus:ring-violet-500/30 transition-all"
         />
       </div>
 

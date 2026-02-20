@@ -233,7 +233,7 @@ export function ReasoningCard({
     <div
       className={cn(
         'rounded-xl overflow-hidden',
-        'bg-[#0a0a0a] border border-white/[0.06]',
+        'border border-white/[0.06]',
         hasVicyGlow && [
           'border-violet-500/30',
           'shadow-[0_0_60px_rgba(139,92,246,0.1)]',
@@ -395,7 +395,7 @@ export function ReasoningCardCompact({
     <div
       className={cn(
         'flex items-center gap-3 p-3 rounded-xl',
-        'bg-[#0a0a0a] border border-white/[0.06]',
+        'border border-white/[0.06]',
         hasVicyGlow && 'border-violet-500/20 shadow-[0_0_30px_rgba(139,92,246,0.05)]',
         className
       )}

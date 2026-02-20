@@ -14,9 +14,9 @@ interface SwarmPanelProps {
 }
 
 const STATUS_MESSAGES = {
-  analyzing: 'Analysiere Anfrage...',
-  routing: 'Delegiere an Spezialisten...',
-  complete: 'Antwort wird generiert...',
+  analyzing: 'Analysiere deine Anfrage...',
+  routing: 'Finde den richtigen Experten...',
+  complete: 'Dein Experte arbeitet an der Antwort...',
 };
 
 export function SwarmPanel({ threadId, prompt, onReady }: SwarmPanelProps) {
@@ -142,7 +142,7 @@ export function SwarmPanel({ threadId, prompt, onReady }: SwarmPanelProps) {
       </motion.p>
 
       <p className="text-xs text-white/30 mb-6">
-        Omni koordiniert deine Agents...
+        Beschreibe dein Anliegen — Omni findet den passenden Experten.
       </p>
 
       {/* User's prompt */}

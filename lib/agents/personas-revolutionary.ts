@@ -427,10 +427,10 @@ export const REVOLUTIONARY_PERSONAS: Record<string, AgentPersonality> = {
     challenge: 'Bist du bereit für echte Exzellenz? Oder akzeptierst du Mittelmäßigkeit?',
 
     colors: {
-      primary: '#111827', // Almost Black
+      primary: '#171717', // Almost Black
       secondary: '#374151',
       accent: '#9CA3AF',
-      gradient: 'linear-gradient(135deg, #111827 0%, #374151 100%)',
+      gradient: 'linear-gradient(135deg, #171717 0%, #374151 100%)',
       glow: 'rgba(156, 163, 175, 0.4)'
     },
 

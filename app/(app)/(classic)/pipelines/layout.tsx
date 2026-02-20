@@ -2,7 +2,7 @@
 
 /**
  * Pipeline Layout - 2-pane layout matching Inbox pattern
- * Left: PipelineSidebar (w-72, #050505)
+ * Left: PipelineSidebar (w-72, #0f172a)
  * Right: Main stage (#0a0a0a) with violet workspace glow
  */
 
@@ -26,13 +26,13 @@ export default function PipelineLayout({
 
   return (
     <div
-      className="flex flex-1 h-full w-full bg-[#0a0a0a] overflow-hidden"
+      className="flex flex-1 h-full w-full overflow-hidden"
       style={{
         display: 'flex',
         flex: 1,
         height: '100%',
         width: '100%',
-        backgroundColor: '#0a0a0a',
+        backgroundColor: 'var(--vicy-bg)',
         overflow: 'hidden',
       }}
     >
@@ -67,7 +67,7 @@ export default function PipelineLayout({
           'fixed lg:relative inset-y-0 left-0 z-40 w-72 flex-shrink-0',
           'transform transition-all duration-300 ease-in-out lg:transform-none',
           'border-r border-white/[0.05]',
-          'bg-[#050505]',
+          'bg-[#0f172a]',
           isMobileSidebarOpen
             ? 'translate-x-0'
             : '-translate-x-full lg:translate-x-0'
@@ -76,8 +76,8 @@ export default function PipelineLayout({
           position: 'relative',
           width: '288px',
           flexShrink: 0,
-          backgroundColor: '#050505',
-          borderRight: '1px solid rgba(255, 255, 255, 0.05)',
+          backgroundColor: '#0f172a',
+          borderRight: '1px solid rgba(59, 130, 246, 0.08)',
           height: '100%',
         }}
       >
@@ -104,13 +104,13 @@ export default function PipelineLayout({
 
       {/* Right Pane: Main Stage */}
       <main
-        className="flex-1 min-w-0 flex flex-col bg-[#0a0a0a] pipeline-workspace-glow"
+        className="flex-1 min-w-0 flex flex-col pipeline-workspace-glow"
         style={{
           flex: 1,
           minWidth: 0,
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: '#0a0a0a',
+          backgroundColor: 'var(--vicy-bg)',
           background: 'radial-gradient(ellipse 600px 400px at 50% 0%, rgba(139, 92, 246, 0.03), transparent 60%)',
         }}
       >

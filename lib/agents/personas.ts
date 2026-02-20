@@ -14,7 +14,9 @@ import {
   Workflow,
   Bot,
   Mic,
-  Wallet
+  Wallet,
+  Home,
+  Building2
 } from 'lucide-react';
 
 export interface AgentPersona {
@@ -73,7 +75,7 @@ export const agentPersonas: AgentPersona[] = [
     color: '#3B82F6',
     icon: BarChart3,
     bio: 'Expert financial analyst powered by OpenAI GPT-4o-mini. Ich berechne ROI, analysiere P&L, prognostiziere Sales und liefere datenbasierte Finanz-Insights.',
-    specialties: ['ROI Calculator', 'Financial Analysis', 'Sales Forecasting'],
+    specialties: ['ROI-Rechner', 'Finanzanalyse', 'Umsatzprognose'],
     category: 'data',
     status: 'active',
     available: true
@@ -85,7 +87,7 @@ export const agentPersonas: AgentPersona[] = [
     color: '#10B981',
     icon: Headphones,
     bio: 'I handle customer queries 24/7, manage tickets, and ensure customer satisfaction.',
-    specialties: ['Ticket Management', 'FAQ Generation', 'Issue Resolution', 'Customer Feedback'],
+    specialties: ['Ticket-Verwaltung', 'FAQ-Erstellung', 'Problemlösung', 'Kundenfeedback'],
     category: 'support',
     status: 'active',
     available: true
@@ -97,7 +99,7 @@ export const agentPersonas: AgentPersona[] = [
     color: '#8B5CF6',
     icon: Mail,
     bio: 'I organize your inbox, draft professional emails, and manage email campaigns.',
-    specialties: ['Email Automation', 'Campaign Management', 'Template Creation', 'Follow-ups'],
+    specialties: ['E-Mail-Automatisierung', 'Kampagnen-Management', 'Vorlagen-Erstellung', 'Follow-ups'],
     category: 'operations',
     status: 'active',
     available: true
@@ -109,7 +111,7 @@ export const agentPersonas: AgentPersona[] = [
     color: '#EC4899',
     icon: Sparkles,
     bio: 'I develop brand strategies, positioning, and messaging that resonate with your audience.',
-    specialties: ['Brand Identity', 'Positioning', 'Messaging', 'Competitor Analysis'],
+    specialties: ['Markenidentität', 'Positionierung', 'Markenbotschaft', 'Wettbewerbsanalyse'],
     category: 'marketing',
     status: 'active',
     available: true
@@ -122,7 +124,7 @@ export const agentPersonas: AgentPersona[] = [
     color: '#10B981',
     icon: Code2,
     bio: 'Expert code assistant powered by AI. Ich schreibe, debugge und erkläre Code in allen gängigen Programmiersprachen.',
-    specialties: ['Code Generation', 'Debugging', 'Code Review', 'Technical Documentation'],
+    specialties: ['Code-Erstellung', 'Debugging', 'Code-Review', 'Technische Doku'],
     category: 'technical',
     status: 'active',
     available: true
@@ -135,7 +137,7 @@ export const agentPersonas: AgentPersona[] = [
     color: '#64748B',
     icon: Scale,
     bio: 'KI-gestützter Rechtsberater. Ich helfe bei Vertragsanalysen, Compliance-Fragen und rechtlichen Dokumenten.',
-    specialties: ['Contract Analysis', 'Compliance', 'Legal Research', 'Document Drafting'],
+    specialties: ['Vertragsanalyse', 'Compliance', 'Rechtsrecherche', 'Dokumentenerstellung'],
     category: 'operations',
     status: 'active',
     available: true
@@ -148,7 +150,7 @@ export const agentPersonas: AgentPersona[] = [
     color: '#059669',
     icon: TrendingUp,
     bio: 'Finanzexperte für strategische Planung. Ich optimiere Budgets, analysiere Investments und erstelle Finanzprognosen.',
-    specialties: ['Budget Planning', 'Investment Analysis', 'Financial Forecasting', 'Cost Optimization'],
+    specialties: ['Budgetplanung', 'Investment-Analyse', 'Finanzprognose', 'Kostenoptimierung'],
     category: 'data',
     status: 'active',
     available: true
@@ -161,7 +163,7 @@ export const agentPersonas: AgentPersona[] = [
     color: '#06B6D4',
     icon: Telescope,
     bio: 'Research-Spezialist für tiefgreifende Analysen. Ich recherchiere Märkte, Trends und liefere strategische Insights.',
-    specialties: ['Market Research', 'Trend Analysis', 'Competitive Intelligence', 'Strategic Insights'],
+    specialties: ['Marktforschung', 'Trendanalyse', 'Wettbewerbs-Intelligence', 'Strategische Insights'],
     category: 'data',
     status: 'active',
     available: true
@@ -175,7 +177,7 @@ export const agentPersonas: AgentPersona[] = [
     color: '#F97316',
     icon: Video,
     bio: 'AI-powered video production expert. Ich erstelle Konzepte, Storyboards und koordiniere Videoproduktionen von der Idee bis zum fertigen Clip.',
-    specialties: ['Video Konzeption', 'Storyboarding', 'Production Planning', 'Content Strategy'],
+    specialties: ['Video-Konzeption', 'Storyboarding', 'Produktionsplanung', 'Content-Strategie'],
     category: 'motion',
     status: 'active',
     available: true
@@ -188,7 +190,7 @@ export const agentPersonas: AgentPersona[] = [
     color: '#A855F7',
     icon: Film,
     bio: 'Kreatives Motion Design Genie. Ich animiere Logos, erstelle Intros, Transitions und bringe statische Designs zum Leben.',
-    specialties: ['Logo Animation', 'Motion Graphics', 'Transitions', 'Visual Effects'],
+    specialties: ['Logo-Animation', 'Motion Graphics', 'Übergänge', 'Visuelle Effekte'],
     category: 'motion',
     status: 'active',
     available: true
@@ -202,7 +204,7 @@ export const agentPersonas: AgentPersona[] = [
     color: '#6366F1',
     icon: Workflow,
     bio: 'Automatisierungs-Experte für intelligente Workflows. Ich designe, implementiere und optimiere KI-gestützte Automatisierungen.',
-    specialties: ['Workflow Automation', 'AI Integration', 'Process Optimization', 'Trigger Design'],
+    specialties: ['Smarte Workflows', 'KI-Integration', 'Prozess-Optimierung', 'Automatische Aktionen'],
     category: 'AI & Automation',
     status: 'active',
     available: true
@@ -215,7 +217,7 @@ export const agentPersonas: AgentPersona[] = [
     color: '#DC2626',
     icon: Shield,
     bio: 'Sicherheits- und Compliance-Expertin. Ich prüfe Systeme, identifiziere Risiken und stelle Regelkonformität sicher.',
-    specialties: ['Security Audits', 'Risk Assessment', 'Compliance Checks', 'Data Privacy'],
+    specialties: ['Sicherheits-Audits', 'Risikobewertung', 'Compliance-Prüfung', 'Datenschutz'],
     category: 'operations',
     status: 'active',
     available: true
@@ -228,7 +230,7 @@ export const agentPersonas: AgentPersona[] = [
     color: '#0EA5E9',
     icon: Mic,
     bio: 'Audio-Experte für Voice-Inhalte. Ich transkribiere, analysiere und erstelle Audio-Content und Podcasts.',
-    specialties: ['Transcription', 'Audio Analysis', 'Podcast Production', 'Voice Content'],
+    specialties: ['Transkription', 'Audio-Analyse', 'Podcast-Produktion', 'Voice-Content'],
     category: 'creative',
     status: 'active',
     available: true
@@ -237,11 +239,11 @@ export const agentPersonas: AgentPersona[] = [
     id: 'omni',
     name: 'Omni',
     role: 'Multi-Agent Orchestrator',
-    description: 'Master-Orchestrator für komplexe Multi-Agent-Aufgaben. Ich koordiniere mehrere Agents und löse komplexe Anfragen.',
+    description: 'Dein persönlicher Assistent mit einem Team aus Experten. Ich finde den richtigen Spezialisten für jede Aufgabe.',
     color: '#7C3AED',
     icon: Bot,
-    bio: 'Master-Orchestrator für komplexe Multi-Agent-Aufgaben. Ich koordiniere mehrere Agents und löse komplexe Anfragen.',
-    specialties: ['Agent Coordination', 'Complex Tasks', 'Multi-Step Workflows', 'Task Delegation'],
+    bio: 'Dein persönlicher Assistent mit einem Team aus Experten. Ich finde den richtigen Spezialisten für jede Aufgabe.',
+    specialties: ['Team-Koordination', 'Komplexe Aufgaben', 'Mehrstufige Workflows', 'Aufgaben-Verteilung'],
     category: 'AI & Automation',
     status: 'active',
     available: true
@@ -255,9 +257,37 @@ export const agentPersonas: AgentPersona[] = [
     color: '#F59E0B',
     icon: Wallet,
     bio: 'Dein persönlicher Budget-Assistent. Ich überwache deine AI-Kosten, liefere Insights und helfe aktiv bei der Optimierung.',
-    specialties: ['Budget Monitoring', 'Cost Optimization', 'Usage Analytics', 'Proactive Alerts', 'Limit Management'],
+    specialties: ['Budget-Überwachung', 'Kostenoptimierung', 'Nutzungsanalyse', 'Proaktive Warnungen', 'Limit-Verwaltung'],
     category: 'Data & Analytics',
     status: 'active',
+    available: true
+  },
+  // Real Estate Communication Agent
+  {
+    id: 'tenant-communicator',
+    name: 'Tenant Communicator',
+    role: 'Mieterkommunikation & Fristenmanagement',
+    description: 'Professioneller Kommunikations-Manager fuer Vermieter und Hausverwaltungen. Erstellt rechtssichere Schreiben, berechnet BGB-Fristen und verwaltet Zustellnachweise.',
+    color: '#047857',
+    icon: Building2,
+    bio: 'Professioneller Kommunikations-Manager fuer Vermieter und Hausverwaltungen. Erstellt rechtssichere Schreiben, berechnet BGB-Fristen und verwaltet Zustellnachweise.',
+    specialties: ['Mieterschreiben', 'Fristenberechnung', 'Zustellnachweise', 'BGB Mietrecht'],
+    category: 'operations',
+    status: 'active',
+    available: true
+  },
+  // Real Estate Monitoring Agent
+  {
+    id: 'property-sentinel',
+    name: 'Property Sentinel',
+    role: 'Immobilien-Marktüberwachung',
+    description: 'Autonomer Überwachungs-Bot für Immobilien-Portale. Scannt 6x täglich nach neuen Inseraten, bewertet Rendite per KI und schiebt Top-Deals in deine Pipeline.',
+    color: '#92400E',
+    icon: Home,
+    bio: 'Autonomer Überwachungs-Bot für Immobilien-Portale. Scannt 6x täglich nach neuen Inseraten, bewertet Rendite per KI und schiebt Top-Deals in deine Pipeline.',
+    specialties: ['Portal-Überwachung', 'Rendite-Analyse', 'Deal-Scoring', 'Pipeline-Integration'],
+    category: 'Data & Analytics',
+    status: 'beta',
     available: true
   }
 ];

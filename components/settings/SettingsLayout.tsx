@@ -56,14 +56,14 @@ export default function SettingsLayout({
   return (
     <div className="min-h-screen w-full bg-[var(--vicy-bg)]">
       {/* Header with User Info */}
-      <div className="border-b border-[var(--vicy-border)]">
-        <div className="max-w-5xl mx-auto px-6 py-6">
+      <div className="border-b border-white/[0.04]">
+        <div className="max-w-5xl mx-auto px-6 py-8">
           <SettingsHeader profile={profile} onLogout={onLogout} />
         </div>
       </div>
 
       {/* Tab Navigation - Sticky below back navigation bar */}
-      <div className="sticky top-14 z-30 bg-[var(--vicy-surface-95)] backdrop-blur-xl border-b border-[var(--vicy-border)]">
+      <div className="sticky top-14 z-30 bg-zinc-950/60 backdrop-blur-2xl border-b border-white/[0.03]">
         <div className="max-w-5xl mx-auto">
           <SettingsTopNav activeTab={activeTab} onTabChange={handleTabChange} />
         </div>

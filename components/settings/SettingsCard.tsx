@@ -1,6 +1,6 @@
 /**
- * Settings Card - Reusable Card Component for Settings Sections
- * Clean, minimal design with consistent styling
+ * Settings Card - Ultra-Premium Glass Components
+ * Deep glassmorphism with generous padding and subtle depth
  */
 
 'use client';
@@ -22,25 +22,25 @@ export function SettingsCard({
   title,
   description,
   icon: Icon,
-  iconColor = 'text-muted-foreground',
+  iconColor = 'text-zinc-400',
   children,
   className = '',
   action,
 }: SettingsCardProps) {
   return (
-    <div className={`rounded-xl bg-[var(--vicy-surface)] border border-[var(--vicy-border)] shadow-sm overflow-hidden backdrop-blur-sm ${className}`}>
+    <div className={`rounded-2xl bg-zinc-900/60 backdrop-blur-xl border border-white/[0.05] shadow-xl shadow-black/20 overflow-hidden ${className}`}>
       {/* Header */}
-      <div className="flex items-start justify-between px-5 py-4 border-b border-[var(--vicy-border)]">
-        <div className="flex items-start gap-3">
+      <div className="flex items-start justify-between px-8 py-6 border-b border-white/[0.03]">
+        <div className="flex items-start gap-4">
           {Icon && (
-            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--vicy-glass-bg)] border border-[var(--vicy-glass-border)] mt-0.5">
-              <Icon className={`w-4.5 h-4.5 ${iconColor}`} />
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/[0.15]">
+              <Icon className={`w-5 h-5 ${iconColor}`} />
             </div>
           )}
           <div>
-            <h3 className="text-sm font-semibold text-[var(--vicy-text-primary)]">{title}</h3>
+            <h3 className="text-base font-semibold text-white">{title}</h3>
             {description && (
-              <p className="text-xs text-[var(--vicy-text-secondary)] mt-0.5">{description}</p>
+              <p className="text-sm text-zinc-500 mt-0.5">{description}</p>
             )}
           </div>
         </div>
@@ -48,7 +48,7 @@ export function SettingsCard({
       </div>
 
       {/* Content */}
-      <div className="p-5">{children}</div>
+      <div className="p-8">{children}</div>
     </div>
   );
 }
@@ -67,11 +67,11 @@ export function SettingsSection({
   className = '',
 }: SettingsSectionProps) {
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`space-y-5 ${className}`}>
       <div>
-        <h2 className="text-lg font-semibold text-[var(--vicy-text-primary)]">{title}</h2>
+        <h2 className="text-xl font-bold text-white tracking-tight">{title}</h2>
         {description && (
-          <p className="text-sm text-[var(--vicy-text-secondary)] mt-1">{description}</p>
+          <p className="text-sm text-zinc-400 mt-1">{description}</p>
         )}
       </div>
       {children}
@@ -93,11 +93,11 @@ export function SettingsRow({
   className = '',
 }: SettingsRowProps) {
   return (
-    <div className={`flex items-center justify-between py-3 ${className}`}>
+    <div className={`flex items-center justify-between py-4 px-4 -mx-4 rounded-xl hover:bg-white/[0.02] transition-colors ${className}`}>
       <div className="flex-1 min-w-0 pr-4">
-        <p className="text-sm font-medium text-[var(--vicy-text-primary)]">{label}</p>
+        <p className="text-sm font-medium text-white/80">{label}</p>
         {description && (
-          <p className="text-xs text-[var(--vicy-text-secondary)] mt-0.5">{description}</p>
+          <p className="text-xs text-zinc-500 mt-0.5">{description}</p>
         )}
       </div>
       <div className="flex-shrink-0">{children}</div>
@@ -110,5 +110,5 @@ interface SettingsDividerProps {
 }
 
 export function SettingsDivider({ className = '' }: SettingsDividerProps) {
-  return <div className={`border-t border-[var(--vicy-border)] ${className}`} />;
+  return <div className={`border-t border-white/[0.03] ${className}`} />;
 }

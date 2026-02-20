@@ -6,7 +6,7 @@
  * Right sidebar panel for configuring pipeline triggers.
  * Supports Manual, Schedule (Cron), and Webhook trigger types.
  *
- * Vicy-Style: Deep Black (#050505)
+ * Vicy-Style: Deep Black (#0f172a)
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -184,8 +184,8 @@ export function TriggerConfigPanel({
 
   return (
     <div
-      className="h-full flex flex-col border-l border-white/[0.06]"
-      style={{ background: '#050505' }}
+      className="h-full flex flex-col border-l border-white/[0.05] backdrop-blur-xl"
+      style={{ background: 'rgba(9, 9, 11, 0.80)' }}
     >
       {/* Header */}
       <div className="flex-shrink-0 px-4 py-3 border-b border-white/[0.06]">

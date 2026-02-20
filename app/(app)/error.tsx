@@ -9,16 +9,47 @@ export default function AppLayoutError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // Stealth mode: auth errors → blank screen + silent redirect
+  const msg = (error?.message || '').toLowerCase();
+  const isAuthError = msg.includes('auth') || msg.includes('unauthorized') || msg.includes('token') || msg.includes('401') || msg.includes('sign in');
+
   useEffect(() => {
     // Log the error to console in development
     console.error('App Layout Error:', error);
-  }, [error]);
+
+    // Auth errors: stealth redirect to /login
+    if (isAuthError && typeof window !== 'undefined' && window.location.pathname !== '/login') {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('token');
+      document.cookie = 'sintra.sid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      document.cookie = 'accessToken=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      window.location.href = '/login';
+    }
+  }, [error, isAuthError]);
+
+  // Auth errors: friendly session-expired screen while redirecting
+  if (isAuthError) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#030712', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '16px' }}>Deine Sitzung ist abgelaufen</p>
+          <button
+            onClick={() => window.location.href = '/login'}
+            style={{ padding: '10px 24px', background: '#6366f1', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}
+          >
+            Neu einloggen
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{
       padding: '32px',
       minHeight: '100vh',
-      background: '#0a0a0a',
+      background: '#030712',
       color: '#e5e7eb'
     }}>
       <div style={{

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
 import { devtools } from 'zustand/middleware';
 import {
   Node,
@@ -1042,7 +1043,7 @@ export const selectStepForNode = (nodeId: string) => (state: PipelineState) => {
 
 // Hook for debug mode state
 export const useDebugMode = () => {
-  return usePipelineStore((state) => ({
+  return usePipelineStore(useShallow((state) => ({
     isDebugMode: state.isDebugMode,
     currentRun: state.currentRun,
     runTrace: state.runTrace,
@@ -1052,7 +1053,7 @@ export const useDebugMode = () => {
     loadRun: state.loadRun,
     exitDebugMode: state.exitDebugMode,
     getStepForNode: state.getStepForNode,
-  }));
+  })));
 };
 
 // Hook to get step data for a specific node
@@ -1071,12 +1072,10 @@ export const selectTemplateDialogOpen = (state: PipelineState) => state.template
 
 // Hook for template dialog
 export const useTemplateDialog = () => {
-  return usePipelineStore((state) => ({
+  return usePipelineStore(useShallow((state) => ({
     isOpen: state.templateDialogOpen,
-    open: () => state.setTemplateDialogOpen(true),
-    close: () => state.setTemplateDialogOpen(false),
-    toggle: () => state.setTemplateDialogOpen(!state.templateDialogOpen),
-  }));
+    setTemplateDialogOpen: state.setTemplateDialogOpen,
+  })));
 };
 
 // ============================================
@@ -1092,7 +1091,7 @@ export const selectIsPaused = (state: PipelineState) => state.isPaused;
  * Hook for Control Mode UI state and actions
  */
 export const useControlModeUI = () => {
-  return usePipelineStore((state) => ({
+  return usePipelineStore(useShallow((state) => ({
     showExecutionPanel: state.showExecutionPanel,
     showApprovalBar: state.showApprovalBar,
     awaitingApprovalNodeId: state.awaitingApprovalNodeId,
@@ -1100,7 +1099,7 @@ export const useControlModeUI = () => {
     setShowExecutionPanel: state.setShowExecutionPanel,
     setShowApprovalBar: state.setShowApprovalBar,
     setIsPaused: state.setIsPaused,
-  }));
+  })));
 };
 
 // ============================================
@@ -1114,20 +1113,22 @@ export const selectWorkflowValidation = (state: PipelineState) => state.workflow
  * Hook for connection validation state and actions
  */
 export const useConnectionValidation = () => {
-  return usePipelineStore((state) => ({
+  return usePipelineStore(useShallow((state) => ({
     lastConnectionError: state.lastConnectionError,
     workflowValidation: state.workflowValidation,
     isValidConnection: state.isValidConnection,
     validateCurrentWorkflow: state.validateCurrentWorkflow,
     clearConnectionError: state.clearConnectionError,
-  }));
+  })));
 };
 
 /**
  * Hook to check if workflow is valid (for save/publish buttons)
  */
+const EMPTY_VALIDATION_ARRAY: any[] = [];
+
 export const useWorkflowValidity = () => {
-  return usePipelineStore((state) => {
+  return usePipelineStore(useShallow((state) => {
     // Return cached validation if available
     if (state.workflowValidation) {
       return {
@@ -1140,11 +1141,11 @@ export const useWorkflowValidity = () => {
     // No validation yet - workflow needs to be validated
     return {
       isValid: true, // Assume valid until checked
-      errors: [],
-      warnings: [],
+      errors: EMPTY_VALIDATION_ARRAY,
+      warnings: EMPTY_VALIDATION_ARRAY,
       needsValidation: true,
     };
-  });
+  }));
 };
 
 // ============================================
@@ -1155,13 +1156,13 @@ export const useWorkflowValidity = () => {
  * Hook for auto-layout actions
  */
 export const useAutoLayout = () => {
-  return usePipelineStore((state) => ({
+  return usePipelineStore(useShallow((state) => ({
     autoLayout: state.autoLayout,
     autoLayoutHorizontal: state.autoLayoutHorizontal,
     autoLayoutVertical: state.autoLayoutVertical,
     autoLayoutCompact: state.autoLayoutCompact,
     autoLayoutSpread: state.autoLayoutSpread,
-  }));
+  })));
 };
 
 // ============================================
@@ -1176,14 +1177,14 @@ export const selectIsLoadingLoopData = (state: PipelineState) => state.isLoading
  * Hook for loop iteration navigation
  */
 export const useLoopNavigation = () => {
-  return usePipelineStore((state) => ({
+  return usePipelineStore(useShallow((state) => ({
     selectedIteration: state.selectedIteration,
     loopGroupData: state.loopGroupData,
     isLoadingLoopData: state.isLoadingLoopData,
     setSelectedIteration: state.setSelectedIteration,
     loadLoopData: state.loadLoopData,
     clearLoopData: state.clearLoopData,
-  }));
+  })));
 };
 
 /**

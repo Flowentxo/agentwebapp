@@ -5,3 +5,4 @@
  */
 
 export { AdminBackground } from './AdminBackground';
+export { PublicNavbar } from './PublicNavbar';

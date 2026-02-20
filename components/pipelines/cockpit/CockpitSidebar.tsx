@@ -6,7 +6,7 @@
  * Right sidebar container for the Pipeline Cockpit.
  * Houses TriggerCockpit, AutopilotToggle, ApprovalQueuePanel, and LiveStepTracker.
  *
- * Vicy-Style: Deep Black (#050505) + Subtle borders
+ * Vicy-Style: Deep Black (#0f172a) + Subtle borders
  */
 
 import { useMemo } from 'react';
@@ -97,7 +97,7 @@ export function CockpitSidebar({
   return (
     <div
       className="h-full flex flex-col border-l border-white/[0.06]"
-      style={{ background: '#050505', width: '384px' }}
+      style={{ background: '#0f172a', width: '384px' }}
     >
       {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">

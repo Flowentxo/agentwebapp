@@ -66,6 +66,13 @@ function SettingsLayoutSkeleton() {
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="vicy-theme min-h-screen bg-[var(--vicy-bg)]">
+      {/* Ambient mesh gradient */}
+      <div className="mesh-bg fixed inset-0 pointer-events-none" />
+      {/* Purple glow orb */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-purple-500/[0.10] rounded-full blur-[120px] pointer-events-none" />
+      {/* Blue glow orb (lower-right for depth) */}
+      <div className="fixed bottom-0 right-0 w-[500px] h-[400px] bg-blue-500/[0.05] rounded-full blur-[120px] pointer-events-none" />
+
       {/* Back Navigation Bar */}
       <BackNavigation />
 

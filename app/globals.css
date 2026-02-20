@@ -44,8 +44,8 @@
 
 /* Vicy theme: deep-black canvas */
 .vicy-theme .canvas-dot-pattern {
-  background-color: #050505;
-  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-color: #050d1a;
+  background-image: radial-gradient(circle, rgba(59, 130, 246, 0.06) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -70,6 +70,22 @@
     outline: none !important;
     box-shadow: none !important;
     border: inherit !important;
+  }
+
+  /* Ghost cursor fix: hide text caret on non-interactive elements */
+  html, body, div, span, p, a, button, nav, section, article, aside,
+  main, header, footer, ul, li, label, figure, figcaption, h1, h2, h3, h4, h5, h6 {
+    caret-color: transparent;
+  }
+
+  /* Restore visible caret on text inputs */
+  input, textarea, [contenteditable="true"], [role="textbox"] {
+    caret-color: auto;
+  }
+
+  /* Prevent text-select cursor on non-text areas */
+  body {
+    cursor: default;
   }
 }
 
@@ -337,9 +353,9 @@ input, select, textarea {
     --surface-3: rgba(63, 63, 70, 0.4);          /* Hover state */
 
     /* Inbox Column Layering - Visual Depth Differentiation */
-    --inbox-sidebar-bg: #0d0d0d;                 /* Darkest: thread list */
-    --inbox-chat-bg: #0a0a0a;                    /* Medium: main chat area */
-    --inbox-artifact-bg: #111113;                 /* Slightly elevated: output panel */
+    --inbox-sidebar-bg: #0f172a;                 /* Slate-900: thread list */
+    --inbox-chat-bg: #030712;                    /* Gray-950: main chat area */
+    --inbox-artifact-bg: #1e293b;                /* Slate-800: output panel */
 
     /* Hairline - Ultra-subtle separators */
     --hairline: rgba(255, 255, 255, 0.05);
@@ -798,7 +814,7 @@ html {
 .dark :focus-visible {
   outline: 2px solid hsl(262 83% 68% / 0.8);
   outline-offset: 2px;
-  --tw-ring-offset-color: #0a0a0a;  /* Enterprise Zinc offset */
+  --tw-ring-offset-color: #030712;  /* Enterprise Zinc offset */
 }
 
 /* Interactive elements focus enhancement */
@@ -2030,7 +2046,7 @@ input[type="range"]::-moz-range-track {
 
 /* Active Dot Styles */
 .dark .recharts-active-dot circle {
-  stroke: #0a0a0a !important;  /* Enterprise Zinc outline */
+  stroke: #030712 !important;  /* Enterprise Zinc outline */
   stroke-width: 2px;
 }
 
@@ -2188,72 +2204,140 @@ input[type="range"]::-moz-range-track {
    ======================================== */
 
 .vicy-theme {
-  --vicy-bg: #0A0A0A;
-  --vicy-surface: #111111;
-  --vicy-surface-hover: #1A1A1A;
-  --vicy-border: rgba(255, 255, 255, 0.06);
-  --vicy-border-focus: rgba(255, 255, 255, 0.12);
-  --vicy-text-primary: #FAFAFA;
-  --vicy-text-secondary: #71717A;
-  --vicy-text-tertiary: #3F3F46;
-  --vicy-glass-bg: rgba(255, 255, 255, 0.03);
-  --vicy-glass-border: rgba(255, 255, 255, 0.08);
-  --vicy-accent: #8b5cf6;
-  --vicy-accent-glow: rgba(139, 92, 246, 0.15);
+  --vicy-bg: #030712;
+  --vicy-surface: #0f172a;
+  --vicy-surface-hover: #1e293b;
+  --vicy-border: rgba(59, 130, 246, 0.12);
+  --vicy-border-focus: rgba(59, 130, 246, 0.25);
+  --vicy-text-primary: #f1f5f9;
+  --vicy-text-secondary: #94a3b8;
+  --vicy-text-tertiary: #475569;
+  --vicy-glass-bg: rgba(15, 23, 42, 0.8);
+  --vicy-glass-border: rgba(59, 130, 246, 0.1);
+  --vicy-accent: #3b82f6;
+  --vicy-accent-glow: rgba(59, 130, 246, 0.15);
+
+  /* Ambient lighting — blue atmospheric glow */
+  --vicy-ambient-1: rgba(59, 130, 246, 0.06);
+  --vicy-ambient-2: rgba(6, 182, 212, 0.04);
 
   /* Opacity variants for Tailwind compatibility */
-  --vicy-surface-95: rgba(17, 17, 17, 0.95);
-  --vicy-surface-50: rgba(17, 17, 17, 0.50);
-  --vicy-accent-20: rgba(139, 92, 246, 0.20);
-  --vicy-accent-30: rgba(139, 92, 246, 0.30);
-  --vicy-accent-40: rgba(139, 92, 246, 0.40);
-  --vicy-accent-50: rgba(139, 92, 246, 0.50);
-  --vicy-accent-90: rgba(139, 92, 246, 0.90);
-  --vicy-accent-25-shadow: rgba(139, 92, 246, 0.25);
+  --vicy-surface-95: rgba(15, 23, 42, 0.95);
+  --vicy-surface-50: rgba(15, 23, 42, 0.50);
+  --vicy-accent-20: rgba(59, 130, 246, 0.20);
+  --vicy-accent-30: rgba(59, 130, 246, 0.30);
+  --vicy-accent-40: rgba(59, 130, 246, 0.40);
+  --vicy-accent-50: rgba(59, 130, 246, 0.50);
+  --vicy-accent-90: rgba(59, 130, 246, 0.90);
+  --vicy-accent-25-shadow: rgba(59, 130, 246, 0.25);
 
   color-scheme: dark;
   background-color: var(--vicy-bg);
   color: var(--vicy-text-primary);
 }
 
-/* Glassmorphism panels */
+/* Ambient light orb — blue aurora glow at top center */
+.vicy-theme::before {
+  content: '';
+  position: fixed;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1200px;
+  height: 600px;
+  background: radial-gradient(ellipse, rgba(59, 130, 246, 0.15), rgba(6, 182, 212, 0.06) 40%, transparent 70%);
+  filter: blur(100px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Subtle dot-grid background pattern — blue tinted */
+.vicy-grid-bg {
+  background-image: radial-gradient(rgba(59, 130, 246, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Glassmorphism panels — blue-tinted */
 .glass {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(15, 23, 42, 0.7);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.1);
 }
 
 .glass-hover:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(59, 130, 246, 0.2);
 }
 
 .glass-focus:focus-within {
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.1), 0 8px 32px rgba(0, 0, 0, 0.3);
+  border-color: rgba(59, 130, 246, 0.25);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.1), 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
-/* Vicy omnibar input */
+/* Vicy omnibar input — ghost style with violet glow */
 .vicy-omnibar {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.10);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: 16px;
   transition: all 0.2s ease;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 4px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.08);
 }
 
 .vicy-omnibar:focus-within {
-  border-color: rgba(139, 92, 246, 0.3);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 0 0 1px rgba(139, 92, 246, 0.1),
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    0 0 40px rgba(139, 92, 246, 0.05);
+  border-color: rgba(168, 85, 247, 0.35);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.15), 0 0 40px rgba(168, 85, 247, 0.05);
+}
+
+/* Suggestion pill hover — glow + lift */
+.pill-hover {
+  transition: all 0.2s ease;
+}
+
+.pill-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
+}
+
+.pill-hover:active {
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
+}
+
+/* Animated mesh gradient — organic depth */
+@keyframes mesh-drift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.mesh-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 20% 50%, rgba(88, 28, 135, 0.06) 0%, transparent 50%),
+              radial-gradient(ellipse at 80% 20%, rgba(30, 58, 138, 0.05) 0%, transparent 50%),
+              radial-gradient(ellipse at 50% 80%, rgba(88, 28, 135, 0.04) 0%, transparent 50%);
+  background-size: 200% 200%;
+  animation: mesh-drift 20s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Message slide-in animation */
+@keyframes msg-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.msg-enter {
+  animation: msg-slide-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 /* Agent glow effect when identified */
@@ -2403,3 +2487,318 @@ input[type="range"]::-moz-range-track {
 .swarm-agent-pulse {
   animation: swarm-pulse 2s ease-in-out infinite;
 }
+
+/* ============================================================
+   Pipeline Studio - Premium Visual Upgrade
+   Canvas atmosphere, glassmorphism controls, minimap
+   ============================================================ */
+
+/* Canvas mesh gradient atmosphere */
+.pipeline-canvas-atmosphere {
+  background-color: #09090b;
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(139, 92, 246, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(6, 182, 212, 0.03) 0%, transparent 50%);
+}
+
+/* Controls wrapper — invisible, spaced */
+.pipeline-controls.react-flow__controls {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Control buttons — round glass */
+.pipeline-controls .react-flow__controls-button {
+  background: rgba(24, 24, 27, 0.80) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  border-radius: 9999px !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  width: 36px !important;
+  height: 36px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 2px 0 !important;
+  transition: all 0.2s ease;
+}
+
+.pipeline-controls .react-flow__controls-button:hover {
+  background: rgba(39, 39, 42, 0.90) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.pipeline-controls .react-flow__controls-button svg {
+  fill: currentColor !important;
+  width: 16px !important;
+  height: 16px !important;
+}
+
+/* MiniMap — glass card */
+.pipeline-minimap.react-flow__minimap {
+  background-color: transparent !important;
+  background: rgba(24, 24, 27, 0.40) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-radius: 1rem !important;
+  overflow: hidden !important;
+}
+
+/* Data-pulse trail animation for edge trailing particles */
+@keyframes data-pulse-trail {
+  0%   { opacity: 0.3; r: 4; }
+  50%  { opacity: 0.12; r: 6; }
+  100% { opacity: 0.3; r: 4; }
+}
+
+.data-pulse-trail {
+  animation: data-pulse-trail 1.6s ease-in-out infinite;
+}
+
+/* Node icon badge hover glow — activated via parent group/node hover */
+.group\/node:hover .node-icon-badge {
+  box-shadow: inset 0 0 16px var(--node-glow-color, rgba(139, 92, 246, 0.25)), 0 0 16px var(--node-glow-color, rgba(139, 92, 246, 0.25));
+  transform: scale(1.05);
+}
+
+/* Selected state: stronger glow — wins over hover via specificity */
+.node-icon-badge.node-icon-selected {
+  box-shadow: var(--node-selected-glow);
+  transform: scale(1.05);
+}
+
+/* ============================================================================
+   LANDING PAGE: Animated Mesh Gradient
+   Subtle, slow-moving ambient background for the public homepage
+   ============================================================================ */
+
+@keyframes mesh-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  25% {
+    background-position: 50% 0%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  75% {
+    background-position: 50% 100%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.bg-mesh {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(139, 92, 246, 0.08), transparent 50%),
+    radial-gradient(ellipse 60% 60% at 80% 20%, rgba(59, 130, 246, 0.06), transparent 50%),
+    radial-gradient(ellipse 70% 50% at 50% 80%, rgba(52, 211, 153, 0.05), transparent 50%),
+    radial-gradient(ellipse 50% 40% at 70% 60%, rgba(139, 92, 246, 0.04), transparent 50%);
+  background-size: 200% 200%;
+  animation: mesh-shift 20s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-mesh {
+    animation: none;
+    background-size: 100% 100%;
+  }
+}
+
+/* Landing Page: Technical Dot Grid */
+.landing-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* ============================================================================
+   ENTERPRISE DESIGN SYSTEM — Noise, Aura, Glass, Dot-Grid
+   ============================================================================ */
+
+/* Film grain noise texture (apply to page root div) */
+.noise-overlay::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* Pulsing violet aura glow (insert as first child div) */
+.aura-glow {
+  position: fixed;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 500px;
+  background: radial-gradient(ellipse, rgba(139, 92, 246, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  animation: aura-pulse 8s ease-in-out infinite;
+}
+
+@keyframes aura-pulse {
+  0%, 100% { opacity: 0.6; transform: translateX(-50%) scale(1); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.05); }
+}
+
+/* Glass border — subtle inset highlight for cards/containers */
+.glass-border {
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Violet glow on interactive links (legal/vault pages) */
+.link-glow {
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+.link-glow:hover {
+  color: #c4b5fd;
+  text-shadow: 0 0 12px rgba(167, 139, 250, 0.5), 0 0 4px rgba(167, 139, 250, 0.3);
+}
+
+/* ── Platform Hub: pipeline node pulse ── */
+@keyframes pipeline-node-pulse {
+  0%, 100% { opacity: 0.5; }
+  15%, 35% { opacity: 1; }
+}
+
+.platform-node {
+  animation: pipeline-node-pulse 4s ease-in-out infinite;
+}
+
+.platform-node[data-delay="0"] { animation-delay: 0s; }
+.platform-node[data-delay="1"] { animation-delay: 1s; }
+.platform-node[data-delay="2"] { animation-delay: 2s; }
+.platform-node[data-delay="3"] { animation-delay: 3s; }
+
+/* Active glow per node (set --pulse-color via inline style) */
+.platform-node::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  opacity: 0;
+  box-shadow: 0 0 20px var(--pulse-color, rgba(139,92,246,0.3));
+  animation: pipeline-node-pulse 4s ease-in-out infinite;
+  animation-delay: inherit;
+  pointer-events: none;
+}
+
+/* Status dot pulse synced with node */
+.platform-status-dot {
+  animation: pipeline-node-pulse 4s ease-in-out infinite;
+}
+
+/* Status indicator pulse for "executing" nodes */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+  50% { opacity: 0.5; box-shadow: 0 0 6px 2px currentColor; }
+}
+
+.status-pulse {
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+/* Terminal log line fade-in */
+@keyframes terminal-line-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.terminal-line-in {
+  animation: terminal-line-in 0.3s ease-out forwards;
+}
+
+/* Dot-grid for non-landing pages */
+.page-dot-grid::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* ============================================================================
+   LANDING LIGHT MODE — Background Layers for /v1
+   ============================================================================ */
+
+.bg-mesh-light {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(139, 92, 246, 0.04), transparent 50%),
+    radial-gradient(ellipse 60% 60% at 80% 20%, rgba(59, 130, 246, 0.03), transparent 50%),
+    radial-gradient(ellipse 70% 50% at 50% 80%, rgba(52, 211, 153, 0.025), transparent 50%);
+  background-size: 200% 200%;
+  animation: mesh-shift 20s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-mesh-light {
+    animation: none;
+    background-size: 100% 100%;
+  }
+}
+
+.landing-grid-light {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.glass-border-light {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+}
+
+.platform-node-light {
+  animation: pipeline-node-pulse-light 4s ease-in-out infinite;
+}
+
+@keyframes pipeline-node-pulse-light {
+  0%, 100% { opacity: 0.85; }
+  15%, 35% { opacity: 1; }
+}
+
+.platform-node-light::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  opacity: 0;
+  box-shadow: 0 0 12px var(--pulse-color, rgba(139, 92, 246, 0.15));
+  animation: pipeline-node-pulse-light 4s ease-in-out infinite;
+  animation-delay: inherit;
+  pointer-events: none;
+}
+
+.platform-node-light[data-delay="0"] { animation-delay: 0s; }
+.platform-node-light[data-delay="1"] { animation-delay: 1s; }
+.platform-node-light[data-delay="2"] { animation-delay: 2s; }
+.platform-node-light[data-delay="3"] { animation-delay: 3s; }

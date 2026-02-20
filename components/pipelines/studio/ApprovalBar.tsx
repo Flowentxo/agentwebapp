@@ -6,7 +6,7 @@
  * Fixed bottom bar for Human-in-the-Loop approval during pipeline execution.
  * Appears when a HumanApprovalNode is reached and awaiting user decision.
  *
- * Vicy-Style: Deep Black (#050505) + Violet Glow
+ * Vicy-Style: Deep Black (#0f172a) + Violet Glow
  */
 
 import { useState } from 'react';
@@ -109,7 +109,7 @@ export function ApprovalBar({
           <div
             className="relative border-t border-violet-500/30"
             style={{
-              background: '#050505',
+              background: '#0f172a',
               boxShadow: '0 -10px 60px rgba(139, 92, 246, 0.1)',
             }}
           >

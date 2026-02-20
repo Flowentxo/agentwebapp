@@ -6,7 +6,7 @@
  */
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import { getValidToken, hasStoredCredentials } from '@/lib/auth/get-token';
+import { getValidToken, hasStoredCredentials, ensureValidToken, forceLogout } from '@/lib/auth/get-token';
 import type {
   Thread,
   ThreadsResponse,
@@ -63,21 +63,15 @@ const apiClient: AxiosInstance = axios.create({
 
 /**
  * Request interceptor for auth
- * Uses centralized getValidToken() for reliable token retrieval
+ * Uses ensureValidToken() to proactively refresh expired tokens before requests
  */
 apiClient.interceptors.request.use(
-  (config) => {
-    // Get token from localStorage (simplified - only checks 'accessToken')
-    const token = getValidToken();
-
-    // EMERGENCY DEBUG LOG
-    console.log('[INBOX_API] localStorage.accessToken:', token ? `FOUND (${token.substring(0, 8)}...)` : 'MISSING');
+  async (config) => {
+    // Proactively refresh token if expired/near-expiry
+    const token = await ensureValidToken();
 
     if (token && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('[INBOX_API] Authorization header SET');
-    } else if (!token) {
-      console.warn('[INBOX_API] NO TOKEN - request will be unauthorized!');
     }
     return config;
   },
@@ -100,107 +94,10 @@ class ApiError extends Error {
 }
 
 /**
- * Token refresh state to prevent rate limiting
- * - Only allow one refresh attempt every 30 seconds
- * - Track if refresh is in progress to prevent concurrent attempts
- */
-let lastRefreshAttempt = 0;
-let isRefreshing = false;
-let refreshPromise: Promise<string | null> | null = null;
-const REFRESH_COOLDOWN_MS = 30000; // 30 seconds between refresh attempts
-
-/**
- * Check if we have any credentials to even attempt a refresh
- * Uses centralized hasStoredCredentials() function
- */
-function hasRefreshCredentials(): boolean {
-  return hasStoredCredentials();
-}
-
-/**
- * Try to refresh the access token using the refresh token
- * With rate-limiting protection to prevent 429 errors
- *
- * CRITICAL FIX: Now checks if credentials exist before attempting refresh
- * This prevents infinite 401 loops when user is not logged in
- */
-async function tryRefreshToken(): Promise<string | null> {
-  const now = Date.now();
-
-  // CRITICAL: Don't attempt refresh if no credentials exist
-  if (!hasRefreshCredentials()) {
-    return null;
-  }
-
-  // Check cooldown - don't attempt refresh if we just tried
-  if (now - lastRefreshAttempt < REFRESH_COOLDOWN_MS) {
-    return null;
-  }
-
-  // If a refresh is already in progress, wait for it
-  if (isRefreshing && refreshPromise) {
-    return refreshPromise;
-  }
-
-  isRefreshing = true;
-  lastRefreshAttempt = now;
-
-  refreshPromise = (async () => {
-    try {
-      const response = await axios.post(
-        `${API_BASE_URL}/api/auth/refresh`,
-        {},
-        { withCredentials: true }
-      );
-      if (response.data?.ok && response.data?.accessToken) {
-        // Store new token in localStorage
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('accessToken', response.data.accessToken);
-        }
-        return response.data.accessToken;
-      }
-      return null;
-    } catch (error: any) {
-      // If we get 429 Too Many Requests, extend the cooldown
-      if (error.response?.status === 429) {
-        lastRefreshAttempt = now + 60000; // Add extra 60 seconds to cooldown
-      }
-      // If we get 401/403, the refresh token is invalid - notify auth context
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        handleAuthFailure();
-      }
-      return null;
-    } finally {
-      isRefreshing = false;
-      refreshPromise = null;
-    }
-  })();
-
-  return refreshPromise;
-}
-
-/**
- * Handle authentication failure
- * CRITICAL FIX: Instead of clearing tokens, dispatch an event
- * This prevents auth loops when backend is temporarily unavailable
- * The AuthContext should listen for this event and handle re-login if needed
- */
-function handleAuthFailure() {
-  if (typeof window !== 'undefined') {
-    // Dispatch event for AuthContext to handle
-    window.dispatchEvent(new CustomEvent('auth:unauthorized', {
-      detail: { source: 'inbox-service', timestamp: Date.now() }
-    }));
-  }
-}
-
-/**
  * Response interceptor for error handling
- * CRITICAL: Preserves response.status for React Query retry decisions
- * Handles 401 errors with token refresh attempt
- *
- * CRITICAL FIX: Added credential check before attempting refresh
- * to prevent 401 loops when user is not logged in
+ * Token refresh is handled proactively in the request interceptor via ensureValidToken().
+ * This interceptor handles cases where the token becomes invalid mid-flight.
+ * On auth failure, forces redirect to /login to break any loop.
  */
 apiClient.interceptors.response.use(
   (response) => response,
@@ -211,24 +108,18 @@ apiClient.interceptors.response.use(
                     error.message ||
                     'An unexpected error occurred';
 
-    // Handle 401 Unauthorized - try to refresh token ONLY if we have credentials
-    if (status === 401 && error.config && !(error.config as any)._retry) {
-      (error.config as any)._retry = true;
+    // 401/403: Session is dead → force logout and redirect to login
+    if (status === 401 || status === 403) {
+      forceLogout();
+      const apiError = new ApiError(message, status);
+      return Promise.reject(apiError);
+    }
 
-      // Check if we have credentials before attempting refresh
-      if (!hasRefreshCredentials()) {
-        const apiError = new ApiError('Authentication required. Please log in.', 401);
-        return Promise.reject(apiError);
-      }
-
-      const newToken = await tryRefreshToken();
-
-      if (newToken) {
-        error.config.headers.Authorization = `Bearer ${newToken}`;
-        return apiClient.request(error.config);
-      } else {
-        handleAuthFailure();
-      }
+    // 429: Rate limited (likely from refresh loop) → force logout
+    if (status === 429) {
+      forceLogout();
+      const apiError = new ApiError('Too many requests. Please log in again.', status);
+      return Promise.reject(apiError);
     }
 
     // Return ApiError with status preserved for retry logic

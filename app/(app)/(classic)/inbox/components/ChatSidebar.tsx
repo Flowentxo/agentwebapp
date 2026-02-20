@@ -25,21 +25,15 @@ import {
   Archive,
   Trash2,
   MoreHorizontal,
-  Bot,
-  Wifi,
-  WifiOff,
-  Bell,
-  BellOff,
-  Keyboard,
   Check,
   CheckSquare,
   Square,
   X,
   Mail,
-  Tag,
+  PanelLeftClose,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format, isToday, isYesterday, isThisWeek, parseISO } from 'date-fns';
+import { isToday, isYesterday, isThisWeek, parseISO } from 'date-fns';
 import type { Thread } from '@/types/inbox';
 import { getAgentById } from '@/lib/agents/personas';
 import { NewChatModal } from './NewChatModal';
@@ -48,24 +42,20 @@ import { AgentStack } from './AgentStack';
 interface ChatSidebarProps {
   searchInputRef: RefObject<HTMLInputElement>;
   onSelectThread?: () => void;
-  notificationPermission?: 'default' | 'granted' | 'denied';
-  notificationsEnabled?: boolean;
-  onToggleNotifications?: () => void;
-  onRequestNotificationPermission?: () => void;
 }
 
 // Date group helpers
 function getDateGroup(date: Date | string): string {
   const d = typeof date === 'string' ? parseISO(date) : date;
-  if (isToday(d)) return 'Today';
-  if (isYesterday(d)) return 'Yesterday';
-  if (isThisWeek(d)) return 'This Week';
-  return 'Earlier';
+  if (isToday(d)) return 'Heute';
+  if (isYesterday(d)) return 'Gestern';
+  if (isThisWeek(d)) return 'Diese Woche';
+  return 'Früher';
 }
 
 function groupThreadsByDate(threads: Thread[]): Map<string, Thread[]> {
   const groups = new Map<string, Thread[]>();
-  const order = ['Today', 'Yesterday', 'This Week', 'Earlier'];
+  const order = ['Heute', 'Gestern', 'Diese Woche', 'Früher'];
 
   // Initialize groups in order
   order.forEach((group) => groups.set(group, []));
@@ -87,13 +77,23 @@ function groupThreadsByDate(threads: Thread[]): Map<string, Thread[]> {
   return groups;
 }
 
+function formatRelativeTime(date: Date | string): string {
+  const d = typeof date === 'string' ? parseISO(date) : date;
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'jetzt';
+  if (diffMin < 60) return `${diffMin}m`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h`;
+  const diffDays = Math.floor(diffHr / 24);
+  if (diffDays < 7) return `${diffDays}d`;
+  return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+}
+
 export function ChatSidebar({
   searchInputRef,
   onSelectThread,
-  notificationPermission,
-  notificationsEnabled,
-  onToggleNotifications,
-  onRequestNotificationPermission,
 }: ChatSidebarProps) {
   const router = useRouter();
   const params = useParams();
@@ -103,7 +103,7 @@ export function ChatSidebar({
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const { viewMode, setViewMode } = useInboxStore();
+  const { viewMode, setViewMode, toggleSidebar } = useInboxStore();
 
   // Batch selection handlers
   const toggleSelect = (threadId: string) => {
@@ -218,26 +218,17 @@ export function ChatSidebar({
   return (
     <div className="flex flex-col h-full">
       {/* Header - Grok-style ultra minimal */}
-      <div className="flex-shrink-0 px-4 pt-4 pb-3">
+      <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-white/[0.06]">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-medium text-white/50">Chats</h2>
-            {/* Real-time connection status */}
-            <div
-              className={cn(
-                'flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium transition-colors',
-                isConnected
-                  ? 'bg-emerald-500/10 text-emerald-500'
-                  : 'bg-muted text-muted-foreground'
-              )}
-              title={isConnected ? 'Real-time updates active' : 'Connecting...'}
+            <button
+              onClick={toggleSidebar}
+              className="hidden lg:flex p-1 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-all"
+              title="Sidebar schließen"
             >
-              {isConnected ? (
-                <Wifi className="w-2.5 h-2.5" />
-              ) : (
-                <WifiOff className="w-2.5 h-2.5" />
-              )}
-            </div>
+              <PanelLeftClose className="w-4 h-4" />
+            </button>
+            <h2 className="text-sm font-medium text-white/50">Chats</h2>
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -265,14 +256,14 @@ export function ChatSidebar({
 
         {/* Search Input - Ultra minimal */}
         <div className="relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/35 group-focus-within:text-white/60 transition-colors" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40 group-focus-within:text-white/60 transition-colors" />
           <input
             ref={searchInputRef}
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search..."
-            className="w-full pl-9 pr-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white placeholder-white/40 focus:outline-none focus:border-violet-500/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] focus:shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_0_0_1px_rgba(139,92,246,0.1)] transition-all"
+            placeholder="Chats durchsuchen..."
+            className="w-full pl-9 pr-3 py-2 bg-white/[0.05] border border-white/[0.08] rounded-lg text-sm text-white placeholder-white/40 focus:outline-none focus:border-violet-500/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] focus:shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_0_0_1px_rgba(139,92,246,0.1)] transition-all"
           />
           {searchQuery && (
             <button
@@ -285,11 +276,11 @@ export function ChatSidebar({
         </div>
 
         {/* View Mode Toggle - Task Board Tabs */}
-        <div className="flex mt-3 gap-0.5 bg-white/[0.03] rounded-lg p-0.5">
+        <div className="flex mt-3 gap-0.5 bg-white/[0.04] border border-white/[0.06] rounded-lg p-0.5">
           {([
-            { key: 'active' as const, label: 'Active' },
-            { key: 'completed' as const, label: 'Completed' },
-            { key: 'drafts' as const, label: 'Drafts' },
+            { key: 'active' as const, label: 'Aktiv' },
+            { key: 'completed' as const, label: 'Erledigt' },
+            { key: 'drafts' as const, label: 'Entwürfe' },
           ]).map((tab) => (
             <button
               key={tab.key}
@@ -297,8 +288,8 @@ export function ChatSidebar({
               className={cn(
                 'flex-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all',
                 viewMode === tab.key
-                  ? 'bg-white/[0.08] text-white'
-                  : 'text-white/40 hover:text-white/60'
+                  ? 'bg-white/[0.10] text-white shadow-sm'
+                  : 'text-white/35 hover:text-white/60'
               )}
             >
               {tab.label}
@@ -367,19 +358,19 @@ export function ChatSidebar({
             <MessageSquare className="w-8 h-8 text-slate-300 mb-2" />
             <p className="text-muted-foreground text-xs">
               {searchQuery
-                ? 'No matches found'
+                ? 'Keine Treffer'
                 : viewMode === 'completed'
-                ? 'No completed tasks'
+                ? 'Keine erledigten Chats'
                 : viewMode === 'drafts'
-                ? 'No drafts yet'
-                : 'No conversations yet'}
+                ? 'Noch keine Entwürfe'
+                : 'Noch keine Chats'}
             </p>
             {!searchQuery && viewMode === 'active' && (
               <button
                 onClick={handleNewChatClick}
                 className="mt-2 px-3 py-1.5 bg-primary hover:bg-primary/90 text-white text-xs font-medium rounded-lg shadow-sm transition-colors"
               >
-                Start conversation
+                Chat starten
               </button>
             )}
           </div>
@@ -387,8 +378,8 @@ export function ChatSidebar({
           <div className="py-1">
             {Array.from(groupedThreads.entries()).map(([group, groupThreads]) => (
               <div key={group}>
-                {/* Date Group Header - Ultra minimal */}
-                <div className="px-4 py-1.5 text-[10px] font-medium text-white/40 uppercase tracking-wider">
+                {/* Date Group Header */}
+                <div className="px-4 py-1.5 mt-4 first:mt-0 text-[10px] font-medium text-zinc-500 uppercase tracking-widest border-t border-white/5 pt-3">
                   {group}
                 </div>
 
@@ -417,55 +408,12 @@ export function ChatSidebar({
                   disabled={isFetchingNextPage}
                   className="w-full py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  {isFetchingNextPage ? 'Loading...' : 'Load more'}
+                  {isFetchingNextPage ? 'Laden...' : 'Mehr laden'}
                 </button>
               </div>
             )}
           </div>
         )}
-      </div>
-
-      {/* Sidebar Footer - Notifications & Shortcuts */}
-      <div className="flex-shrink-0 border-t border-white/[0.04] px-4 py-2">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          {/* Notification toggle */}
-          <div className="flex items-center gap-1.5">
-            {notificationPermission === 'default' && (
-              <button
-                onClick={() => onRequestNotificationPermission?.()}
-                className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                title="Enable desktop notifications"
-              >
-                <Bell className="w-3.5 h-3.5" />
-                <span className="text-[11px]">Notifications</span>
-              </button>
-            )}
-            {notificationPermission === 'granted' && (
-              <button
-                onClick={() => onToggleNotifications?.()}
-                className={cn(
-                  'flex items-center gap-1.5 px-2 py-1 rounded-lg transition-colors',
-                  notificationsEnabled
-                    ? 'text-emerald-500 hover:bg-emerald-500/10'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                )}
-                title={notificationsEnabled ? 'Notifications enabled' : 'Notifications paused'}
-              >
-                {notificationsEnabled ? (
-                  <Bell className="w-3.5 h-3.5" />
-                ) : (
-                  <BellOff className="w-3.5 h-3.5" />
-                )}
-              </button>
-            )}
-          </div>
-
-          {/* Keyboard shortcut hint */}
-          <span className="flex items-center gap-1.5">
-            <Keyboard className="w-3 h-3" />
-            <kbd className="px-1 py-0.5 bg-muted border border-border rounded font-mono text-[10px]">?</kbd>
-          </span>
-        </div>
       </div>
 
       {/* New Chat Modal with Agent Selection */}
@@ -501,36 +449,24 @@ function ConversationItem({
   onToggleSelect,
 }: ConversationItemProps) {
   const hasUnread = (thread.unreadCount || 0) > 0;
-  const lastMessageTime = thread.updatedAt || thread.createdAt;
-  const formattedTime = lastMessageTime
-    ? isToday(parseISO(lastMessageTime))
-      ? format(parseISO(lastMessageTime), 'HH:mm')
-      : format(parseISO(lastMessageTime), 'MMM d')
-    : '';
 
   // Get agent color for avatar
   const agent = getAgentById(thread.agentId);
   const agentColor = agent?.color || '#6b7280';
   const involvedAgents = thread.metadata?.involvedAgents;
 
-  // Status dot color
-  const statusColor =
-    thread.status === 'active' ? 'bg-emerald-400' :
-    thread.status === 'suspended' ? 'bg-amber-400' :
-    'bg-zinc-600';
-
   return (
     <div
       className={cn(
-        'group relative mx-2 mb-0.5 rounded-xl transition-all cursor-pointer',
+        'group relative mx-2 rounded-xl border-b border-white/[0.04] transition-all cursor-pointer',
         isSelected && isSelectMode
-          ? 'bg-violet-500/[0.06] border-l-2 border-l-violet-500/50'
+          ? 'bg-violet-500/[0.06] border-l-[3px] border-l-violet-500/50'
           : isActive
-          ? 'bg-violet-500/[0.08] border-l-2 border-l-violet-500'
-          : 'hover:bg-white/[0.03] border-l-2 border-l-transparent'
+          ? 'bg-violet-500/[0.10] border-l-[3px] border-l-violet-500'
+          : 'hover:bg-white/[0.04] border-l-[3px] border-l-transparent'
       )}
     >
-      <div className="flex items-center gap-2.5 px-3 py-2" onClick={onSelect}>
+      <div className="flex items-center gap-2.5 px-3 py-3" onClick={onSelect}>
         {/* Select Mode Checkbox */}
         {isSelectMode && (
           <button
@@ -542,7 +478,7 @@ function ConversationItem({
           </button>
         )}
 
-        {/* Agent Avatar with color */}
+        {/* Agent Avatar */}
         <div className="relative flex-shrink-0">
           {involvedAgents && involvedAgents.length > 1 ? (
             <AgentStack agents={involvedAgents} max={3} size="sm" />
@@ -556,66 +492,57 @@ function ConversationItem({
               </span>
             </div>
           )}
-          {/* Status dot */}
-          <div className={cn('absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-[#050505]', statusColor)} />
+          {/* Online status dot */}
+          <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#0a0f1a]" />
         </div>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-1">
+        {/* Title + timestamp */}
+        {(() => {
+          const raw = thread.subject || thread.preview?.slice(0, 45) || '';
+          const cleaned = raw.trim();
+          let title: string;
+          if (!cleaned || /^(hey|hi|hallo|hello|yo|test|new chat|hej|moin|neues gespraech|unbenanntes projekt)$/i.test(cleaned)) {
+            const preview = thread.preview?.trim();
+            if (preview && preview.length > 5) {
+              const words = preview.split(/\s+/);
+              title = words.slice(0, 4).join(' ') + (words.length > 4 ? '...' : '');
+            } else {
+              title = 'Unbenanntes Projekt';
+            }
+          } else {
+            title = cleaned;
+          }
+          const isUntitled = title === 'Unbenanntes Projekt';
+          return (
             <h3
               className={cn(
-                'text-sm truncate',
-                hasUnread ? 'font-medium text-white' : 'text-white/50'
+                'flex-1 min-w-0 text-sm truncate',
+                isActive
+                  ? 'font-semibold text-white'
+                  : isUntitled
+                    ? 'font-normal text-zinc-500 italic'
+                    : 'font-medium text-zinc-300'
               )}
             >
-              {thread.subject || 'New Conversation'}
+              {title}
             </h3>
-            <span className="text-[10px] text-white/40 flex-shrink-0">{formattedTime}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-medium truncate" style={{ color: agentColor }}>
-              {thread.agentName || 'AI Assistant'}
-            </span>
-            <span className="text-white/25">·</span>
-            <p className="text-xs text-white/40 truncate flex-1">
-              {thread.preview || 'No messages yet'}
-            </p>
-          </div>
-          {/* Workflow progress bar */}
-          {thread.metadata?.workflowProgress && (
-            <div className="mt-1 flex items-center gap-2">
-              <div className="flex-1 h-1 bg-white/[0.06] rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-500 progress-active"
-                  style={{
-                    width: `${(thread.metadata.workflowProgress.current / thread.metadata.workflowProgress.total) * 100}%`,
-                    backgroundColor: agentColor,
-                  }}
-                />
-              </div>
-              <span className="text-[9px] text-white/30">
-                {thread.metadata.workflowProgress.current}/{thread.metadata.workflowProgress.total}
-              </span>
-            </div>
-          )}
-        </div>
+          );
+        })()}
 
-        {/* Unread indicator */}
-        {hasUnread && (
-          <div className="flex-shrink-0 w-2 h-2 rounded-full bg-violet-500" />
-        )}
+        {/* Timestamp removed for cleaner look */}
+
+        {/* Unread indicator removed for cleaner look */}
       </div>
 
-      {/* Context Menu with Portal - fixes clipping issue */}
+      {/* Context Menu */}
       <DropdownMenu.Root>
         <DropdownMenu.Trigger asChild>
           <button
             onClick={(e) => e.stopPropagation()}
             className={cn(
-              'absolute top-2.5 right-2.5 p-1 rounded-lg transition-opacity',
+              'absolute top-3 right-2.5 p-1 rounded-lg transition-opacity',
               'text-muted-foreground hover:text-foreground hover:bg-muted',
-              'opacity-40 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100',
+              'opacity-0 sm:group-hover:opacity-100 focus:opacity-100',
               'focus:outline-none focus:ring-2 focus:ring-primary/20'
             )}
           >
@@ -646,7 +573,7 @@ function ConversationItem({
               )}
             >
               <Archive className="w-3.5 h-3.5" />
-              Archive
+              Archivieren
             </DropdownMenu.Item>
             <DropdownMenu.Item
               onClick={(e) => {
@@ -660,7 +587,7 @@ function ConversationItem({
               )}
             >
               <Trash2 className="w-3.5 h-3.5" />
-              Delete
+              Löschen
             </DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>

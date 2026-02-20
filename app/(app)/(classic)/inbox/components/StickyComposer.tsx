@@ -31,7 +31,7 @@ interface StickyComposerProps {
 export function StickyComposer({
   onSend,
   isLoading = false,
-  placeholder = 'Type a message...',
+  placeholder = 'Beschreibe deine Aufgabe...',
   disabled = false,
   maxLength = 4000,
   showAttachments = false,
@@ -125,115 +125,111 @@ export function StickyComposer({
   };
 
   return (
-    <div className="flex-shrink-0 border-t border-white/[0.06] bg-[#0a0a0a]/95 backdrop-blur-sm p-4 relative">
-      {/* @-Mention Dropdown */}
-      {showMentions && filteredAgents.length > 0 && (
-        <div className="absolute bottom-full left-4 right-4 mb-2 max-h-48 overflow-y-auto bg-[#111] border border-white/[0.08] rounded-xl shadow-lg backdrop-blur-xl z-50 animate-mention-dropdown">
-          {filteredAgents.map((agent, index) => (
+    <div
+      className="absolute bottom-0 left-0 right-0 px-4 pb-8 pt-3 pointer-events-none z-30"
+      style={{ background: 'linear-gradient(to top, rgba(3,7,18,0.95) 60%, transparent)' }}
+    >
+      <div className="pointer-events-auto relative">
+        {/* @-Mention Dropdown */}
+        {showMentions && filteredAgents.length > 0 && (
+          <div className="absolute bottom-full left-0 right-0 mb-2 mx-auto max-w-2xl max-h-48 overflow-y-auto bg-[#171717] border border-white/[0.08] rounded-xl shadow-lg backdrop-blur-xl z-50 animate-mention-dropdown">
+            {filteredAgents.map((agent, index) => (
+              <button
+                key={agent.id}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleMentionSelect(agent.name);
+                }}
+                className={cn(
+                  'w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors',
+                  index === selectedMentionIndex
+                    ? 'bg-violet-500/[0.08]'
+                    : 'hover:bg-white/[0.04]'
+                )}
+              >
+                <div
+                  className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
+                  style={{ backgroundColor: agent.color }}
+                >
+                  {agent.name.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="font-medium text-white">{agent.name}</span>
+                  <span className="ml-1.5 text-xs text-white/40">{agent.role}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Floating Capsule Input */}
+        <div
+          className={cn(
+            'mx-auto max-w-2xl flex items-end gap-3 p-2 pl-4 bg-white/[0.08] backdrop-blur-xl rounded-full border border-white/[0.10] shadow-2xl shadow-black/40',
+            'focus-within:border-violet-500/30 focus-within:ring-1 focus-within:ring-violet-500/10',
+            'transition-all duration-200',
+            disabled && 'opacity-50'
+          )}
+        >
+          {/* Attachment Button (optional) */}
+          {showAttachments && (
             <button
-              key={agent.id}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                handleMentionSelect(agent.name);
-              }}
+              className="flex-shrink-0 p-2 text-white/40 hover:text-white/60 transition-colors rounded-lg hover:bg-white/[0.06]"
+              title="Datei anhängen"
+              disabled={disabled}
+            >
+              <Paperclip className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* Textarea */}
+          <TextareaAutosize
+            ref={textareaRef}
+            value={message}
+            onChange={(e) => handleChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            disabled={disabled || isLoading}
+            minRows={1}
+            maxRows={3}
+            className={cn(
+              'flex-1 resize-none bg-transparent text-sm text-white',
+              'placeholder-white/40 focus:outline-none',
+              'scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent'
+            )}
+          />
+
+          {/* Character count (when close to limit) */}
+          {message.length > maxLength * 0.8 && (
+            <span
               className={cn(
-                'w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors',
-                index === selectedMentionIndex
-                  ? 'bg-violet-500/[0.08]'
-                  : 'hover:bg-white/[0.04]'
+                'flex-shrink-0 text-xs',
+                message.length >= maxLength ? 'text-red-500' : 'text-white/40'
               )}
             >
-              <div
-                className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
-                style={{ backgroundColor: agent.color }}
-              >
-                {agent.name.charAt(0)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="font-medium text-white">{agent.name}</span>
-                <span className="ml-1.5 text-xs text-white/40">{agent.role}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
+              {message.length}/{maxLength}
+            </span>
+          )}
 
-      <div
-        className={cn(
-          'flex items-end gap-3 p-3 bg-white/[0.03] rounded-2xl border border-white/[0.08]',
-          'focus-within:border-violet-500/30 focus-within:ring-1 focus-within:ring-violet-500/10',
-          'transition-all duration-200',
-          disabled && 'opacity-50'
-        )}
-      >
-        {/* Attachment Button (optional) */}
-        {showAttachments && (
+          {/* Send Button */}
           <button
-            className="flex-shrink-0 p-2 text-white/40 hover:text-white/60 transition-colors rounded-lg hover:bg-white/[0.06]"
-            title="Attach file"
-            disabled={disabled}
-          >
-            <Paperclip className="w-5 h-5" />
-          </button>
-        )}
-
-        {/* Textarea */}
-        <TextareaAutosize
-          ref={textareaRef}
-          value={message}
-          onChange={(e) => handleChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={disabled || isLoading}
-          minRows={1}
-          maxRows={5}
-          className={cn(
-            'flex-1 resize-none bg-transparent text-sm text-white',
-            'placeholder-white/40 focus:outline-none',
-            'scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent'
-          )}
-        />
-
-        {/* Character count (when close to limit) */}
-        {message.length > maxLength * 0.8 && (
-          <span
+            onClick={handleSend}
+            disabled={!canSend}
             className={cn(
-              'flex-shrink-0 text-xs',
-              message.length >= maxLength ? 'text-red-500' : 'text-white/40'
+              'flex-shrink-0 p-2.5 rounded-full transition-all duration-200',
+              canSend
+                ? 'bg-violet-500 hover:bg-violet-400 text-white shadow-sm shadow-violet-500/25'
+                : 'bg-white/[0.06] text-white/20 cursor-not-allowed'
             )}
+            title={canSend ? 'Nachricht senden' : 'Nachricht eingeben'}
           >
-            {message.length}/{maxLength}
-          </span>
-        )}
-
-        {/* Send Button */}
-        <button
-          onClick={handleSend}
-          disabled={!canSend}
-          className={cn(
-            'flex-shrink-0 p-2.5 rounded-xl transition-all duration-200',
-            canSend
-              ? 'bg-violet-500 hover:bg-violet-400 text-white shadow-sm shadow-violet-500/25'
-              : 'bg-white/[0.06] text-white/20 cursor-not-allowed'
-          )}
-          title={canSend ? 'Send message' : 'Type a message to send'}
-        >
-          {isLoading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <Send className="w-5 h-5" />
-          )}
-        </button>
-      </div>
-
-      {/* Hint */}
-      <div className="flex items-center justify-center gap-4 mt-2 text-xs text-white/50">
-        <span>
-          <kbd className="px-1.5 py-0.5 bg-white/[0.06] border border-white/[0.08] rounded text-white/60">Enter</kbd> to send
-        </span>
-        <span>
-          <kbd className="px-1.5 py-0.5 bg-white/[0.06] border border-white/[0.08] rounded text-white/60">@</kbd> to mention agent
-        </span>
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

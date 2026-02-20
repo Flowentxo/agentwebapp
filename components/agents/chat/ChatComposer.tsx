@@ -139,15 +139,15 @@ export function ChatComposer({
   }[mode];
 
   return (
-    <div className="space-y-3 border-t border-white/6 bg-surface-1 p-4">
+    <div className="space-y-3 px-6 pb-5 pt-3">
       {/* Quick Prompts */}
       {quickPrompts.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="mx-auto max-w-3xl flex flex-wrap gap-2">
           {quickPrompts.map((prompt) => (
             <button
               key={prompt.id}
               onClick={() => selectQuickPrompt(prompt)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-card/5 px-3 py-1.5 text-xs font-medium text-text transition-colors hover:bg-card/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-white/50 transition-colors hover:bg-white/[0.06] hover:text-white/70 focus-visible:outline-none"
             >
               {prompt.icon && <span>{prompt.icon}</span>}
               {prompt.label}
@@ -158,7 +158,7 @@ export function ChatComposer({
 
       {/* Slash Commands Dropdown */}
       {showSlashCommands && filteredCommands.length > 0 && (
-        <div className="rounded-lg border border-white/10 bg-surface-2 shadow-lg">
+        <div className="mx-auto max-w-3xl rounded-xl border border-white/[0.08] bg-[#171717] shadow-lg backdrop-blur-xl">
           <div className="max-h-60 overflow-y-auto p-1">
             {filteredCommands.map((command, index) => {
               const isSelected = index === selectedCommandIndex;
@@ -168,18 +168,18 @@ export function ChatComposer({
                   key={command.command}
                   onClick={() => selectSlashCommand(command)}
                   className={`
-                    flex w-full items-start gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors
+                    flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors
                     ${
                       isSelected
-                        ? 'bg-card/10 text-text'
-                        : 'text-text-muted hover:bg-card/5 hover:text-text'
+                        ? 'bg-white/[0.06] text-white'
+                        : 'text-white/50 hover:bg-white/[0.04] hover:text-white/70'
                     }
                   `}
                 >
                   <Terminal className="mt-0.5 h-4 w-4 flex-shrink-0" />
                   <div className="min-w-0 flex-1">
                     <div className="font-medium">/{command.command}</div>
-                    <div className="text-xs text-text-subtle">
+                    <div className="text-xs text-white/30">
                       {command.description}
                     </div>
                   </div>
@@ -192,8 +192,8 @@ export function ChatComposer({
 
       {/* Agent Selector Row */}
       {showAgentSelector && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-text-subtle">Agent:</span>
+        <div className="mx-auto max-w-3xl flex items-center gap-2">
+          <span className="text-xs text-white/30">Agent:</span>
           <AgentSelector
             selectedAgentId={currentAgentId}
             onSelectAgent={handleAgentChange}
@@ -202,8 +202,14 @@ export function ChatComposer({
         </div>
       )}
 
-      {/* Composer */}
-      <div className="flex items-end gap-2">
+      {/* Composer Capsule */}
+      <div
+        className="mx-auto max-w-3xl flex items-end gap-2 rounded-2xl p-3 px-4 transition-all border border-white/[0.08] focus-within:border-violet-500/30 focus-within:ring-1 focus-within:ring-violet-500/10"
+        style={{
+          background: 'rgba(255, 255, 255, 0.03)',
+          backdropFilter: 'blur(40px)',
+        }}
+      >
         {/* Mode Switcher */}
         <div className="flex flex-col gap-1">
           {modes.map(({ value, label, icon: Icon }) => {
@@ -216,12 +222,12 @@ export function ChatComposer({
                 aria-label={`Modus: ${label}`}
                 aria-pressed={isActive}
                 className={`
-                  rounded-lg border p-2 transition-colors
-                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+                  rounded-lg p-1.5 transition-colors
+                  focus-visible:outline-none
                   ${
                     isActive
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-white/10 bg-card/5 text-text-muted hover:bg-card/10 hover:text-text'
+                      ? 'bg-violet-500/20 text-violet-400'
+                      : 'text-white/20 hover:bg-white/[0.06] hover:text-white/50'
                   }
                 `}
                 title={label}
@@ -232,7 +238,7 @@ export function ChatComposer({
           })}
         </div>
 
-        {/* Input with toolbar */}
+        {/* Input area */}
         <div className="relative flex-1">
           <textarea
             ref={textareaRef}
@@ -242,56 +248,59 @@ export function ChatComposer({
             placeholder={placeholderText}
             rows={1}
             disabled={isLoading}
-            className="w-full resize-none rounded-lg border border-white/10 bg-card/5 px-4 py-3 pb-10 text-sm text-text placeholder:text-text-subtle focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-            style={{ minHeight: '48px', maxHeight: '200px' }}
+            className="w-full resize-none bg-transparent px-3 py-2.5 text-sm text-white/90 placeholder:text-white/15 focus:outline-none disabled:opacity-50"
+            style={{ minHeight: '40px', maxHeight: '160px' }}
           />
-
-          {/* Toolbar at bottom of textarea */}
-          <div className="absolute bottom-2 left-2 flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => {/* TODO: Implement attachment */}}
-              aria-label="Anhang hinzufügen"
-              title="Anhang hinzufügen"
-              className="rounded p-1.5 text-text-subtle transition-colors hover:bg-card/10 hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <Paperclip className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => {/* TODO: Implement data source picker */}}
-              aria-label="Datenquelle wählen"
-              title="Datenquelle wählen"
-              className="rounded p-1.5 text-text-subtle transition-colors hover:bg-card/10 hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <Database className="h-4 w-4" />
-            </button>
-          </div>
         </div>
+
+        {/* Toolbar buttons */}
+        <button
+          type="button"
+          onClick={() => {/* TODO: Implement attachment */}}
+          aria-label="Anhang hinzufügen"
+          title="Anhang hinzufügen"
+          className="p-2 rounded-lg text-white/20 hover:text-white/50 hover:bg-white/[0.04] transition-colors"
+        >
+          <Paperclip className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => {/* TODO: Implement data source picker */}}
+          aria-label="Datenquelle wählen"
+          title="Datenquelle wählen"
+          className="p-2 rounded-lg text-white/20 hover:text-white/50 hover:bg-white/[0.04] transition-colors"
+        >
+          <Database className="h-4 w-4" />
+        </button>
 
         {/* Send Button */}
         <button
           onClick={handleSend}
           disabled={!message.trim() || isLoading}
           aria-label="Nachricht senden"
-          className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-violet-500 text-white transition-all hover:bg-violet-400 focus-visible:outline-none disabled:opacity-30 disabled:cursor-not-allowed"
+          style={{
+            boxShadow: (!message.trim() || isLoading)
+              ? 'none'
+              : '0 0 16px rgba(139, 92, 246, 0.3)',
+          }}
         >
           {isLoading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Send className="h-5 w-5" />
+            <Send className="h-4 w-4" />
           )}
         </button>
       </div>
 
       {/* Helper Text */}
-      <div className="flex items-center justify-between text-xs text-text-subtle">
+      <div className="mx-auto max-w-3xl flex items-center justify-between text-[10px] text-white/20 px-1">
         <span>
-          <kbd className="inline-flex h-5 items-center rounded border border-white/10 bg-card/5 px-1.5 font-mono">
+          <kbd className="inline-flex h-4 items-center rounded border border-white/[0.08] bg-white/[0.03] px-1 font-mono text-[10px]">
             Enter
           </kbd>{' '}
           senden ·{' '}
-          <kbd className="inline-flex h-5 items-center rounded border border-white/10 bg-card/5 px-1.5 font-mono">
+          <kbd className="inline-flex h-4 items-center rounded border border-white/[0.08] bg-white/[0.03] px-1 font-mono text-[10px]">
             Shift+Enter
           </kbd>{' '}
           neue Zeile

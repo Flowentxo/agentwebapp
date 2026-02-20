@@ -38,7 +38,9 @@ import {
   BellOff,
   Languages,
   AlarmClock,
-  Archive
+  Archive,
+  Shield,
+  Workflow
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAgentById, AgentPersona } from '@/lib/agents/personas';
@@ -188,134 +190,201 @@ interface ChatSession {
 // MISSION CONTROL: Per-agent titles & specialty icons
 // =====================================================
 const agentMissionTitles: Record<string, string> = {
-  dexter: 'Ready for Analysis',
-  cassie: 'How Can I Help?',
-  emmie: 'Inbox Command Center',
-  kai: "Let's Build Something",
-  lex: 'Legal Intelligence Ready',
-  finn: 'Financial Core Online',
-  nova: 'Research Mode Active',
-  aura: 'Brand Strategy Hub',
-  vince: 'Production Studio Ready',
-  milo: 'Motion Lab Active',
-  ari: 'Automation Engine Online',
-  vera: 'Security Scan Ready',
-  echo: 'Audio Lab Online',
-  omni: 'Orchestrator Online',
-  buddy: 'Financial Intel Active',
-  default: 'Ready to Assist',
+  dexter: 'Bereit für deine Analyse',
+  cassie: 'Wie kann ich helfen?',
+  emmie: 'Dein E-Mail-Assistent',
+  kai: 'Lass uns etwas bauen',
+  lex: 'Dein Rechtsberater',
+  finn: 'Dein Finanzexperte',
+  nova: 'Bereit für Recherche',
+  aura: 'Deine Markenstrategie',
+  vince: 'Dein Produktionsstudio',
+  milo: 'Dein Motion-Design Studio',
+  ari: 'Dein Automatisierungs-Experte',
+  vera: 'Dein Sicherheitsberater',
+  echo: 'Dein Audio-Experte',
+  omni: 'Dein Team-Koordinator',
+  buddy: 'Dein Budget-Berater',
+  default: 'Bereit, dir zu helfen',
 };
 
 const specialtyIcons: Record<string, typeof Search> = {
-  'ROI Calculator': Zap,
-  'Financial Analysis': Database,
-  'Sales Forecasting': ChevronRight,
-  'Ticket Management': MessageSquare,
-  'FAQ Generation': FileText,
-  'Issue Resolution': CheckCircle,
-  'Email Draft': Mail,
-  'Email Automation': Mail,
-  'Campaign Planning': Globe,
-  'Campaign Management': Globe,
-  'Template Creation': FileText,
-  'Follow-Up Sequences': CalendarClock,
-  'Code Generation': Zap,
-  'Code Review': Eye,
-  'Bug Fixing': AlertCircle,
-  'Architecture Design': Database,
-  'Contract Review': FileText,
-  'Compliance Check': CheckCircle,
-  'Risk Assessment': AlertCircle,
-  'Legal Research': Search,
-  'Budget Planning': Database,
-  'Investment Analysis': ChevronRight,
-  'Tax Strategy': FileText,
-  'Market Research': Search,
-  'Trend Analysis': Eye,
-  'Competitive Intelligence': Brain,
-  'Data Synthesis': Database,
-  'Brand Strategy': Sparkles,
-  'Content Creation': Edit3,
-  'Social Media': Globe,
-  'Visual Identity': Eye,
-  'Video Production': Eye,
+  // Dexter
+  'ROI-Rechner': Zap,
+  'Finanzanalyse': Database,
+  'Umsatzprognose': ChevronRight,
+  // Cassie
+  'Ticket-Verwaltung': MessageSquare,
+  'FAQ-Erstellung': FileText,
+  'Problemlösung': CheckCircle,
+  'Kundenfeedback': MessageSquare,
+  // Emmie
+  'E-Mail-Automatisierung': Mail,
+  'Kampagnen-Management': Globe,
+  'Vorlagen-Erstellung': FileText,
+  'Follow-ups': CalendarClock,
+  // Aura
+  'Markenidentität': Sparkles,
+  'Positionierung': Eye,
+  'Markenbotschaft': Edit3,
+  'Wettbewerbsanalyse': Brain,
+  // Kai
+  'Code-Erstellung': Zap,
+  'Debugging': AlertCircle,
+  'Code-Review': Eye,
+  'Technische Doku': FileText,
+  // Lex
+  'Vertragsanalyse': FileText,
+  'Compliance': CheckCircle,
+  'Rechtsrecherche': Search,
+  'Dokumentenerstellung': FileText,
+  // Finn
+  'Budgetplanung': Database,
+  'Investment-Analyse': ChevronRight,
+  'Finanzprognose': ChevronRight,
+  'Kostenoptimierung': Zap,
+  // Nova
+  'Marktforschung': Search,
+  'Trendanalyse': Eye,
+  'Wettbewerbs-Intelligence': Brain,
+  'Strategische Insights': Database,
+  // Vince
+  'Video-Konzeption': Eye,
   'Storyboarding': FileText,
-  'Workflow Design': Zap,
-  'Process Automation': Zap,
-  'Security Audit': AlertCircle,
-  'Threat Detection': Eye,
-  'Audio Production': Zap,
-  'Task Delegation': MessageSquarePlus,
-  'Multi-Agent Coordination': Brain,
+  'Produktionsplanung': CalendarClock,
+  'Content-Strategie': Globe,
+  // Milo
+  'Logo-Animation': Sparkles,
+  'Motion Graphics': Eye,
+  'Übergänge': Zap,
+  'Visuelle Effekte': Eye,
+  // Ari
+  'Smarte Workflows': Zap,
+  'KI-Integration': Brain,
+  'Prozess-Optimierung': Zap,
+  'Automatische Aktionen': Zap,
+  // Vera
+  'Sicherheits-Audits': AlertCircle,
+  'Risikobewertung': AlertCircle,
+  'Compliance-Prüfung': CheckCircle,
+  'Datenschutz': Shield,
+  // Echo
+  'Transkription': FileText,
+  'Audio-Analyse': Eye,
+  'Podcast-Produktion': Zap,
+  'Voice-Content': MessageSquare,
+  // Omni
+  'Team-Koordination': Brain,
+  'Komplexe Aufgaben': Zap,
+  'Mehrstufige Workflows': Workflow,
+  'Aufgaben-Verteilung': MessageSquarePlus,
+  // Buddy
+  'Budget-Überwachung': Database,
+  'Nutzungsanalyse': Eye,
+  'Proaktive Warnungen': AlertCircle,
+  'Limit-Verwaltung': CheckCircle,
+  // Property Sentinel (already German)
+  'Portal-Überwachung': Search,
+  'Rendite-Analyse': ChevronRight,
+  'Deal-Scoring': Zap,
+  'Pipeline-Integration': Workflow,
   'default': Sparkles,
 };
 
-// Specialty descriptions for welcome cards
+// Specialty descriptions for welcome cards (German)
 const specialtyDescriptions: Record<string, string> = {
-  'ROI Calculator': 'Calculate return on investment for any business scenario with detailed breakdowns',
-  'Financial Analysis': 'Deep-dive into financial statements, margins, and performance metrics',
-  'Sales Forecasting': 'Predict future revenue trends based on historical data and market signals',
-  'Ticket Management': 'Track, prioritize and resolve customer support tickets efficiently',
-  'FAQ Generation': 'Auto-generate comprehensive FAQ documents from your knowledge base',
-  'Issue Resolution': 'Diagnose and resolve complex customer issues step by step',
-  'Customer Feedback': 'Analyze and act on customer feedback to improve satisfaction',
-  'Email Automation': 'Set up automated email sequences and drip campaigns',
-  'Campaign Management': 'Plan, execute and monitor multi-channel email campaigns',
-  'Template Creation': 'Design reusable, professional email templates for every occasion',
-  'Follow-ups': 'Never miss a follow-up with smart scheduling and reminders',
-  'Brand Identity': 'Define and refine your brand identity and visual language',
-  'Positioning': 'Craft compelling market positioning and value propositions',
-  'Messaging': 'Develop consistent, impactful brand messaging frameworks',
-  'Competitor Analysis': 'Analyze competitors\' strategies, strengths and weaknesses',
-  'Code Generation': 'Generate clean, production-ready code in any programming language',
-  'Debugging': 'Find and fix bugs with systematic debugging strategies',
-  'Code Review': 'Get thorough code reviews with actionable improvement suggestions',
-  'Technical Documentation': 'Create clear, well-structured technical documentation',
-  'Contract Analysis': 'Review contracts for risks, obligations and key terms',
-  'Compliance': 'Ensure regulatory compliance with up-to-date guidance',
-  'Legal Research': 'Research case law, statutes and legal precedents',
-  'Document Drafting': 'Draft legal documents with precise, enforceable language',
-  'Budget Planning': 'Create detailed budgets with variance tracking and alerts',
-  'Investment Analysis': 'Evaluate investment opportunities with risk-adjusted returns',
-  'Financial Forecasting': 'Build sophisticated financial models and projections',
-  'Cost Optimization': 'Identify cost savings and efficiency improvements',
-  'Market Research': 'Research market dynamics, sizing and growth opportunities',
-  'Trend Analysis': 'Identify emerging trends and their business implications',
-  'Competitive Intelligence': 'Monitor competitive landscape and strategic moves',
-  'Strategic Insights': 'Deliver data-driven strategic recommendations',
-  'Video Konzeption': 'Develop creative video concepts from brief to final vision',
-  'Storyboarding': 'Create visual storyboards for video and motion projects',
-  'Production Planning': 'Plan production schedules, resources and deliverables',
-  'Content Strategy': 'Design content strategies aligned with business goals',
-  'Logo Animation': 'Bring logos to life with professional motion design',
-  'Motion Graphics': 'Create eye-catching animated graphics and visual effects',
-  'Transitions': 'Design smooth, creative transitions for video projects',
-  'Visual Effects': 'Add stunning visual effects to elevate your content',
-  'Workflow Automation': 'Build intelligent automated workflows to save time',
-  'AI Integration': 'Integrate AI capabilities into your business processes',
-  'Process Optimization': 'Streamline and optimize business processes end-to-end',
-  'Trigger Design': 'Design event-driven triggers for automated actions',
-  'Security Audits': 'Comprehensive security assessments of systems and processes',
-  'Risk Assessment': 'Identify, evaluate and mitigate business and technical risks',
-  'Compliance Checks': 'Verify adherence to regulatory and policy requirements',
-  'Data Privacy': 'Ensure data privacy compliance and best practices',
-  'Transcription': 'Convert audio and video content to accurate text transcripts',
-  'Audio Analysis': 'Analyze audio content for insights, sentiment and quality',
-  'Podcast Production': 'Plan, produce and optimize podcast content',
-  'Voice Content': 'Create and manage voice-based content and interactions',
-  'Agent Coordination': 'Orchestrate multiple AI agents for complex tasks',
-  'Complex Tasks': 'Break down and solve multi-step problems efficiently',
-  'Multi-Step Workflows': 'Design and execute complex multi-step workflows',
-  'Task Delegation': 'Intelligently delegate tasks to the right specialist agents',
-  'Budget Monitoring': 'Track AI spending in real-time across all services',
-  'Usage Analytics': 'Analyze usage patterns and optimize resource allocation',
-  'Proactive Alerts': 'Get notified before hitting budget limits or anomalies',
-  'Limit Management': 'Set and manage spending limits across teams and projects',
+  // Dexter
+  'ROI-Rechner': 'Berechne den Return on Investment für jedes Szenario mit detaillierten Aufschlüsselungen',
+  'Finanzanalyse': 'Tiefgehende Analyse von Finanzberichten, Margen und Leistungskennzahlen',
+  'Umsatzprognose': 'Prognostiziere zukünftige Umsatztrends basierend auf historischen Daten',
+  // Cassie
+  'Ticket-Verwaltung': 'Support-Tickets effizient verwalten, priorisieren und lösen',
+  'FAQ-Erstellung': 'Umfassende FAQ-Dokumente automatisch aus deiner Wissensbasis generieren',
+  'Problemlösung': 'Komplexe Kundenprobleme Schritt für Schritt diagnostizieren und lösen',
+  'Kundenfeedback': 'Kundenfeedback analysieren und gezielt die Zufriedenheit verbessern',
+  // Emmie
+  'E-Mail-Automatisierung': 'Automatisierte E-Mail-Sequenzen und Drip-Kampagnen einrichten',
+  'Kampagnen-Management': 'Multi-Channel-E-Mail-Kampagnen planen, durchführen und überwachen',
+  'Vorlagen-Erstellung': 'Professionelle, wiederverwendbare E-Mail-Vorlagen für jeden Anlass',
+  'Follow-ups': 'Kein Follow-up mehr verpassen dank smartem Scheduling und Erinnerungen',
+  // Aura
+  'Markenidentität': 'Deine Markenidentität und visuelle Sprache definieren und verfeinern',
+  'Positionierung': 'Überzeugende Marktpositionierung und Wertversprechen entwickeln',
+  'Markenbotschaft': 'Konsistente, wirkungsvolle Markenbotschaften erarbeiten',
+  'Wettbewerbsanalyse': 'Strategien, Stärken und Schwächen der Konkurrenz analysieren',
+  // Kai
+  'Code-Erstellung': 'Sauberen, produktionsreifen Code in jeder Programmiersprache erstellen',
+  'Debugging': 'Bugs systematisch finden und beheben',
+  'Code-Review': 'Gründliche Code-Reviews mit umsetzbaren Verbesserungsvorschlägen',
+  'Technische Doku': 'Klare, gut strukturierte technische Dokumentation erstellen',
+  // Lex
+  'Vertragsanalyse': 'Verträge auf Risiken, Pflichten und wichtige Klauseln prüfen',
+  'Compliance': 'Regulatorische Konformität mit aktuellen Richtlinien sicherstellen',
+  'Rechtsrecherche': 'Rechtsprechung, Gesetze und Präzedenzfälle recherchieren',
+  'Dokumentenerstellung': 'Rechtsdokumente mit präziser, durchsetzbarer Sprache erstellen',
+  // Finn
+  'Budgetplanung': 'Detaillierte Budgets mit Abweichungsüberwachung und Warnungen erstellen',
+  'Investment-Analyse': 'Investitionsmöglichkeiten mit risikobereinigten Renditen bewerten',
+  'Finanzprognose': 'Anspruchsvolle Finanzmodelle und Prognosen erstellen',
+  'Kostenoptimierung': 'Einsparpotenziale und Effizienzsteigerungen identifizieren',
+  // Nova
+  'Marktforschung': 'Marktdynamik, Marktgröße und Wachstumschancen recherchieren',
+  'Trendanalyse': 'Aufkommende Trends und ihre geschäftlichen Auswirkungen erkennen',
+  'Wettbewerbs-Intelligence': 'Wettbewerbslandschaft und strategische Bewegungen beobachten',
+  'Strategische Insights': 'Datengestützte strategische Empfehlungen liefern',
+  // Vince
+  'Video-Konzeption': 'Kreative Videokonzepte vom Briefing bis zur finalen Vision entwickeln',
+  'Storyboarding': 'Visuelle Storyboards für Video- und Motion-Projekte erstellen',
+  'Produktionsplanung': 'Produktionszeitpläne, Ressourcen und Meilensteine planen',
+  'Content-Strategie': 'Content-Strategien passend zu deinen Geschäftszielen designen',
+  // Milo
+  'Logo-Animation': 'Logos mit professionellem Motion Design zum Leben erwecken',
+  'Motion Graphics': 'Aufmerksamkeitsstarke animierte Grafiken und visuelle Effekte erstellen',
+  'Übergänge': 'Geschmeidige, kreative Übergänge für Videoprojekte designen',
+  'Visuelle Effekte': 'Beeindruckende visuelle Effekte für deine Inhalte hinzufügen',
+  // Ari
+  'Smarte Workflows': 'Intelligente automatisierte Workflows erstellen, die Zeit sparen',
+  'KI-Integration': 'KI-Fähigkeiten in deine Geschäftsprozesse integrieren',
+  'Prozess-Optimierung': 'Geschäftsprozesse ganzheitlich optimieren und verschlanken',
+  'Automatische Aktionen': 'Event-basierte Trigger für automatisierte Aktionen designen',
+  // Vera
+  'Sicherheits-Audits': 'Umfassende Sicherheitsbewertungen von Systemen und Prozessen',
+  'Risikobewertung': 'Geschäftliche und technische Risiken identifizieren und bewerten',
+  'Compliance-Prüfung': 'Einhaltung von Vorschriften und Richtlinien überprüfen',
+  'Datenschutz': 'Datenschutz-Konformität und Best Practices sicherstellen',
+  // Echo
+  'Transkription': 'Audio- und Video-Inhalte in präzise Texttranskripte umwandeln',
+  'Audio-Analyse': 'Audio-Inhalte auf Insights, Stimmung und Qualität analysieren',
+  'Podcast-Produktion': 'Podcast-Inhalte planen, produzieren und optimieren',
+  'Voice-Content': 'Sprachbasierte Inhalte und Interaktionen erstellen und verwalten',
+  // Omni
+  'Team-Koordination': 'Mehrere KI-Agents für komplexe Aufgaben orchestrieren',
+  'Komplexe Aufgaben': 'Mehrstufige Probleme effizient zerlegen und lösen',
+  'Mehrstufige Workflows': 'Komplexe mehrstufige Workflows entwerfen und ausführen',
+  'Aufgaben-Verteilung': 'Aufgaben intelligent an den richtigen Spezialisten delegieren',
+  // Buddy
+  'Budget-Überwachung': 'KI-Ausgaben in Echtzeit über alle Services hinweg tracken',
+  'Nutzungsanalyse': 'Nutzungsmuster analysieren und Ressourcenzuweisung optimieren',
+  'Proaktive Warnungen': 'Benachrichtigungen bei Budgetlimits oder Anomalien erhalten',
+  'Limit-Verwaltung': 'Ausgabenlimits für Teams und Projekte setzen und verwalten',
+  // Property Sentinel (already German)
+  'Portal-Überwachung': 'Immobilien-Portale automatisch nach neuen Inseraten scannen',
+  'Rendite-Analyse': 'Rendite und Wirtschaftlichkeit per KI bewerten',
+  'Deal-Scoring': 'Top-Deals mit intelligenter Bewertung identifizieren',
+  'Pipeline-Integration': 'Gefundene Objekte direkt in deine Pipeline einspeisen',
 };
 
 const getSpecialtyDescription = (specialty: string): string => {
-  return specialtyDescriptions[specialty] || `Get expert help with ${specialty.toLowerCase()}`;
+  return specialtyDescriptions[specialty] || `Hilfe von deinem Experten für ${specialty}`;
 };
+
+// Omni-specific suggestion chips (compact action buttons instead of specialty grid)
+const omniSuggestionChips = [
+  { emoji: '📝', label: 'E-Mail entwerfen', prompt: 'Schreibe mir eine professionelle E-Mail' },
+  { emoji: '💰', label: 'Angebot prüfen', prompt: 'Prüfe dieses Angebot für mich' },
+  { emoji: '🔍', label: 'Recherche starten', prompt: 'Recherchiere für mich zum Thema' },
+  { emoji: '📊', label: 'Daten analysieren', prompt: 'Analysiere diese Daten für mich' },
+];
 
 // Agent greeting messages based on personality
 const agentGreetings: Record<string, string[]> = {
@@ -343,6 +412,56 @@ const agentGreetings: Record<string, string[]> = {
     "Guten Tag! Wie kann ich Sie bei rechtlichen Fragen unterstützen?",
     "Hallo! Vertrag, Compliance oder Risikobewertung - womit kann ich helfen?",
     "Willkommen! Welche rechtliche Angelegenheit soll ich prüfen?"
+  ],
+  aura: [
+    "Hallo! Lass uns deine Marke auf das nächste Level bringen. Was steht an?",
+    "Hi! Positionierung, Messaging oder Wettbewerbsanalyse — womit starten wir?",
+    "Hey! Ich helfe dir, deine Marke klar und überzeugend zu kommunizieren."
+  ],
+  finn: [
+    "Hallo! Lass uns über deine Finanzen sprechen. Budget, Investment oder Prognose?",
+    "Hi! Ich helfe dir, smarte finanzielle Entscheidungen zu treffen.",
+    "Hey! Bereit für eine Finanzanalyse. Was soll ich durchrechnen?"
+  ],
+  nova: [
+    "Hallo! Welches Thema soll ich für dich recherchieren?",
+    "Hi! Marktforschung, Trends oder Wettbewerb — wo soll ich reinschauen?",
+    "Hey! Ich finde die Insights, die du brauchst. Was interessiert dich?"
+  ],
+  vince: [
+    "Hallo! Lass uns ein Videoprojekt planen. Was schwebt dir vor?",
+    "Hi! Konzept, Storyboard oder Produktionsplanung — woran arbeiten wir?",
+    "Hey! Bereit, deine Video-Idee zum Leben zu erwecken!"
+  ],
+  milo: [
+    "Hallo! Welches Design soll ich zum Leben erwecken?",
+    "Hi! Logo-Animation, Motion Graphics oder Effekte — was brauchst du?",
+    "Hey! Lass uns etwas Visuelles zaubern. Was steht an?"
+  ],
+  ari: [
+    "Hallo! Welchen Prozess sollen wir automatisieren?",
+    "Hi! Ich helfe dir, wiederkehrende Aufgaben intelligent zu lösen.",
+    "Hey! Lass uns deine Workflows smarter machen. Wo fangen wir an?"
+  ],
+  vera: [
+    "Hallo! Sicherheits-Check, Compliance oder Risikobewertung — was steht an?",
+    "Hi! Ich prüfe deine Systeme und Prozesse auf Herz und Nieren.",
+    "Willkommen! Welchen Bereich soll ich auf Sicherheit prüfen?"
+  ],
+  echo: [
+    "Hallo! Audio-Transkription, Podcast oder Analyse — womit kann ich helfen?",
+    "Hi! Lass uns an deinem Audio-Content arbeiten. Was brauchst du?",
+    "Hey! Bereit, deine Audio-Welt zu optimieren!"
+  ],
+  omni: [
+    "Hallo! Ich bin dein Assistent und habe Experten für Finanzen, Recht, Marketing und mehr im Team. Was steht heute an?",
+    "Hi! Sag mir, was du brauchst — ich finde den richtigen Experten für dich.",
+    "Hey! Egal ob E-Mail, Vertrag oder Analyse — ich kümmere mich drum. Was kann ich für dich tun?"
+  ],
+  buddy: [
+    "Hallo! Lass uns deine KI-Kosten im Blick behalten. Was möchtest du wissen?",
+    "Hi! Budget-Check, Nutzungsanalyse oder Limits — womit kann ich helfen?",
+    "Hey! Ich sorge dafür, dass dein Budget optimal genutzt wird."
   ],
   default: [
     "Hallo! Wie kann ich dir heute helfen?",
@@ -716,6 +835,12 @@ export default function AgentChatPage() {
       console.error('Failed to send message:', err);
 
       if (err.name !== 'AbortError') {
+        // Suppress auth errors — forceLogout() handles redirect silently
+        const errMsg = (err.message || '').toLowerCase();
+        if (errMsg.includes('auth') || errMsg.includes('401') || errMsg.includes('unauthorized') || errMsg.includes('token')) {
+          return;
+        }
+
         const errorMessage = err.message || 'Fehler beim Senden der Nachricht';
         setError(errorMessage);
         setMessages(prev => prev.filter(m => m.id !== userMessage.id));
@@ -797,7 +922,7 @@ export default function AgentChatPage() {
   const displaySessions = chatSessions.filter(s => s.messages.length > 0 || s.id === currentSessionId);
 
   return (
-    <div className="h-full flex overflow-hidden relative" style={{ background: '#111114' }}>
+    <div className="h-full flex overflow-hidden relative" style={{ background: 'transparent' }}>
       {/* ============================================= */}
       {/* AMBIENT AGENT-COLOR GRADIENT                  */}
       {/* ============================================= */}
@@ -866,7 +991,7 @@ export default function AgentChatPage() {
                   showContextPanel ? 'text-white/80' : 'text-white/25 hover:text-white/60 hover:bg-white/[0.04]'
                 }`}
                 style={showContextPanel ? { backgroundColor: `${agent.color}15`, color: agent.color } : {}}
-                title="Context Panel"
+                title="Kontext"
               >
                 <Brain className="w-3.5 h-3.5" />
               </button>
@@ -966,7 +1091,7 @@ export default function AgentChatPage() {
                   </motion.div>
                   <div
                     className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 flex items-center justify-center"
-                    style={{ backgroundColor: agent.color, borderColor: '#111114' }}
+                    style={{ backgroundColor: agent.color, borderColor: 'var(--vicy-bg)' }}
                   >
                     <Sparkles className="w-3.5 h-3.5 text-white" />
                   </div>
@@ -976,61 +1101,93 @@ export default function AgentChatPage() {
                 <h1 className="text-2xl font-bold text-white/90 mb-1">{missionTitle}</h1>
                 <p className="text-sm text-white/30 mb-8 max-w-md leading-relaxed">{agent.bio}</p>
 
-                {/* Capabilities Cards (3 large cards) */}
-                <div className="grid grid-cols-3 gap-4 max-w-2xl w-full">
-                  {agent.specialties?.slice(0, 3).map((specialty, idx) => {
-                    const SpecIcon = specialtyIcons[specialty] || specialtyIcons.default;
-                    return (
+                {/* Quick-Start: Omni gets suggestion chips, others get 2x2 grid */}
+                {agentId === 'omni' ? (
+                  <div className="flex flex-wrap justify-center gap-3 max-w-xl w-full">
+                    {omniSuggestionChips.map((chip, idx) => (
                       <motion.button
-                        key={specialty}
-                        initial={{ opacity: 0, y: 20 }}
+                        key={chip.label}
+                        initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 + idx * 0.12, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                        onClick={() => setInputMessage(`Hilf mir mit ${specialty}`)}
-                        whileHover={{ scale: 1.03, y: -2 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="flex flex-col items-start gap-4 p-6 rounded-2xl text-left group/cap transition-all cursor-pointer relative overflow-hidden"
+                        transition={{ delay: 0.3 + idx * 0.08 }}
+                        onClick={() => setInputMessage(chip.prompt)}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.97 }}
+                        className="flex items-center gap-2 px-5 py-3 rounded-full text-sm font-medium text-white/70 hover:text-white transition-all cursor-pointer"
                         style={{
-                          background: 'rgba(255, 255, 255, 0.02)',
-                          border: '1px solid rgba(255, 255, 255, 0.06)',
+                          background: 'rgba(255, 255, 255, 0.04)',
+                          border: '1px solid rgba(255, 255, 255, 0.08)',
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = `${agent.color}35`;
-                          e.currentTarget.style.boxShadow = `0 0 40px ${agent.color}12, inset 0 1px 0 ${agent.color}15`;
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                          e.currentTarget.style.borderColor = `${agent.color}40`;
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.07)';
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
-                          e.currentTarget.style.boxShadow = 'none';
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
                         }}
                       >
-                        {/* Shimmer line at top on hover */}
-                        <div
-                          className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover/cap:opacity-100 transition-opacity duration-500"
-                          style={{ background: `linear-gradient(90deg, transparent, ${agent.color}60, transparent)` }}
-                        />
-                        <div
-                          className="w-12 h-12 rounded-xl flex items-center justify-center"
+                        <span>{chip.emoji}</span>
+                        {chip.label}
+                      </motion.button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4 max-w-2xl w-full">
+                    {agent.specialties?.slice(0, 4).map((specialty, idx) => {
+                      const SpecIcon = specialtyIcons[specialty] || specialtyIcons.default;
+                      return (
+                        <motion.button
+                          key={specialty}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.3 + idx * 0.12, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                          onClick={() => setInputMessage(`Ich brauche Hilfe mit ${specialty}`)}
+                          whileHover={{ scale: 1.03, y: -2 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="flex flex-col items-start gap-4 p-6 rounded-2xl text-left group/cap transition-all cursor-pointer relative overflow-hidden"
                           style={{
-                            backgroundColor: `${agent.color}10`,
-                            border: `1px solid ${agent.color}18`,
+                            background: 'rgba(255, 255, 255, 0.02)',
+                            border: '1px solid rgba(255, 255, 255, 0.06)',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = `${agent.color}35`;
+                            e.currentTarget.style.boxShadow = `0 0 40px ${agent.color}12, inset 0 1px 0 ${agent.color}15`;
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+                            e.currentTarget.style.boxShadow = 'none';
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
                           }}
                         >
-                          <SpecIcon className="w-6 h-6" style={{ color: agent.color }} />
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-white/80 group-hover/cap:text-white transition-colors mb-1.5">
-                            {specialty}
+                          {/* Shimmer line at top on hover */}
+                          <div
+                            className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover/cap:opacity-100 transition-opacity duration-500"
+                            style={{ background: `linear-gradient(90deg, transparent, ${agent.color}60, transparent)` }}
+                          />
+                          <div
+                            className="w-12 h-12 rounded-xl flex items-center justify-center"
+                            style={{
+                              backgroundColor: `${agent.color}10`,
+                              border: `1px solid ${agent.color}18`,
+                            }}
+                          >
+                            <SpecIcon className="w-6 h-6" style={{ color: agent.color }} />
                           </div>
-                          <div className="text-[11px] text-white/25 group-hover/cap:text-white/40 transition-colors leading-relaxed">
-                            {getSpecialtyDescription(specialty)}
+                          <div>
+                            <div className="text-sm font-medium text-white/80 group-hover/cap:text-white transition-colors mb-1.5">
+                              {specialty}
+                            </div>
+                            <div className="text-[11px] text-white/25 group-hover/cap:text-white/40 transition-colors leading-relaxed">
+                              {getSpecialtyDescription(specialty)}
+                            </div>
                           </div>
-                        </div>
-                      </motion.button>
-                    );
-                  })}
-                </div>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -1075,7 +1232,6 @@ export default function AgentChatPage() {
                       message.role === 'user' ? 'text-primary-foreground/60' : 'text-white/20'
                     }`}>
                       <span>{formatTimestamp(message.timestamp)}</span>
-                      {message.tokens && <span>• {message.tokens} tokens</span>}
                     </div>
                   </div>
                 </motion.div>
@@ -1310,7 +1466,7 @@ export default function AgentChatPage() {
                   {agent.specialties?.map((s) => (
                     <button
                       key={s}
-                      onClick={() => { setInputMessage(`Hilf mir mit ${s}`); setShowToolSuggestions(false); }}
+                      onClick={() => { setInputMessage(`Ich brauche Hilfe mit ${s}`); setShowToolSuggestions(false); }}
                       className="px-3 py-1.5 text-[11px] rounded-full transition-all hover:scale-105"
                       style={{
                         backgroundColor: `${agent.color}08`,
@@ -1327,12 +1483,11 @@ export default function AgentChatPage() {
 
             {/* Floating Glass Input */}
             <div
-              className="flex items-end gap-2 rounded-[28px] p-3 px-4 transition-all mx-auto max-w-3xl"
+              className="flex items-end gap-2 rounded-2xl p-2.5 px-4 transition-all mx-auto max-w-3xl"
               style={{
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                backdropFilter: 'blur(60px)',
-                boxShadow: '0 -12px 40px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255,255,255,0.03), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+                background: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.2)',
               }}
             >
               {/* Agent indicator */}
@@ -1351,10 +1506,10 @@ export default function AgentChatPage() {
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder={`Frage ${agent.name}...`}
+                placeholder="Beschreibe deine Aufgabe..."
                 rows={1}
                 disabled={isTyping}
-                className="flex-1 resize-none py-2.5 bg-transparent focus:outline-none disabled:opacity-50 placeholder:text-white/15 text-sm text-white/90"
+                className="flex-1 resize-none py-2.5 bg-transparent focus:outline-none disabled:opacity-50 placeholder:text-white/30 text-sm text-white/90"
                 style={{ minHeight: '40px', maxHeight: '120px' }}
               />
 
@@ -1366,7 +1521,7 @@ export default function AgentChatPage() {
                   color: showToolSuggestions ? agent.color : 'rgba(255,255,255,0.25)',
                   backgroundColor: showToolSuggestions ? `${agent.color}12` : 'transparent',
                 }}
-                title="Tool-Vorschläge"
+                title="Vorschläge"
               >
                 <Sparkles className="w-4 h-4" />
               </button>
@@ -1518,12 +1673,12 @@ export default function AgentChatPage() {
               <div className="p-4 flex items-center justify-between shrink-0 border-b border-white/[0.04]">
                 <div className="flex items-center gap-2">
                   <Brain className="w-4 h-4" style={{ color: agent.color }} />
-                  <h3 className="text-sm font-medium text-white/70">Active Context</h3>
+                  <h3 className="text-sm font-medium text-white/70">Kontext</h3>
                 </div>
                 <button
                   onClick={() => setShowModelConfigModal(true)}
                   className="p-1.5 rounded-lg text-white/20 hover:text-white/50 hover:bg-white/[0.04] transition-all"
-                  title="Model Configuration"
+                  title="Einstellungen"
                 >
                   <Settings className="w-3.5 h-3.5" />
                 </button>
@@ -1534,7 +1689,7 @@ export default function AgentChatPage() {
                 <div>
                   <p className="text-[10px] text-white/30 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                     <FileText className="w-3 h-3" />
-                    Knowledge Files
+                    Wissen
                   </p>
                   <div className="space-y-2">
                     {knowledgeFiles.map(file => {
@@ -1570,7 +1725,7 @@ export default function AgentChatPage() {
                 <div>
                   <p className="text-[10px] text-white/30 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                     <Zap className="w-3 h-3" />
-                    Active Capabilities
+                    Fähigkeiten
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {agentConfig.activeTools.map(toolId => (
@@ -1593,15 +1748,15 @@ export default function AgentChatPage() {
                 <div>
                   <p className="text-[10px] text-white/30 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                     <Database className="w-3 h-3" />
-                    Memory
+                    Speicher
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="p-2.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                      <p className="text-[9px] text-white/20">Context Window</p>
+                      <p className="text-[9px] text-white/20">Kapazität</p>
                       <p className="text-xs font-mono text-white/50">128K tokens</p>
                     </div>
                     <div className="p-2.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                      <p className="text-[9px] text-white/20">Used</p>
+                      <p className="text-[9px] text-white/20">Verwendet</p>
                       <p className="text-xs font-mono" style={{ color: agent.color }}>
                         {tokenUsage.total > 0 ? `${(tokenUsage.total / 1000).toFixed(1)}K` : '0'}
                       </p>
@@ -1622,7 +1777,7 @@ export default function AgentChatPage() {
                   }}
                 >
                   <RefreshCw className="w-3 h-3" />
-                  Clear Context
+                  Zurücksetzen
                 </button>
               </div>
             </motion.div>
@@ -1649,10 +1804,10 @@ export default function AgentChatPage() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2 }}
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] max-h-[80vh] overflow-y-auto rounded-2xl shadow-2xl"
-              style={{ background: '#111114', border: '1px solid rgba(255,255,255,0.08)' }}
+              style={{ background: 'var(--vicy-surface)', border: '1px solid rgba(148,163,184,0.1)' }}
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
-                <span className="text-sm font-medium text-white/70">Model Configuration</span>
+                <span className="text-sm font-medium text-white/70">Einstellungen</span>
                 <button
                   onClick={() => setShowModelConfigModal(false)}
                   className="p-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-all"

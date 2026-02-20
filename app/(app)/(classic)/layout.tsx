@@ -20,7 +20,7 @@ import { CommandPalette } from '@/components/brain/CommandPalette';
 import { cn } from '@/lib/utils';
 
 // Routes that use full immersion mode (edge-to-edge, no padding)
-const IMMERSIVE_ROUTES = ['/inbox', '/agents/integrations', '/studio', '/pipelines'];
+const IMMERSIVE_ROUTES = ['/inbox', '/agents/integrations', '/agents/property-sentinel', '/studio', '/pipelines'];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -34,13 +34,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <ShellProvider>
         <InboxSocketProvider>
           <div
-            className="vicy-theme flex h-screen overflow-hidden"
+            className="vicy-theme vicy-grid-bg flex h-screen overflow-hidden"
             style={{
               display: 'flex',
               height: '100vh',
               overflow: 'hidden',
-              backgroundColor: '#0A0A0A',
-              color: '#FAFAFA',
+              backgroundColor: 'var(--vicy-bg)',
+              color: 'var(--vicy-text-primary)',
             }}
           >
             {/* Vicy Icon-Rail Sidebar */}

@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useQueryClient } from '@tanstack/react-query';
-import { getValidToken } from '@/lib/auth/get-token';
+import { getValidToken, ensureValidToken } from '@/lib/auth/get-token';
 import { useInboxStore } from '@/lib/stores/useInboxStore';
 
 // ============================================================================
@@ -188,9 +188,16 @@ export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
       return () => timers.forEach(t => clearTimeout(t));
     }
 
-    // SINGLETON: Don't recreate if socket exists and isn't disconnected
+    // SINGLETON: Don't recreate if socket exists, isn't disconnected, and token hasn't changed
     if (socketRef.current && !socketRef.current.disconnected) {
-      return;
+      const currentSocketToken = (socketRef.current as any).auth?.token;
+      if (currentSocketToken === token) {
+        return;
+      }
+      // Token changed - disconnect old socket to reconnect with new token
+      socketRef.current.removeAllListeners();
+      socketRef.current.disconnect();
+      socketRef.current = null;
     }
 
     // Clean up any stale socket before creating new one
@@ -221,15 +228,25 @@ export function InboxSocketProvider({ children }: InboxSocketProviderProps) {
       setError(null);
     });
 
-    newSocket.on('connect_error', (err) => {
+    newSocket.on('connect_error', async (err) => {
       console.error('[InboxSocket] Connection error:', err.message);
       const isAuthError = err.message.includes('Authentication') || err.message.includes('token');
 
       if (isAuthError) {
-        // Auth errors = hard stop. Don't retry with a bad token.
-        console.error('[InboxSocket] Auth failed permanently. Stopping.');
+        // Auth error - try to refresh the token before giving up
+        console.log('[InboxSocket] Auth error, attempting token refresh...');
         newSocket.disconnect();
         socketRef.current = null;
+
+        const refreshedToken = await ensureValidToken();
+        if (refreshedToken && isMountedRef.current) {
+          console.log('[InboxSocket] Token refreshed, reconnecting...');
+          setAuthToken(refreshedToken);
+          return;
+        }
+
+        // Refresh failed - stop permanently
+        console.error('[InboxSocket] Token refresh failed. Stopping.');
         if (isMountedRef.current) {
           setSocket(null);
           setIsConnected(false);

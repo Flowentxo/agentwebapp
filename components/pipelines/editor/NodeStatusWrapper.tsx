@@ -4,7 +4,7 @@
  * NodeStatusWrapper Component
  *
  * Enhanced execution status visualization for pipeline nodes.
- * Vicy-Style: Deep Black (#050505) + Violet Glow + Status-specific effects
+ * Vicy-Style: Deep Black (#0f172a) + Violet Glow + Status-specific effects
  */
 
 import React from 'react';
@@ -183,7 +183,7 @@ function getStatusStyles(status: NodeExecutionStatus | null): string {
   const config = STATUS_CONFIG[status];
   if (!config) return '';
 
-  const baseRing = 'ring-2 ring-offset-1 ring-offset-[#050505]';
+  const baseRing = 'ring-2 ring-offset-1 ring-offset-[#09090b]';
   const animation = config.animate ? 'animate-pulse' : '';
 
   return `${baseRing} ${config.ringColor} ${config.glowColor} ${animation}`;

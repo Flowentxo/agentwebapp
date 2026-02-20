@@ -198,7 +198,7 @@ export const designTokens = {
       },
 
       // Background & Surface
-      background: '#0a0a0a',
+      background: '#030712',
       surface: '#171717',
       elevated: '#262626',
 

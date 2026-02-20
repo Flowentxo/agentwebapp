@@ -67,7 +67,7 @@ function MessageBubbleComponent({
                 style={oneDark}
                 language={match[1]}
                 PreTag="div"
-                className="rounded-lg !bg-zinc-900 !my-0 text-sm"
+                className="rounded-lg !bg-zinc-900/80 !my-0 text-sm"
                 {...props}
               >
                 {codeString}
@@ -188,7 +188,7 @@ function MessageBubbleComponent({
           className={cn(
             'rounded-2xl px-4 py-3 text-sm',
             isUser
-              ? 'bg-violet-600 text-white rounded-br-md'
+              ? 'bg-purple-600/10 text-white rounded-br-md border border-purple-500/20'
               : 'bg-zinc-800/80 text-zinc-200 rounded-bl-md border border-white/5'
           )}
         >

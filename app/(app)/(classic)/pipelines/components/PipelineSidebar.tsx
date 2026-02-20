@@ -553,7 +553,7 @@ function PipelineItem({
           {/* Status dot */}
           <div
             className={cn(
-              'absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-[#050505]',
+              'absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-[#0f172a]',
               statusColor
             )}
           />

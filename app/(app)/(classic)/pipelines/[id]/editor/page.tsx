@@ -222,7 +222,7 @@ export default function PipelineEditorPage() {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header Bar */}
-      <header className="flex items-center justify-between px-4 py-3 bg-[#0a0a0a]/80 border-b border-white/[0.06] backdrop-blur-sm">
+      <header className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] backdrop-blur-sm" style={{ backgroundColor: 'rgba(10, 10, 10, 0.8)' }}>
         {/* Left: Back & Title */}
         <div className="flex items-center gap-4">
           <button

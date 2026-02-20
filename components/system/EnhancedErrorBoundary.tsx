@@ -47,6 +47,17 @@ export class EnhancedErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: any) {
+    // Auth errors: immediate redirect to /login
+    const msg = error.message.toLowerCase();
+    if (msg.includes('auth') || msg.includes('unauthorized') || msg.includes('token') || msg.includes('401')) {
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = '/login';
+        return;
+      }
+    }
+
     // Log error to our centralized error handler
     errorHandler.handle(error, `ErrorBoundary-${this.props.level || 'component'}`);
 

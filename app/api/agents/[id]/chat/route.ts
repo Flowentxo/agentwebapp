@@ -29,6 +29,8 @@ import { getVinceToolsForOpenAI, executeVinceTool, getVinceToolDisplay } from '@
 import { getMiloToolsForOpenAI, executeMiloTool, getMiloToolDisplay } from '@/lib/agents/milo/tools';
 import { getEchoToolsForOpenAI, executeEchoTool, getEchoToolDisplay } from '@/lib/agents/echo/tools';
 import { getFinnToolsForOpenAI, executeFinnTool, getFinnToolDisplay } from '@/lib/agents/finn/tools';
+import { getTenantCommunicatorToolsForOpenAI, executeTenantCommunicatorTool, getTenantCommunicatorToolDisplay } from '@/lib/agents/tenant-communicator/tools';
+import { getSentinelToolsForOpenAI, executeSentinelTool, getSentinelToolDisplay } from '@/lib/agents/property-sentinel/tools';
 import { z } from 'zod';
 import { createLogger } from '@/lib/logger';
 
@@ -395,10 +397,13 @@ export const POST = withAuth<AgentChatContext>(async (
     const isMiloAgent = agentId === 'milo';
     const isEchoAgent = agentId === 'echo';
     const isFinnAgent = agentId === 'finn';
+    const isTenantCommunicatorAgent = agentId === 'tenant-communicator';
+    const isPropertySentinelAgent = agentId === 'property-sentinel';
     const isAgenticAgent = isEmmieAgent || isDexterAgent || isBuddyAgent
       || isKaiAgent || isLexAgent || isNovaAgent || isOmniAgent
       || isCassieAgent || isVeraAgent || isAriAgent || isAuraAgent
-      || isVinceAgent || isMiloAgent || isEchoAgent || isFinnAgent;
+      || isVinceAgent || isMiloAgent || isEchoAgent || isFinnAgent
+      || isTenantCommunicatorAgent || isPropertySentinelAgent;
 
     // Stream response
     const startTime = Date.now();
@@ -449,7 +454,11 @@ export const POST = withAuth<AgentChatContext>(async (
                                         ? getEchoToolsForOpenAI()
                                         : isFinnAgent
                                           ? getFinnToolsForOpenAI()
-                                          : [];
+                                          : isTenantCommunicatorAgent
+                                            ? getTenantCommunicatorToolsForOpenAI()
+                                            : isPropertySentinelAgent
+                                              ? getSentinelToolsForOpenAI()
+                                              : [];
 
             // Apply tool gating based on activeTools from Control Panel
             const agentTools = allAgentTools.filter(tool => {
@@ -498,7 +507,8 @@ export const POST = withAuth<AgentChatContext>(async (
               : isKaiAgent ? 'KAI' : isLexAgent ? 'LEX' : isNovaAgent ? 'NOVA' : isOmniAgent ? 'OMNI'
               : isCassieAgent ? 'CASSIE' : isVeraAgent ? 'VERA' : isAriAgent ? 'ARI'
               : isAuraAgent ? 'AURA' : isVinceAgent ? 'VINCE' : isMiloAgent ? 'MILO'
-              : isEchoAgent ? 'ECHO' : 'FINN';
+              : isEchoAgent ? 'ECHO' : isFinnAgent ? 'FINN'
+              : isTenantCommunicatorAgent ? 'TENANT_COMMUNICATOR' : 'PROPERTY_SENTINEL';
 
             const toolExecutor = async (toolName: string, args: Record<string, any>) => {
               logger.debug('Executing tool', { agentName, toolName, args });
@@ -591,6 +601,18 @@ export const POST = withAuth<AgentChatContext>(async (
                   workspaceId,
                   sessionId: req.headers.get('x-session-id') || undefined,
                 });
+              } else if (isTenantCommunicatorAgent) {
+                return executeTenantCommunicatorTool(toolName, args, {
+                  userId: auth.userId,
+                  workspaceId,
+                  sessionId: req.headers.get('x-session-id') || undefined,
+                });
+              } else if (isPropertySentinelAgent) {
+                return executeSentinelTool(toolName, args, {
+                  userId: auth.userId,
+                  workspaceId,
+                  sessionId: req.headers.get('x-session-id') || undefined,
+                });
               } else {
                 return executeFinnTool(toolName, args, {
                   userId: auth.userId,
@@ -616,6 +638,8 @@ export const POST = withAuth<AgentChatContext>(async (
               if (isMiloAgent) return getMiloToolDisplay(toolName);
               if (isEchoAgent) return getEchoToolDisplay(toolName);
               if (isFinnAgent) return getFinnToolDisplay(toolName);
+              if (isTenantCommunicatorAgent) return getTenantCommunicatorToolDisplay(toolName);
+              if (isPropertySentinelAgent) return getSentinelToolDisplay(toolName);
               return toolName;
             };
 
@@ -628,7 +652,7 @@ export const POST = withAuth<AgentChatContext>(async (
               model: selectedModel,
               temperature, // Use Control Panel value
               maxTokens, // Use Control Panel value
-              maxToolCalls: isEmmieAgent ? 10 : isOmniAgent ? 15 : 5,
+              maxToolCalls: isEmmieAgent ? 10 : isOmniAgent ? 15 : isPropertySentinelAgent ? 10 : 5,
               maxRetries: 3,
               userId: auth.userId, // Memory: auto-log tool results
               agentId, // Memory: auto-log tool results

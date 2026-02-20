@@ -189,7 +189,7 @@ export default function LatencyChart({ data, isLoading }: LatencyChartProps) {
               stroke="#10b981"
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4, fill: '#10b981', stroke: '#0a0a0a', strokeWidth: 2 }}
+              activeDot={{ r: 4, fill: '#10b981', stroke: '#030712', strokeWidth: 2 }}
             />
             <Line
               type="monotone"
@@ -198,7 +198,7 @@ export default function LatencyChart({ data, isLoading }: LatencyChartProps) {
               stroke="#f59e0b"
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4, fill: '#f59e0b', stroke: '#0a0a0a', strokeWidth: 2 }}
+              activeDot={{ r: 4, fill: '#f59e0b', stroke: '#030712', strokeWidth: 2 }}
             />
             <Line
               type="monotone"
@@ -207,7 +207,7 @@ export default function LatencyChart({ data, isLoading }: LatencyChartProps) {
               stroke="#ef4444"
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4, fill: '#ef4444', stroke: '#0a0a0a', strokeWidth: 2 }}
+              activeDot={{ r: 4, fill: '#ef4444', stroke: '#030712', strokeWidth: 2 }}
             />
           </LineChart>
         </ResponsiveContainer>

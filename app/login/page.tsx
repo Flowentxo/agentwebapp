@@ -1,5 +1,5 @@
 /**
- * SINTRA Login Page - Power-Tool Split Layout
+ * Flowent AI Login Page - Power-Tool Split Layout
  * Left: Branding Hero | Right: Login Form
  */
 
@@ -98,7 +98,7 @@ export default function LoginPage() {
   }, [mfaStep]);
 
   useEffect(() => {
-    document.title = 'Anmelden · SINTRA';
+    document.title = 'Anmelden · Flowent AI';
     try {
       const params = new URLSearchParams(window.location.search);
       const nextParam = params.get('next');
@@ -343,7 +343,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col lg:flex-row bg-[#0A0A0A]">
+    <main className="min-h-screen flex flex-col lg:flex-row bg-[#030712]">
       {/* Success overlay */}
       <div className={`fixed inset-0 bg-violet-600/10 backdrop-blur-sm z-50 transition-opacity duration-500 pointer-events-none ${success ? 'opacity-100' : 'opacity-0'}`}>
         <div className="absolute inset-0 flex items-center justify-center">
@@ -409,11 +409,11 @@ export default function LoginPage() {
                 </svg>
               </div>
               <span className="text-2xl lg:text-3xl font-bold tracking-[0.12em] text-white/90">
-                SINTRA
+                Flowent AI
               </span>
             </div>
             <p className="text-base lg:text-lg text-white/35 font-light">
-              AI-Powered Business Automation
+              KI-Agenten für das moderne Unternehmen
             </p>
           </div>
 
@@ -461,7 +461,7 @@ export default function LoginPage() {
 
           {/* Social Proof Metrics - Desktop only */}
           <div className="hidden lg:block mt-16 hero-fade-in hero-delay-3">
-            <div className="border-t border-[rgba(255,255,255,0.06)] pt-6">
+            <div className="border-t border-white/10 pt-6">
               <div className="grid grid-cols-3 gap-6">
                 <div>
                   <p className="text-lg font-bold text-white/70">15+</p>
@@ -485,12 +485,15 @@ export default function LoginPage() {
       {/* RIGHT: Login Form                                                */}
       {/* ================================================================ */}
       <div
-        className="relative lg:w-[50%] min-h-[60vh] lg:min-h-screen flex flex-col items-center justify-center bg-[#111111] border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.06)]"
+        className="relative lg:w-[50%] min-h-[60vh] lg:min-h-screen flex flex-col items-center justify-center border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] noise-overlay"
         style={{
-          boxShadow: '-20px 0 60px rgba(139,92,246,0.05)',
+          backgroundColor: '#09090b',
+          boxShadow: '-20px 0 60px rgba(0,0,0,0.3)',
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px)',
+          backgroundSize: '32px 32px',
         }}
       >
-        <div className={`w-full max-w-[400px] px-6 lg:px-0 py-10 lg:py-0 transition-all duration-500 ${success ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}>
+        <div className={`w-full max-w-md bg-zinc-900/60 backdrop-blur-xl border border-white/5 shadow-2xl rounded-2xl p-8 transition-all duration-500 glass-border ${success ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}>
           <div className={`transition-transform duration-300 ${shakeError ? 'animate-shake' : ''}`}>
 
             {/* Header */}
@@ -558,10 +561,10 @@ export default function LoginPage() {
                     onBlur={() => setFocusedField(null)}
                     autoComplete="one-time-code"
                     placeholder="000000"
-                    className={`w-full h-16 px-4 rounded-xl bg-[rgba(255,255,255,0.03)] border text-white text-[28px] text-center tracking-[0.3em] font-mono transition-all duration-200 outline-none placeholder:text-[#3F3F46] ${
+                    className={`w-full h-16 px-4 rounded-xl bg-black/20 border text-white text-[28px] text-center tracking-[0.3em] font-mono transition-all duration-200 outline-none placeholder:text-zinc-500 ${
                       focusedField === 'mfaCode'
-                        ? 'border-violet-500/50 shadow-[0_0_0_4px_rgba(139,92,246,0.1)]'
-                        : 'border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)]'
+                        ? 'border-purple-500/50 ring-1 ring-purple-500/20 bg-purple-500/5'
+                        : 'border-white/10 hover:border-white/15'
                     }`}
                   />
                 </div>
@@ -573,7 +576,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={loading || mfaCode.length !== 6}
-                  className="w-full h-12 rounded-xl bg-[#8b5cf6] hover:bg-[#7c3aed] text-white text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
+                  className="w-full h-12 rounded-xl bg-purple-600 hover:bg-purple-500 shadow-[0_0_15px_rgba(147,51,234,0.3)] hover:shadow-[0_0_20px_rgba(147,51,234,0.4)] text-white text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <>
@@ -622,10 +625,10 @@ export default function LoginPage() {
                     onBlur={() => setFocusedField(null)}
                     autoComplete="email"
                     placeholder="name@example.com"
-                    className={`w-full h-12 px-4 rounded-xl bg-[rgba(255,255,255,0.03)] border text-white text-sm transition-all duration-200 outline-none placeholder:text-[#3F3F46] ${
+                    className={`w-full h-12 px-4 rounded-xl bg-black/20 border text-white text-sm transition-all duration-200 outline-none placeholder:text-zinc-500 ${
                       focusedField === 'email'
-                        ? 'border-violet-500/50 shadow-[0_0_0_4px_rgba(139,92,246,0.1)]'
-                        : 'border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)]'
+                        ? 'border-purple-500/50 ring-1 ring-purple-500/20 bg-purple-500/5'
+                        : 'border-white/10 hover:border-white/15'
                     }`}
                   />
                 </div>
@@ -645,10 +648,10 @@ export default function LoginPage() {
                       onBlur={() => setFocusedField(null)}
                       autoComplete="current-password"
                       placeholder="Passwort eingeben"
-                      className={`w-full h-12 px-4 pr-10 rounded-xl bg-[rgba(255,255,255,0.03)] border text-white text-sm transition-all duration-200 outline-none placeholder:text-[#3F3F46] ${
+                      className={`w-full h-12 px-4 pr-10 rounded-xl bg-black/20 border text-white text-sm transition-all duration-200 outline-none placeholder:text-zinc-500 ${
                         focusedField === 'password'
-                          ? 'border-violet-500/50 shadow-[0_0_0_4px_rgba(139,92,246,0.1)]'
-                          : 'border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)]'
+                          ? 'border-purple-500/50 ring-1 ring-purple-500/20 bg-purple-500/5'
+                          : 'border-white/10 hover:border-white/15'
                       }`}
                     />
                     <button
@@ -680,13 +683,13 @@ export default function LoginPage() {
                         onChange={(e) => setRemember(e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-[18px] h-[18px] rounded-md bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.1)] peer-checked:bg-[#8b5cf6] peer-checked:border-[#8b5cf6] transition-all duration-200 flex items-center justify-center group-hover:border-[rgba(255,255,255,0.2)]">
+                      <div className="w-[18px] h-[18px] rounded-md bg-black/20 border border-zinc-500 peer-checked:bg-purple-600 peer-checked:border-purple-600 transition-all duration-200 flex items-center justify-center group-hover:border-zinc-400">
                         <svg className={`w-3 h-3 text-white transition-all duration-200 ${remember ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
                       </div>
                     </div>
-                    <span className="text-[#71717A] text-xs group-hover:text-white/60 transition-colors select-none">
+                    <span className="text-zinc-300 text-xs font-medium group-hover:text-white/70 transition-colors select-none">
                       Angemeldet bleiben
                     </span>
                   </label>
@@ -702,7 +705,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={loading || (countdown !== null && countdown > 0)}
-                  className="w-full h-12 rounded-xl bg-[#8b5cf6] hover:bg-[#7c3aed] text-white text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 mt-2 active:scale-[0.98] flex items-center justify-center gap-2"
+                  className="w-full h-12 rounded-xl bg-purple-600 hover:bg-purple-500 shadow-[0_0_15px_rgba(147,51,234,0.3)] hover:shadow-[0_0_20px_rgba(147,51,234,0.4)] text-white text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 mt-2 active:scale-[0.98] flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <>
@@ -731,10 +734,10 @@ export default function LoginPage() {
               <>
                 <div className="relative my-7">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-[rgba(255,255,255,0.06)]" />
+                    <div className="w-full border-t border-white/10" />
                   </div>
                   <div className="relative flex justify-center">
-                    <span className="px-4 bg-[#111111] text-[#3F3F46] text-xs font-medium uppercase tracking-wider">
+                    <span className="px-4 bg-zinc-900/60 text-[#525252] text-xs font-medium uppercase tracking-wider">
                       oder fortfahren mit
                     </span>
                   </div>
@@ -772,7 +775,7 @@ export default function LoginPage() {
                     onClick={() => {
                       window.location.href = `/api/auth/oauth/google?next=${encodeURIComponent(next)}`;
                     }}
-                    className="h-12 rounded-xl bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.06)] text-white/70 text-sm font-medium hover:bg-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)] transition-all duration-200 flex items-center justify-center gap-2.5 active:scale-[0.98]"
+                    className="h-12 rounded-xl bg-black/20 border border-white/10 text-white/70 text-sm font-medium hover:bg-black/30 hover:border-white/15 transition-all duration-200 flex items-center justify-center gap-2.5 active:scale-[0.98]"
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -787,7 +790,7 @@ export default function LoginPage() {
                     onClick={() => {
                       window.location.href = `/api/auth/oauth/github?next=${encodeURIComponent(next)}`;
                     }}
-                    className="h-12 rounded-xl bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.06)] text-white/70 text-sm font-medium hover:bg-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)] transition-all duration-200 flex items-center justify-center gap-2.5 active:scale-[0.98]"
+                    className="h-12 rounded-xl bg-black/20 border border-white/10 text-white/70 text-sm font-medium hover:bg-black/30 hover:border-white/15 transition-all duration-200 flex items-center justify-center gap-2.5 active:scale-[0.98]"
                   >
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
@@ -809,7 +812,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="absolute bottom-6 left-0 right-0 text-center text-xs text-[#3F3F46]">
-          &copy; 2026 SINTRA. Alle Rechte vorbehalten.
+          &copy; 2026 Flowent AI. Alle Rechte vorbehalten.
         </p>
       </div>
 

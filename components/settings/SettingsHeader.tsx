@@ -1,6 +1,6 @@
 /**
- * Settings Header - Clean, Minimal Design
- * Focused header with user info and quick actions
+ * Settings Header - Hero Design with Ambient Glow
+ * Premium header with large title, user card, and status badges
  */
 
 'use client';
@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ProfileResponse } from '@/lib/profile/schemas';
-import { LogOut, ChevronDown, Crown, Shield, Mail } from 'lucide-react';
+import { LogOut, ChevronDown, Shield, Mail, Sparkles } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,30 +55,33 @@ export default function SettingsHeader({ profile, onLogout }: SettingsHeaderProp
   const isEmailVerified = profile.emailVerified;
 
   return (
-    <div className="flex items-center justify-between">
-      {/* Left: Title & Subtitle */}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-[var(--vicy-text-primary)] tracking-tight">
+    <div className="relative flex items-center justify-between">
+      {/* Ambient glow behind title */}
+      <div className="absolute -top-20 -left-10 w-72 h-72 bg-purple-600/[0.08] rounded-full blur-[100px] pointer-events-none" />
+
+      {/* Left: Hero Title */}
+      <div className="relative space-y-2">
+        <h1 className="text-3xl font-bold text-white tracking-tight">
           Einstellungen
         </h1>
-        <p className="text-sm text-[var(--vicy-text-secondary)]">
-          Verwalte dein Konto, Sicherheit und Präferenzen
+        <p className="text-base text-zinc-400">
+          Verwalte dein Konto, Sicherheit und Integrationen
         </p>
       </div>
 
       {/* Right: User Profile Card */}
-      <div className="flex items-center gap-4">
+      <div className="relative flex items-center gap-4">
         {/* Status Badges */}
         <div className="hidden md:flex items-center gap-2">
           {/* Pro Badge */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-violet-500/10 border border-violet-500/20">
-            <Crown className="h-3.5 w-3.5 text-violet-400" />
-            <span className="text-xs font-semibold text-violet-400">Pro</span>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-500/15 to-violet-500/15 border border-purple-500/20">
+            <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+            <span className="text-xs font-semibold text-purple-400">Pro</span>
           </div>
 
           {/* Email Verified Badge */}
           {isEmailVerified && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
               <Mail className="h-3.5 w-3.5 text-emerald-400" />
               <span className="text-xs font-medium text-emerald-400">Verifiziert</span>
             </div>
@@ -86,7 +89,7 @@ export default function SettingsHeader({ profile, onLogout }: SettingsHeaderProp
 
           {/* Admin Badge */}
           {isAdmin && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20">
               <Shield className="h-3.5 w-3.5 text-amber-400" />
               <span className="text-xs font-semibold text-amber-400">Admin</span>
             </div>
@@ -96,41 +99,41 @@ export default function SettingsHeader({ profile, onLogout }: SettingsHeaderProp
         {/* User Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-3 pl-1 pr-3 py-1 rounded-xl bg-[var(--vicy-surface)] border border-[var(--vicy-border)] hover:bg-[var(--vicy-surface-hover)] hover:border-[var(--vicy-accent-30)] transition-all group">
+            <button className="flex items-center gap-3 pl-1.5 pr-3 py-1.5 rounded-2xl bg-zinc-900/60 border border-white/[0.06] hover:bg-zinc-800/60 hover:border-purple-500/20 transition-all group backdrop-blur-xl">
               {/* Avatar */}
               <div className="relative">
                 {profile.avatarUrl ? (
                   <img
                     src={profile.avatarUrl}
                     alt={profile.displayName || 'User'}
-                    className="h-9 w-9 rounded-lg object-cover"
+                    className="h-10 w-10 rounded-full object-cover ring-2 ring-purple-500/20"
                   />
                 ) : (
-                  <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center ring-2 ring-purple-500/20">
                     <span className="text-xs font-bold text-white">{initials}</span>
                   </div>
                 )}
                 {/* Online indicator */}
-                <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[var(--vicy-bg)]" />
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-zinc-900" />
               </div>
 
               {/* Name */}
               <div className="hidden sm:flex flex-col items-start min-w-0">
-                <span className="text-sm font-medium text-[var(--vicy-text-primary)] truncate max-w-[120px]">
+                <span className="text-sm font-medium text-white truncate max-w-[120px]">
                   {profile.displayName || 'User'}
                 </span>
-                <span className="text-[11px] text-[var(--vicy-text-secondary)] truncate max-w-[120px]">
+                <span className="text-[11px] text-zinc-500 truncate max-w-[120px]">
                   {profile.email}
                 </span>
               </div>
 
-              <ChevronDown className="h-4 w-4 text-[var(--vicy-text-secondary)] group-hover:text-[var(--vicy-text-primary)] transition-colors" />
+              <ChevronDown className="h-4 w-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
             </button>
           </DropdownMenuTrigger>
 
           <DropdownMenuContent
             align="end"
-            className="w-56 p-1.5 bg-[var(--vicy-surface)] backdrop-blur-xl border-[var(--vicy-border)] rounded-xl shadow-2xl"
+            className="w-56 p-1.5 bg-zinc-900/95 backdrop-blur-xl border-white/[0.06] rounded-xl shadow-2xl shadow-black/40"
           >
             {/* User Info */}
             <div className="px-3 py-2.5 mb-1">
@@ -139,35 +142,35 @@ export default function SettingsHeader({ profile, onLogout }: SettingsHeaderProp
                   <img
                     src={profile.avatarUrl}
                     alt=""
-                    className="h-10 w-10 rounded-lg object-cover"
+                    className="h-10 w-10 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
                     <span className="text-xs font-bold text-white">{initials}</span>
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[var(--vicy-text-primary)] truncate">{profile.displayName}</p>
-                  <p className="text-xs text-[var(--vicy-text-secondary)] truncate">{profile.email}</p>
+                  <p className="text-sm font-medium text-white truncate">{profile.displayName}</p>
+                  <p className="text-xs text-zinc-500 truncate">{profile.email}</p>
                 </div>
               </div>
             </div>
 
-            <DropdownMenuSeparator className="bg-[var(--vicy-border)]" />
+            <DropdownMenuSeparator className="bg-white/[0.04]" />
 
             <DropdownMenuItem
               onClick={() => router.push('/dashboard')}
-              className="px-3 py-2 rounded-lg text-sm text-[var(--vicy-text-secondary)] hover:text-[var(--vicy-text-primary)] hover:bg-[var(--vicy-surface-hover)] cursor-pointer"
+              className="px-3 py-2 rounded-lg text-sm text-zinc-400 hover:text-white hover:bg-white/[0.04] cursor-pointer"
             >
               Zum Dashboard
             </DropdownMenuItem>
 
-            <DropdownMenuSeparator className="bg-[var(--vicy-border)]" />
+            <DropdownMenuSeparator className="bg-white/[0.04]" />
 
             <DropdownMenuItem
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="px-3 py-2 rounded-lg text-sm text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 hover:bg-red-500/10 cursor-pointer"
+              className="px-3 py-2 rounded-lg text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer"
             >
               <LogOut className="mr-2 h-4 w-4" />
               {isLoggingOut ? 'Abmelden...' : 'Abmelden'}

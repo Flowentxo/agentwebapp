@@ -244,10 +244,10 @@ export async function middleware(req: NextRequest) {
     return errorResponse;
   }
 
-  // Redirect to dashboard if already logged in and accessing login/register
-  if ((pathname === "/login" || pathname === "/register") && isAuthenticated) {
-    return NextResponse.redirect(new URL("/v4", req.url));
-  }
+  // NOTE: Removed redirect from /login → /v4 for "already authenticated" users.
+  // The middleware only checks cookie EXISTENCE (not validity), so an expired JWT
+  // in the cookie would cause an infinite loop: /login → /v4 → 401 → /login → ...
+  // The login page handles the "already logged in" case client-side instead.
 
   // =========================================================================
   // EMAIL VERIFICATION ENFORCEMENT

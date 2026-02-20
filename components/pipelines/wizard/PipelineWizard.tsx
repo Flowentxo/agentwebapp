@@ -474,7 +474,8 @@ export function PipelineWizard({ isOpen, onClose, initialPrompt, userId }: Pipel
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-4 md:inset-8 lg:inset-12 bg-[#0a0a0a] rounded-3xl shadow-2xl z-50 flex flex-col overflow-hidden border border-white/[0.06]"
+            className="fixed inset-4 md:inset-8 lg:inset-12 rounded-3xl shadow-2xl z-50 flex flex-col overflow-hidden border border-white/[0.06]"
+            style={{ backgroundColor: 'var(--vicy-bg)' }}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-8 py-5 border-b border-white/[0.06]">
@@ -709,7 +710,7 @@ export function PipelineWizard({ isOpen, onClose, initialPrompt, userId }: Pipel
                               transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
                               className="w-16 h-16 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 p-0.5 mb-6"
                             >
-                              <div className="w-full h-full rounded-full bg-[#0a0a0a] flex items-center justify-center">
+                              <div className="w-full h-full rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--vicy-bg)' }}>
                                 {currentGenStep && <currentGenStep.icon className="w-8 h-8 text-violet-400" />}
                               </div>
                             </motion.div>

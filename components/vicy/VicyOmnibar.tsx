@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ArrowUp, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface VicyOmnibarProps {
   onSubmit: (content: string) => void;
@@ -12,7 +13,7 @@ interface VicyOmnibarProps {
 export function VicyOmnibar({
   onSubmit,
   isSubmitting = false,
-  placeholder = 'How can I help you today',
+  placeholder = 'Beschreibe deine Aufgabe...',
 }: VicyOmnibarProps) {
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -60,14 +61,19 @@ export function VicyOmnibar({
 
       {/* Bottom bar */}
       <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between">
-        <span className="text-[11px]" style={{ color: 'var(--vicy-text-tertiary)' }}>
-          Shift+Enter for new line
+        <span className="text-[11px] text-zinc-500">
+          Umschalt+Eingabe fuer neue Zeile
         </span>
 
         <button
           onClick={handleSubmit}
           disabled={!input.trim() || isSubmitting}
-          className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-500 text-white disabled:opacity-20 disabled:cursor-not-allowed hover:bg-violet-400 transition-all duration-150"
+          className={cn(
+            "flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-150",
+            input.trim()
+              ? "bg-violet-500 text-white shadow-[0_0_12px_rgba(139,92,246,0.4)] hover:bg-violet-400"
+              : "bg-zinc-800 text-zinc-600 cursor-not-allowed"
+          )}
         >
           {isSubmitting ? (
             <Loader2 className="w-4 h-4 animate-spin" />

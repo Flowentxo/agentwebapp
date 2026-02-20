@@ -62,7 +62,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<R
       return res;
     }
 
-    const { email, password, displayName } = parsed.data;
+    const { email, password, displayName, companyName } = parsed.data;
     const normalizedEmail = email.trim().toLowerCase();
 
     // Check if email already exists
@@ -96,6 +96,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<R
         email: normalizedEmail,
         passwordHash,
         displayName,
+        orgTitle: companyName,
         isActive: true,
         emailVerifiedAt: null, // Can be set to new Date() to skip verification
         createdAt: new Date(),

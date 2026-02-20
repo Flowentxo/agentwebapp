@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -11,7 +11,6 @@ import {
   ConnectionMode,
   Node,
   Viewport,
-  useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -50,6 +49,18 @@ const defaultEdgeOptions = {
 };
 
 // ============================================
+// STABLE PROP CONSTANTS (must be outside component to avoid new refs each render)
+// xyflow's StoreUpdater compares props by reference — inline objects cause infinite loops
+// ============================================
+
+const FIT_VIEW_OPTIONS = { padding: 0.2 };
+const PRO_OPTIONS = { hideAttribution: true };
+const DELETE_KEY_CODE = ['Backspace', 'Delete'];
+const MULTI_SELECTION_KEY_CODE = ['Shift'];
+const PAN_ON_DRAG: number[] = [1, 2];
+const MINIMAP_NODE_COLOR = () => '#8b5cf6';
+
+// ============================================
 // CANVAS COMPONENT
 // ============================================
 
@@ -59,18 +70,20 @@ interface CanvasProps {
 }
 
 export function PipelineCanvas({ onDrop, onDragOver }: CanvasProps) {
-  const {
-    nodes,
-    edges,
-    viewport,
-    onNodesChange,
-    onEdgesChange,
-    onConnect,
-    setSelectedNode,
-    setViewport,
-  } = usePipelineStore();
+  const nodes = usePipelineStore((s) => s.nodes);
+  const edges = usePipelineStore((s) => s.edges);
+  const viewport = usePipelineStore((s) => s.viewport);
+  const onNodesChange = usePipelineStore((s) => s.onNodesChange);
+  const onEdgesChange = usePipelineStore((s) => s.onEdgesChange);
+  const onConnect = usePipelineStore((s) => s.onConnect);
+  const setSelectedNode = usePipelineStore((s) => s.setSelectedNode);
+  const setViewport = usePipelineStore((s) => s.setViewport);
 
-  const { setViewport: setReactFlowViewport } = useReactFlow();
+  // Capture initial viewport once for defaultViewport (must not change between renders)
+  const initialViewportRef = useRef(viewport);
+  // Keep a mutable ref of viewport for comparison inside callbacks (avoids deps on viewport)
+  const viewportRef = useRef(viewport);
+  viewportRef.current = viewport;
 
   // Handle node selection
   const handleNodeClick = useCallback(
@@ -88,21 +101,22 @@ export function PipelineCanvas({ onDrop, onDragOver }: CanvasProps) {
   // Handle viewport changes (pan, zoom)
   const handleMoveEnd = useCallback(
     (_: MouseEvent | TouchEvent | null, newViewport: Viewport) => {
+      const cur = viewportRef.current;
       // Only update if viewport actually changed to avoid unnecessary dirty flags
       if (
-        newViewport.x !== viewport.x ||
-        newViewport.y !== viewport.y ||
-        newViewport.zoom !== viewport.zoom
+        newViewport.x !== cur.x ||
+        newViewport.y !== cur.y ||
+        newViewport.zoom !== cur.zoom
       ) {
         setViewport(newViewport);
       }
     },
-    [viewport, setViewport]
+    [setViewport]
   );
 
   return (
     <div
-      className="flex-1 h-full canvas-dot-pattern"
+      className="flex-1 h-full pipeline-canvas-atmosphere"
       onDrop={onDrop}
       onDragOver={onDragOver}
     >
@@ -118,32 +132,32 @@ export function PipelineCanvas({ onDrop, onDragOver }: CanvasProps) {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
-        defaultViewport={viewport}
+        defaultViewport={initialViewportRef.current}
         connectionMode={ConnectionMode.Loose}
         selectionMode={SelectionMode.Partial}
         fitView={nodes.length === 0}
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={FIT_VIEW_OPTIONS}
         minZoom={0.1}
         maxZoom={2}
-        deleteKeyCode={['Backspace', 'Delete']}
-        multiSelectionKeyCode={['Shift']}
-        panOnDrag={[1, 2]}
+        deleteKeyCode={DELETE_KEY_CODE}
+        multiSelectionKeyCode={MULTI_SELECTION_KEY_CODE}
+        panOnDrag={PAN_ON_DRAG}
         selectionOnDrag
-        proOptions={{ hideAttribution: true }}
-        className="!bg-[#050505]"
+        proOptions={PRO_OPTIONS}
+        className="!bg-transparent"
       >
         {/* Background Grid */}
         <Background
           variant={BackgroundVariant.Dots}
           gap={24}
           size={1}
-          color="rgba(255,255,255,0.05)"
-          className="!bg-[#050505]"
+          color="rgba(255,255,255,0.08)"
+          className="!bg-transparent"
         />
 
         {/* Controls */}
         <Controls
-          className="!bg-[#111] !border-[rgba(255,255,255,0.08)] !rounded-xl !shadow-none"
+          className="pipeline-controls"
           showZoom
           showFitView
           showInteractive={false}
@@ -151,28 +165,21 @@ export function PipelineCanvas({ onDrop, onDragOver }: CanvasProps) {
 
         {/* MiniMap */}
         <MiniMap
-          className="!bg-[#111] !border-[rgba(255,255,255,0.08)] !rounded-xl"
-          nodeColor={() => '#8b5cf6'}
-          maskColor="rgba(0,0,0,0.8)"
+          className="pipeline-minimap"
+          nodeColor={MINIMAP_NODE_COLOR}
+          maskColor="rgba(0, 0, 0, 0.5)"
           pannable
           zoomable
+          style={{
+            backgroundColor: 'transparent',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            borderRadius: '1rem',
+          }}
         />
       </ReactFlow>
 
       {/* Custom Styles for React Flow */}
       <style jsx global>{`
-        .react-flow__controls-button {
-          background: #111111 !important;
-          border: 1px solid rgba(255, 255, 255, 0.08) !important;
-          color: rgba(255, 255, 255, 0.5) !important;
-        }
-        .react-flow__controls-button:hover {
-          background: #1a1a1a !important;
-          color: rgba(255, 255, 255, 0.8) !important;
-        }
-        .react-flow__controls-button svg {
-          fill: currentColor !important;
-        }
         .react-flow__edge-path {
           stroke: rgba(139, 92, 246, 0.6) !important;
           stroke-width: 1.5px !important;

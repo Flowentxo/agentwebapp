@@ -10,7 +10,7 @@
  * all parent CSS contexts. It's controlled via usePipelineStore.templateDialogOpen.
  */
 
-import { useCallback, useRef, useEffect, useState, DragEvent } from 'react';
+import { useCallback, useRef, useEffect, useState, DragEvent, Suspense } from 'react';
 import { ReactFlowProvider, useReactFlow, Viewport } from '@xyflow/react';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -81,7 +81,7 @@ function PipelineEditorInner({ initialData }: PipelineEditorInnerProps) {
   // Trigger configuration state
   const [triggerType, setTriggerType] = useState<'manual' | 'schedule' | 'webhook'>('manual');
 
-  const [isLoading, setIsLoading] = useState(!initialData);
+  const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [hasHydrated, setHasHydrated] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -124,17 +124,16 @@ function PipelineEditorInner({ initialData }: PipelineEditorInnerProps) {
       }
 
       if (!id) {
-        // No ID - start with fresh pipeline
-        setIsLoading(false);
+        // No ID - start with fresh pipeline (canvas already visible)
         return;
       }
 
       // Skip if already loaded
       if (pipelineId === id) {
-        setIsLoading(false);
         return;
       }
 
+      setIsLoading(true);
       try {
         console.log('[PIPELINE] Loading pipeline via API:', id);
         const response = await fetch(`/api/pipelines/${id}`, {
@@ -312,7 +311,7 @@ function PipelineEditorInner({ initialData }: PipelineEditorInnerProps) {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-full" style={{ backgroundColor: '#050505' }}>
+      <div className="flex flex-col items-center justify-center h-full" style={{ backgroundColor: '#09090b' }}>
         <Loader2 className="w-10 h-10 text-violet-500 animate-spin mb-4" />
         <p className="text-white/60 text-sm">Loading pipeline...</p>
       </div>
@@ -322,7 +321,7 @@ function PipelineEditorInner({ initialData }: PipelineEditorInnerProps) {
   // Show error state
   if (loadError) {
     return (
-      <div className="flex flex-col items-center justify-center h-full" style={{ backgroundColor: '#050505' }}>
+      <div className="flex flex-col items-center justify-center h-full" style={{ backgroundColor: '#09090b' }}>
         <div className="text-center max-w-md p-6">
           <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">!</span>
@@ -344,9 +343,10 @@ function PipelineEditorInner({ initialData }: PipelineEditorInnerProps) {
   const showLiveExecution = isRunning || showExecutionPanel;
   const showNodeInspector = selectedNodeId && !showLiveExecution;
   const showTriggerConfig = !selectedNodeId && !showLiveExecution;
+  const hasRightPanel = showLiveExecution || showNodeInspector || (showTriggerConfig && pipelineId);
 
   return (
-    <div ref={reactFlowWrapper} className="flex h-full overflow-hidden" style={{ backgroundColor: '#050505' }}>
+    <div ref={reactFlowWrapper} className="flex h-full overflow-hidden" style={{ backgroundColor: '#09090b' }}>
       {/* Column 1: Left Sidebar - Node Library (hidden by default) */}
       {sidebarOpen && (
         <PipelineSidebar onClose={() => setSidebarOpen(false)} />
@@ -363,16 +363,16 @@ function PipelineEditorInner({ initialData }: PipelineEditorInnerProps) {
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
-            className="absolute top-4 left-4 z-20 w-10 h-10 flex items-center justify-center rounded-xl transition-all hover:scale-105"
+            className="absolute top-4 left-4 z-20 w-10 h-10 flex items-center justify-center rounded-xl transition-all hover:scale-105 hover:bg-white/[0.08]"
             style={{
-              backgroundColor: 'rgba(17, 17, 17, 0.9)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
+              backgroundColor: 'rgba(24, 24, 27, 0.80)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              border: '1px solid rgba(255, 255, 255, 0.10)',
             }}
             title="Add Component (Cmd+K)"
           >
-            <Plus className="w-5 h-5 text-white/60" />
+            <Plus className="w-5 h-5 text-white/50" />
           </button>
         )}
 
@@ -399,37 +399,39 @@ function PipelineEditorInner({ initialData }: PipelineEditorInnerProps) {
         )}
       </div>
 
-      {/* Column 3: Right Panel - Context-Sensitive */}
-      <div className="w-80 flex-shrink-0">
-        {/* Live Execution Sidebar (when running or manually opened) */}
-        {showLiveExecution && (
-          <LiveExecutionSidebar
-            executionId={executionId}
-            logs={executionLogs}
-            isRunning={isRunning}
-            onClose={() => setShowExecutionPanel(false)}
-            onStop={() => {
-              usePipelineStore.getState().resetExecution();
-              setShowExecutionPanel(false);
-            }}
-            onNodeClick={(nodeId) => {
-              usePipelineStore.getState().setSelectedNode(nodeId);
-            }}
-          />
-        )}
+      {/* Column 3: Right Panel - Context-Sensitive (collapses when nothing to show) */}
+      {hasRightPanel && (
+        <div className="w-80 flex-shrink-0">
+          {/* Live Execution Sidebar (when running or manually opened) */}
+          {showLiveExecution && (
+            <LiveExecutionSidebar
+              executionId={executionId}
+              logs={executionLogs}
+              isRunning={isRunning}
+              onClose={() => setShowExecutionPanel(false)}
+              onStop={() => {
+                usePipelineStore.getState().resetExecution();
+                setShowExecutionPanel(false);
+              }}
+              onNodeClick={(nodeId) => {
+                usePipelineStore.getState().setSelectedNode(nodeId);
+              }}
+            />
+          )}
 
-        {/* Node Inspector (when node selected and not running) */}
-        {showNodeInspector && <NodeInspector />}
+          {/* Node Inspector (when node selected and not running) */}
+          {showNodeInspector && <NodeInspector />}
 
-        {/* Trigger Config Panel (when nothing selected and not running) */}
-        {showTriggerConfig && pipelineId && (
-          <TriggerConfigPanel
-            pipelineId={pipelineId}
-            currentTrigger={triggerType}
-            onTriggerChange={handleTriggerChange}
-          />
-        )}
-      </div>
+          {/* Trigger Config Panel (when nothing selected and not running) */}
+          {showTriggerConfig && pipelineId && (
+            <TriggerConfigPanel
+              pipelineId={pipelineId}
+              currentTrigger={triggerType}
+              onTriggerChange={handleTriggerChange}
+            />
+          )}
+        </div>
+      )}
 
       {/* Legacy Execution Inspector Panel - keeping for backward compatibility */}
       <ExecutionInspector
@@ -459,7 +461,14 @@ interface PipelineEditorProps {
 export function PipelineEditor({ initialData }: PipelineEditorProps) {
   return (
     <ReactFlowProvider>
-      <PipelineEditorInner initialData={initialData} />
+      <Suspense fallback={
+        <div className="flex flex-col items-center justify-center h-full" style={{ backgroundColor: '#09090b' }}>
+          <Loader2 className="w-10 h-10 text-violet-500 animate-spin mb-4" />
+          <p className="text-white/60 text-sm">Loading pipeline...</p>
+        </div>
+      }>
+        <PipelineEditorInner initialData={initialData} />
+      </Suspense>
     </ReactFlowProvider>
   );
 }

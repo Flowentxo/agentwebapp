@@ -97,7 +97,7 @@ export function EmailAnalytics({
   if (!isOpen) return null;
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto bg-[#0a0a0a]">
+    <div className="flex-1 flex flex-col overflow-y-auto" style={{ backgroundColor: 'var(--vicy-bg)' }}>
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06]">
         <div className="flex items-center gap-2">

@@ -171,7 +171,7 @@ export function EmergencyStopButton({
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md"
             >
-              <div className="bg-[#0a0a0a] border border-white/[0.06] rounded-2xl overflow-hidden shadow-2xl">
+              <div className="border border-white/[0.06] rounded-2xl overflow-hidden shadow-2xl" style={{ backgroundColor: 'var(--vicy-bg)' }}>
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
                   <div className="flex items-center gap-3">

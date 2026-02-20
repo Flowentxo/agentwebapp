@@ -6,7 +6,7 @@
  * Transformed from static dashboard to operational control system.
  * Features: Workflow graph center, HITL approvals, live execution, autopilot.
  *
- * Vicy-Style: Deep Black (#050505) + Violet Glow
+ * Vicy-Style: Deep Black (#0f172a) + Violet Glow
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
@@ -571,7 +571,7 @@ export default function PipelineDetailPage() {
     return (
       <div
         className="flex items-center justify-center h-full"
-        style={{ backgroundColor: "#050505" }}
+        style={{ backgroundColor: "#0f172a" }}
       >
         <RefreshCw className="h-8 w-8 text-violet-500 animate-spin" />
       </div>
@@ -581,7 +581,7 @@ export default function PipelineDetailPage() {
   // Not authenticated state
   if (!isAuthenticated || !userId) {
     return (
-      <div className="p-6" style={{ backgroundColor: "#050505", minHeight: "100vh" }}>
+      <div className="p-6" style={{ backgroundColor: "#0f172a", minHeight: "100vh" }}>
         <div className="text-center py-16">
           <GitBranch className="h-12 w-12 text-white/25 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-white mb-2">
@@ -598,7 +598,7 @@ export default function PipelineDetailPage() {
   // Not found state
   if (!pipeline) {
     return (
-      <div className="p-6" style={{ backgroundColor: "#050505", minHeight: "100vh" }}>
+      <div className="p-6" style={{ backgroundColor: "#0f172a", minHeight: "100vh" }}>
         <div className="text-center py-16">
           <GitBranch className="h-12 w-12 text-white/25 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-white mb-2">
@@ -622,7 +622,7 @@ export default function PipelineDetailPage() {
   return (
     <div
       className="flex flex-col h-full overflow-hidden"
-      style={{ backgroundColor: "#050505" }}
+      style={{ backgroundColor: "#0f172a" }}
     >
       {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
@@ -691,7 +691,7 @@ export default function PipelineDetailPage() {
             size="sm"
             onClick={startDryRun}
             disabled={isRunning}
-            className="bg-[#050505] border-white/[0.06] text-white/50 hover:text-amber-400 hover:border-amber-500/30"
+            className="bg-[#0f172a] border-white/[0.06] text-white/50 hover:text-amber-400 hover:border-amber-500/30"
           >
             <FlaskConical className="h-4 w-4 mr-2" />
             Test
@@ -700,7 +700,7 @@ export default function PipelineDetailPage() {
             variant="outline"
             size="sm"
             onClick={togglePipeline}
-            className="bg-[#050505] border-white/[0.06] text-white/50 hover:text-white"
+            className="bg-[#0f172a] border-white/[0.06] text-white/50 hover:text-white"
           >
             {pipeline.is_active ? (
               <>

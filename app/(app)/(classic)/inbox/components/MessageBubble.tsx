@@ -281,7 +281,7 @@ export const MessageBubble = memo(function MessageBubble({
   return (
     <div
       className={cn(
-        'group flex gap-3 px-4 py-3 transition-colors',
+        'group flex gap-3 px-4 py-3 transition-colors msg-enter',
         isUser ? 'flex-row-reverse' : 'flex-row',
         showActions && 'bg-white/[0.02]'
       )}

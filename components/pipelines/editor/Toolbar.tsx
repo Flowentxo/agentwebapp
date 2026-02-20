@@ -447,13 +447,13 @@ export function PipelineToolbar() {
   return (
     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
       <div
-        className="flex items-center gap-1.5 px-3 py-2 rounded-2xl"
+        className="flex items-center gap-1.5 px-6 py-2 rounded-full"
         style={{
-          backgroundColor: 'rgba(17, 17, 17, 0.9)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+          backgroundColor: 'rgba(24, 24, 27, 0.80)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255, 255, 255, 0.10)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255,255,255,0.03)',
         }}
       >
         {/* Back */}
@@ -596,12 +596,13 @@ export function PipelineToolbar() {
                 onClick={() => setShowMenu(false)}
               />
               <div
-                className="absolute right-0 top-full mt-2 w-48 rounded-xl overflow-hidden z-20"
+                className="absolute right-0 top-full mt-2 w-48 rounded-2xl overflow-hidden z-20"
                 style={{
-                  backgroundColor: 'rgba(17, 17, 17, 0.95)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+                  backgroundColor: 'rgba(24, 24, 27, 0.90)',
+                  backdropFilter: 'blur(16px)',
+                  WebkitBackdropFilter: 'blur(16px)',
+                  border: '1px solid rgba(255, 255, 255, 0.10)',
+                  boxShadow: '0 12px 40px rgba(0, 0, 0, 0.5)',
                 }}
               >
                 {/* Templates */}

@@ -257,6 +257,12 @@ export function ChatInterface({ agents }: ChatInterfaceProps) {
       console.error('Failed to send message:', error);
 
       if (error.name !== 'AbortError') {
+        // Suppress auth errors — forceLogout() handles redirect silently
+        const errMsg = (error.message || '').toLowerCase();
+        if (errMsg.includes('auth') || errMsg.includes('401') || errMsg.includes('unauthorized') || errMsg.includes('token')) {
+          return;
+        }
+
         // Add error message to conversation
         const errorMessage: ChatMessage = {
           id: `msg-error-${Date.now()}`,
@@ -340,7 +346,7 @@ export function ChatInterface({ agents }: ChatInterfaceProps) {
             id: 'streaming',
             role: 'agent' as const,
             type: 'text' as const,
-            content: streamingContent + ' ●',
+            content: streamingContent,
             timestamp: new Date(),
             agentId: activeConversation.agentId,
             agentName: activeConversation.agentName,

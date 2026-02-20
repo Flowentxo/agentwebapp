@@ -6,7 +6,7 @@
  * Right sidebar showing real-time execution logs during workflow run.
  * Part of the Control Mode system for Pipeline Automation.
  *
- * Vicy-Style: Deep Black (#050505) + Violet Glow
+ * Vicy-Style: Deep Black (#0f172a) + Violet Glow
  */
 
 import { useState, useRef, useEffect } from 'react';
@@ -327,11 +327,11 @@ export function LiveExecutionSidebar({
 
   return (
     <div
-      className="h-full flex flex-col border-l border-white/[0.06]"
+      className="h-full flex flex-col border-l border-white/[0.05] backdrop-blur-xl"
       style={{
-        background: '#050505',
+        background: 'rgba(9, 9, 11, 0.80)',
         boxShadow: isRunning
-          ? 'inset 0 0 60px rgba(139, 92, 246, 0.03)'
+          ? 'inset 0 0 60px rgba(139, 92, 246, 0.04)'
           : 'none',
       }}
     >

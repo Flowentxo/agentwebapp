@@ -195,6 +195,17 @@ export class EnhancedErrorBoundary extends Component<Props, State> {
       errorInfo,
     });
 
+    // Auth errors: immediate redirect to /login
+    const msg = error.message.toLowerCase();
+    if (msg.includes('auth') || msg.includes('unauthorized') || msg.includes('token') || msg.includes('401')) {
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = '/login';
+        return;
+      }
+    }
+
     // Log error for debugging
     console.group('🚨 Error Boundary Caught Error');
     console.error('Error ID:', this.state.errorId);
@@ -333,6 +344,12 @@ export class EnhancedErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      // Stealth mode: auth errors → blank screen while redirecting (no flash)
+      const errorType = this.getErrorType();
+      if (errorType === 'auth') {
+        return <div style={{ minHeight: '100vh', backgroundColor: '#030712' }} />;
+      }
+
       // Custom fallback UI
       if (this.props.fallback) {
         return this.props.fallback;
